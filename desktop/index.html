@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Beethoven Desktop Prototype</title>
-    <link rel="stylesheet" href="./styles.css?v=sidebar-actions" />
+    <link rel="stylesheet" href="./styles.css?v=skills-panel" />
   </head>
   <body>
     <div class="app-shell">
@@ -24,7 +24,7 @@
             <span class="icon">⌕</span>
             Search
           </button>
-          <button class="nav-action" type="button">
+          <button class="nav-action" id="skillsButton" type="button">
             <span class="icon">⌘</span>
             Skills
           </button>
@@ -119,6 +119,17 @@
               <div class="workspace-status-list" id="workspaceStatusList"></div>
             </div>
           </div>
+        </section>
+
+        <section class="skills-panel" id="skillsPanel" aria-label="Skill catalog" hidden>
+          <div class="skills-panel-header">
+            <div>
+              <h2>Skill Catalog</h2>
+              <span>Capabilities Beethoven can route through soloists.</span>
+            </div>
+            <button class="icon-button" id="closeSkillsPanel" type="button" aria-label="Close skills">×</button>
+          </div>
+          <div class="skills-grid" id="skillsGrid"></div>
         </section>
 
         <section class="canvas">
@@ -226,6 +237,6 @@
       </main>
     </div>
 
-    <script src="./app.js?v=sidebar-actions"></script>
+    <script src="./app.js?v=skills-panel"></script>
   </body>
 </html>

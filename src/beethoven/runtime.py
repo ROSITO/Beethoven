@@ -77,6 +77,37 @@ def list_soloists() -> list[dict[str, object]]:
     ]
 
 
+def list_skills() -> list[dict[str, object]]:
+    """Return capability groups derived from the configured soloist catalog."""
+    grouped: dict[str, dict[str, object]] = {}
+    for soloist in list_soloists():
+        status = str(soloist["status"])
+        for capability in soloist["capabilities"]:
+            skill = grouped.setdefault(
+                str(capability),
+                {
+                    "id": capability,
+                    "name": str(capability).replace("_", " ").title(),
+                    "status": "planned",
+                    "soloists": [],
+                    "description": f"Route {capability} work to compatible Beethoven soloists.",
+                },
+            )
+            assert isinstance(skill["soloists"], list)
+            skill["soloists"].append(
+                {
+                    "id": soloist["id"],
+                    "name": soloist["name"],
+                    "status": status,
+                    "locality": soloist["locality"],
+                }
+            )
+            if status == "available":
+                skill["status"] = "available"
+
+    return sorted(grouped.values(), key=lambda item: str(item["id"]))
+
+
 def score_objective(objective: str, metadata: dict[str, object] | None = None) -> Score:
     score = create_baseline_score(objective)
     if not metadata:

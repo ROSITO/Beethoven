@@ -68,6 +68,15 @@ def test_soloists_list_command_prints_catalog(capsys) -> None:
     assert "Ollama [planned]" in captured.out
 
 
+def test_skills_list_command_prints_capability_catalog(capsys) -> None:
+    exit_code = main(["skills", "list"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Analyze [available]" in captured.out
+    assert "available: Local Echo" in captured.out
+
+
 def test_workspace_command_prints_current_project(capsys) -> None:
     exit_code = main(["workspace"])
 

@@ -34,6 +34,7 @@ const composerStatus = document.querySelector("#composerStatus");
 const sessionList = document.querySelector("#sessionList");
 const newTaskButton = document.querySelector("#newTaskButton");
 const searchButton = document.querySelector("#searchButton");
+const skillsButton = document.querySelector("#skillsButton");
 const sessionFilterButton = document.querySelector("#sessionFilterButton");
 const sessionSearch = document.querySelector("#sessionSearch");
 const modeTabs = [...document.querySelectorAll(".mode-tab")];
@@ -55,10 +56,14 @@ const commandPanel = document.querySelector("#commandPanel");
 const closeCommandPanel = document.querySelector("#closeCommandPanel");
 const commandList = document.querySelector("#commandList");
 const workspaceStatusList = document.querySelector("#workspaceStatusList");
+const skillsPanel = document.querySelector("#skillsPanel");
+const closeSkillsPanel = document.querySelector("#closeSkillsPanel");
+const skillsGrid = document.querySelector("#skillsGrid");
 
 let currentWorkspace = null;
 let allSessions = [];
 let activeSessionId = null;
+let allSkills = [];
 
 const modeCopy = {
   chat: {
@@ -99,6 +104,10 @@ const cliCommands = [
   {
     command: "beethoven soloists list",
     description: "Show available and planned soloists."
+  },
+  {
+    command: "beethoven skills list",
+    description: "Inspect routable orchestration capabilities."
   },
   {
     command: "beethoven desktop --open",
@@ -245,6 +254,33 @@ function renderSoloists(soloists) {
   soloistSelect.innerHTML = options.join("");
 }
 
+function renderSkills(skills) {
+  if (!skills.length) {
+    skillsGrid.innerHTML = '<div class="session-empty">No skills found</div>';
+    return;
+  }
+
+  skillsGrid.innerHTML = skills
+    .map((skill) => {
+      const soloists = skill.soloists ?? [];
+      const soloistNames = soloists
+        .map((soloist) => `${soloist.name} · ${soloist.status}`)
+        .join(", ");
+      const statusClass = skill.status === "available" ? "success" : "neutral";
+      return `
+        <article class="skill-card">
+          <header>
+            <h3>${escapeHtml(skill.name)}</h3>
+            <span class="pill ${statusClass}">${escapeHtml(skill.status)}</span>
+          </header>
+          <p>${escapeHtml(skill.description)}</p>
+          <div class="route-reason">${escapeHtml(soloistNames)}</div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
 function setMode(mode) {
   const copy = modeCopy[mode] ?? modeCopy.code;
   modeTabs.forEach((tab) => {
@@ -273,8 +309,8 @@ function renderCommandList() {
     .map(
       (item, index) => `
         <button class="command-row" type="button" data-command-index="${index}">
-          <code>${item.command}</code>
-          <span>${item.description}</span>
+          <code>${escapeHtml(item.command)}</code>
+          <span>${escapeHtml(item.description)}</span>
         </button>
       `
     )
@@ -293,15 +329,32 @@ function renderWorkspaceStatus(workspace) {
   }
   workspaceStatusList.innerHTML = status
     .slice(0, 8)
-    .map((line) => `<div class="status-row"><code>${line}</code><span>${workspace.branch ?? "no branch"}</span></div>`)
+    .map(
+      (line) =>
+        `<div class="status-row"><code>${escapeHtml(line)}</code><span>${escapeHtml(workspace.branch ?? "no branch")}</span></div>`
+    )
     .join("");
 }
 
 function toggleCommandPanel(force) {
   const shouldOpen = force ?? commandPanel.hidden;
   commandPanel.hidden = !shouldOpen;
+  if (shouldOpen) {
+    skillsPanel.hidden = true;
+    skillsButton.classList.remove("active");
+  }
   if (shouldOpen && currentWorkspace) {
     renderWorkspaceStatus(currentWorkspace);
+  }
+}
+
+function toggleSkillsPanel(force) {
+  const shouldOpen = force ?? skillsPanel.hidden;
+  skillsPanel.hidden = !shouldOpen;
+  skillsButton.classList.toggle("active", shouldOpen);
+  if (shouldOpen) {
+    commandPanel.hidden = true;
+    renderSkills(allSkills);
   }
 }
 
@@ -458,6 +511,28 @@ async function loadSoloists() {
   }
 }
 
+async function loadSkills() {
+  try {
+    const response = await fetch("/api/skills");
+    if (!response.ok) {
+      throw new Error(`Skills API returned ${response.status}`);
+    }
+    const payload = await response.json();
+    allSkills = payload.skills ?? [];
+  } catch {
+    allSkills = [
+      {
+        id: "analyze",
+        name: "Analyze",
+        status: "available",
+        description: "Route analyze work to compatible Beethoven soloists.",
+        soloists: [{ id: "local-echo", name: "Local Echo", status: "available" }]
+      }
+    ];
+  }
+  renderSkills(allSkills);
+}
+
 async function loadWorkspace() {
   try {
     const response = await fetch("/api/workspace");
@@ -491,6 +566,7 @@ async function startNewTask() {
   permissionSelect.value = "ask";
   effortSelect.value = "medium";
   commandPanel.hidden = true;
+  skillsPanel.hidden = true;
   document.querySelectorAll(".nav-action").forEach((button) => {
     button.classList.toggle("active", button === newTaskButton);
   });
@@ -510,6 +586,7 @@ sendButton.addEventListener("click", runComposer);
 runScoreButton.addEventListener("click", runComposer);
 newTaskButton.addEventListener("click", startNewTask);
 searchButton.addEventListener("click", () => setSearchOpen(sessionSearch.hidden));
+skillsButton.addEventListener("click", () => toggleSkillsPanel());
 sessionFilterButton.addEventListener("click", () => setSearchOpen(sessionSearch.hidden));
 sessionSearch.addEventListener("input", renderFilteredSessions);
 sessionSearch.addEventListener("keydown", (event) => {
@@ -522,6 +599,7 @@ sessionSearch.addEventListener("keydown", (event) => {
 terminalButton.addEventListener("click", () => toggleCommandPanel());
 slashCommandsButton.addEventListener("click", () => toggleCommandPanel(true));
 closeCommandPanel.addEventListener("click", () => toggleCommandPanel(false));
+closeSkillsPanel.addEventListener("click", () => toggleSkillsPanel(false));
 commandList.addEventListener("click", (event) => {
   const row = event.target.closest(".command-row");
   if (row?.dataset.commandIndex) {
@@ -542,5 +620,6 @@ renderCommandList();
 renderScore();
 loadWorkspace();
 loadSoloists();
+loadSkills();
 loadSessions();
 loadInitialScore();

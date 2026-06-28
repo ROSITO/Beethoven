@@ -119,6 +119,7 @@ beethoven trace <run-id>
 beethoven sessions list
 beethoven sessions show <session-id>
 beethoven soloists list
+beethoven skills list
 beethoven workspace
 beethoven package sidecar
 beethoven plugins list
@@ -129,6 +130,11 @@ The first implemented commands are:
 - `beethoven score <objective>`: create a deterministic baseline score.
 - `beethoven run <objective>`: execute that score with the local echo soloist.
 - `beethoven sessions list`: inspect local desktop session history.
+- `beethoven soloists list`: inspect available and planned soloists.
+- `beethoven skills list`: inspect routable capabilities and compatible
+  soloists.
+- `beethoven workspace`: inspect project and Git context.
+- `beethoven package sidecar`: generate a desktop sidecar launcher.
 
 ## Current Desktop Prototype
 
@@ -145,6 +151,7 @@ It implements the first visible shell:
 - project/session sidebar;
 - Chat, Cowork, and Code mode switcher;
 - top bar with project, branch, run, and terminal controls;
+- sidebar actions for new tasks, session search, and the skill catalog;
 - conversation/progression canvas;
 - score inspector with routing reasons, cost, privacy, and task state;
 - composer with project context, permission mode, router policy, and effort.
@@ -155,6 +162,7 @@ When served with `beethoven desktop`, the workbench uses the local API endpoints
 - `GET /api/health`;
 - `GET /api/sessions`;
 - `GET /api/soloists`;
+- `GET /api/skills`;
 - `GET /api/workspace`;
 - `POST /api/score`;
 - `POST /api/run`.

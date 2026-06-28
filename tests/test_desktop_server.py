@@ -26,6 +26,9 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
         soloists = urlopen(f"http://{host}:{port}/api/soloists", timeout=2)
         soloists_data = json.loads(soloists.read().decode("utf-8"))
 
+        skills = urlopen(f"http://{host}:{port}/api/skills", timeout=2)
+        skills_data = json.loads(skills.read().decode("utf-8"))
+
         workspace = urlopen(f"http://{host}:{port}/api/workspace", timeout=2)
         workspace_data = json.loads(workspace.read().decode("utf-8"))
 
@@ -79,5 +82,7 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
     assert detail_data["session"]["run"]["score"]["id"] == payload["score"]["id"]
     assert soloists_data["soloists"][0]["id"] == "local-echo"
     assert soloists_data["soloists"][0]["status"] == "available"
+    assert skills_data["skills"][0]["id"] == "analyze"
+    assert skills_data["skills"][0]["status"] == "available"
     assert workspace_data["workspace"]["name"] == "Beethoven"
     assert "changes" in workspace_data["workspace"]

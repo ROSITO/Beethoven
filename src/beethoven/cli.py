@@ -11,7 +11,7 @@ from beethoven.desktop_server import serve_desktop
 from beethoven.core import Score
 from beethoven.desktop_state import DesktopSessionStore
 from beethoven.packaging import write_sidecar_script
-from beethoven.runtime import list_soloists, run_objective, score_objective
+from beethoven.runtime import list_skills, list_soloists, run_objective, score_objective
 from beethoven.serialization import context_to_dict, score_to_dict
 from beethoven.workspace import inspect_workspace
 
@@ -65,6 +65,11 @@ def build_parser() -> argparse.ArgumentParser:
     soloist_subparsers = soloists.add_subparsers(dest="soloists_command", required=True)
     soloists_list = soloist_subparsers.add_parser("list", help="List available and planned soloists.")
     soloists_list.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+
+    skills = subparsers.add_parser("skills", help="Inspect orchestration skills.")
+    skills_subparsers = skills.add_subparsers(dest="skills_command", required=True)
+    skills_list = skills_subparsers.add_parser("list", help="List skills and compatible soloists.")
+    skills_list.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
 
     workspace = subparsers.add_parser("workspace", help="Inspect current project and Git context.")
     workspace.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
@@ -139,6 +144,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print(json.dumps({"soloists": soloists}, indent=2, ensure_ascii=False))
             else:
                 print_soloists(soloists)
+            return 0
+
+    if args.command == "skills":
+        skills = list_skills()
+        if args.skills_command == "list":
+            if args.json:
+                print(json.dumps({"skills": skills}, indent=2, ensure_ascii=False))
+            else:
+                print_skills(skills)
             return 0
 
     if args.command == "workspace":
@@ -236,6 +250,28 @@ def print_soloists(soloists: list[dict[str, object]]) -> None:
             f"locality: {soloist.get('locality')}"
         )
         print(f"  capabilities: {capabilities}")
+
+
+def print_skills(skills: list[dict[str, object]]) -> None:
+    for skill in skills:
+        soloists = skill.get("soloists", [])
+        assert isinstance(soloists, list)
+        available = [
+            str(soloist.get("name"))
+            for soloist in soloists
+            if isinstance(soloist, dict) and soloist.get("status") == "available"
+        ]
+        planned = [
+            str(soloist.get("name"))
+            for soloist in soloists
+            if isinstance(soloist, dict) and soloist.get("status") != "available"
+        ]
+        print(f"- {skill.get('name')} [{skill.get('status')}]")
+        print(f"  id: {skill.get('id')}")
+        if available:
+            print(f"  available: {', '.join(available)}")
+        if planned:
+            print(f"  planned: {', '.join(planned)}")
 
 
 def print_workspace(workspace: dict[str, object]) -> None:

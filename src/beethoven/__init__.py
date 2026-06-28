@@ -10,6 +10,7 @@ from beethoven.core import (
     Task,
     TaskStatus,
 )
+from beethoven.packaging import write_sidecar_script
 from beethoven.planning import create_baseline_score
 from beethoven.routing import CapabilityRouter, SoloistRegistry
 from beethoven.runtime import list_soloists, run_objective, score_objective
@@ -33,4 +34,5 @@ __all__ = [
     "inspect_workspace",
     "run_objective",
     "score_objective",
+    "write_sidecar_script",
 ]

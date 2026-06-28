@@ -75,3 +75,16 @@ def test_workspace_command_prints_current_project(capsys) -> None:
     assert exit_code == 0
     assert "Workspace: Beethoven" in captured.out
     assert "Git:" in captured.out
+
+
+def test_package_sidecar_command_writes_launcher(tmp_path, capsys) -> None:
+    output = tmp_path / "beethoven-sidecar"
+
+    exit_code = main(["package", "sidecar", "--output", str(output)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Sidecar launcher written" in captured.out
+    assert output.exists()
+    assert "beethoven desktop" in output.read_text(encoding="utf-8")
+    assert output.stat().st_mode & 0o111

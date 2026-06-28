@@ -120,6 +120,7 @@ beethoven sessions list
 beethoven sessions show <session-id>
 beethoven soloists list
 beethoven workspace
+beethoven package sidecar
 beethoven plugins list
 ```
 

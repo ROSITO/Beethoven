@@ -185,6 +185,7 @@ beethoven sessions list
 beethoven sessions show <session-id>
 beethoven soloists list
 beethoven workspace
+beethoven package sidecar
 ```
 
 Without installing dev dependencies, the current tests can also run with:

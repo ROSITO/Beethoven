@@ -10,6 +10,7 @@ from typing import Sequence
 from beethoven.desktop_server import serve_desktop
 from beethoven.core import Score
 from beethoven.desktop_state import DesktopSessionStore
+from beethoven.packaging import write_sidecar_script
 from beethoven.runtime import list_soloists, run_objective, score_objective
 from beethoven.serialization import context_to_dict, score_to_dict
 from beethoven.workspace import inspect_workspace
@@ -67,6 +68,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     workspace = subparsers.add_parser("workspace", help="Inspect current project and Git context.")
     workspace.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+
+    package = subparsers.add_parser("package", help="Prepare desktop packaging assets.")
+    package_subparsers = package.add_subparsers(dest="package_command", required=True)
+    sidecar = package_subparsers.add_parser("sidecar", help="Write a desktop runtime sidecar launcher.")
+    sidecar.add_argument(
+        "--output",
+        default="src-tauri/bin/beethoven-sidecar",
+        help="Path for the generated sidecar launcher.",
+    )
 
     return parser
 
@@ -138,6 +148,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         else:
             print_workspace(workspace)
         return 0
+
+    if args.command == "package":
+        if args.package_command == "sidecar":
+            output_path = write_sidecar_script(args.output)
+            print(f"Sidecar launcher written to {output_path}")
+            return 0
 
     parser.print_help(sys.stderr)
     return 2

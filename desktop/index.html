@@ -128,34 +128,9 @@
             <section class="execution-band" aria-labelledby="progress-title">
               <div class="band-header">
                 <h2 id="progress-title">Progression</h2>
-                <span class="pill success">3 tasks completed</span>
+                <span class="pill success" id="progressPill">3 tasks completed</span>
               </div>
-              <ol class="timeline">
-                <li>
-                  <span class="step-index">1</span>
-                  <div>
-                    <strong>Understand</strong>
-                    <p>Clarify intent, constraints, interface references, and risks.</p>
-                  </div>
-                  <span class="step-state">done</span>
-                </li>
-                <li>
-                  <span class="step-index">2</span>
-                  <div>
-                    <strong>Plan</strong>
-                    <p>Create a desktop product contract plus a CLI-aligned path.</p>
-                  </div>
-                  <span class="step-state">done</span>
-                </li>
-                <li>
-                  <span class="step-index">3</span>
-                  <div>
-                    <strong>Synthesize</strong>
-                    <p>Turn the contract into a first visible workbench prototype.</p>
-                  </div>
-                  <span class="step-state">done</span>
-                </li>
-              </ol>
+              <ol class="timeline" id="timeline"></ol>
             </section>
           </div>
 
@@ -163,7 +138,7 @@
             <div class="inspector-header">
               <div>
                 <h2>Score Inspector</h2>
-                <span>score-675dfa3bdcfe</span>
+                <span id="scoreId">score-675dfa3bdcfe</span>
               </div>
               <span class="pill neutral">local echo</span>
             </div>
@@ -219,6 +194,7 @@
               <button class="send-button" id="sendButton" type="button" aria-label="Run Beethoven">↑</button>
             </div>
           </div>
+          <div class="composer-status" id="composerStatus" role="status"></div>
         </footer>
       </main>
     </div>

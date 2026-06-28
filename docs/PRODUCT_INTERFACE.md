@@ -131,7 +131,7 @@ The repository includes a static prototype in `desktop/` that can be opened
 directly or served with:
 
 ```bash
-python3 -m http.server 4173 -d desktop
+beethoven desktop
 ```
 
 It implements the first visible shell:
@@ -142,6 +142,12 @@ It implements the first visible shell:
 - conversation/progression canvas;
 - score inspector with routing reasons, cost, privacy, and task state;
 - composer with project context, permission mode, router policy, and effort.
+
+When served with `beethoven desktop`, the workbench uses the local API endpoints:
+
+- `GET /api/health`;
+- `POST /api/score`;
+- `POST /api/run`.
 
 ## First Product Milestone
 

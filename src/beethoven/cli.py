@@ -7,12 +7,10 @@ import json
 import sys
 from typing import Sequence
 
-from beethoven.conductor import Conductor
+from beethoven.desktop_server import serve_desktop
 from beethoven.core import Score
-from beethoven.planning import create_baseline_score
-from beethoven.routing import CapabilityRouter, SoloistRegistry
+from beethoven.runtime import run_objective, score_objective
 from beethoven.serialization import context_to_dict, score_to_dict
-from beethoven.soloists import EchoSoloist
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -30,16 +28,24 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("objective", nargs="+", help="Objective to orchestrate.")
     run.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
 
+    desktop = subparsers.add_parser(
+        "desktop",
+        help="Serve the local desktop workbench.",
+        description="Serve the local desktop workbench.",
+    )
+    desktop.add_argument("--host", default="127.0.0.1", help="Host to bind.")
+    desktop.add_argument("--port", default=4173, type=int, help="Port to bind.")
+
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    objective = " ".join(args.objective)
 
     if args.command == "score":
-        generated_score = create_baseline_score(objective)
+        objective = " ".join(args.objective)
+        generated_score = score_objective(objective)
         if args.json:
             print(json.dumps(score_to_dict(generated_score), indent=2, ensure_ascii=False))
         else:
@@ -47,14 +53,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.command == "run":
-        generated_score = create_baseline_score(objective)
-        registry = SoloistRegistry()
-        registry.register(EchoSoloist())
-        context = Conductor(CapabilityRouter(registry)).perform(generated_score)
+        objective = " ".join(args.objective)
+        context = run_objective(objective)
         if args.json:
             print(json.dumps(context_to_dict(context), indent=2, ensure_ascii=False))
         else:
             print_run(context_to_dict(context))
+        return 0
+
+    if args.command == "desktop":
+        serve_desktop(host=args.host, port=args.port)
         return 0
 
     parser.print_help(sys.stderr)

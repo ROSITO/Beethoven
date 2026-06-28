@@ -23,3 +23,13 @@ def test_run_command_prints_trace(capsys) -> None:
     assert "Beethoven performed score-" in captured.out
     assert "understand:local-echo" in captured.out
     assert "synthesize:local-echo" in captured.out
+
+
+def test_desktop_command_is_registered(capsys) -> None:
+    try:
+        main(["desktop", "--help"])
+    except SystemExit as error:
+        assert error.code == 0
+
+    captured = capsys.readouterr()
+    assert "Serve the local desktop workbench" in captured.out

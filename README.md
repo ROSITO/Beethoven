@@ -122,10 +122,10 @@ that captures the target product shape: project sidebar, Chat/Cowork/Code modes,
 conversation canvas, score inspector, execution trace, permission controls, and
 composer.
 
-Open it directly or serve it locally:
+Open it directly, or serve it through Beethoven's local desktop API:
 
 ```bash
-python3 -m http.server 4173 -d desktop
+beethoven desktop
 ```
 
 Then visit `http://localhost:4173`.
@@ -169,6 +169,7 @@ Try the CLI:
 beethoven score "Refactor this repository"
 beethoven run "Refactor this repository"
 beethoven run "Refactor this repository" --json
+beethoven desktop
 ```
 
 Without installing dev dependencies, the current tests can also run with:

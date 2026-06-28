@@ -517,6 +517,16 @@ button {
   box-shadow: var(--shadow);
 }
 
+.composer-status {
+  min-height: 18px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.composer-status.error {
+  color: var(--red);
+}
+
 .context-bar {
   gap: 8px;
   flex-wrap: wrap;

@@ -78,6 +78,19 @@ button {
   padding: 0 8px;
 }
 
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  padding: 4px 8px 0;
+}
+
+.brand-lockup img {
+  display: block;
+  width: min(210px, 100%);
+  height: auto;
+}
+
 .traffic {
   width: 13px;
   height: 13px;

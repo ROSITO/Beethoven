@@ -13,7 +13,7 @@ from beethoven.desktop_state import DesktopSessionStore
 from beethoven.packaging import write_sidecar_script
 from beethoven.runtime import list_skills, list_soloists, run_objective, score_objective
 from beethoven.serialization import context_to_dict, score_to_dict
-from beethoven.workspace import inspect_workspace
+from beethoven.workspace import inspect_workspace, list_workspace_files
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -72,7 +72,11 @@ def build_parser() -> argparse.ArgumentParser:
     skills_list.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
 
     workspace = subparsers.add_parser("workspace", help="Inspect current project and Git context.")
+    workspace_subparsers = workspace.add_subparsers(dest="workspace_command")
     workspace.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+    workspace_files = workspace_subparsers.add_parser("files", help="List attachable workspace files.")
+    workspace_files.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+    workspace_files.add_argument("--limit", default=80, type=int, help="Maximum files to list.")
 
     package = subparsers.add_parser("package", help="Prepare desktop packaging assets.")
     package_subparsers = package.add_subparsers(dest="package_command", required=True)
@@ -156,6 +160,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
 
     if args.command == "workspace":
+        if args.workspace_command == "files":
+            workspace_files = list_workspace_files(limit=args.limit)
+            if args.json:
+                print(json.dumps(workspace_files, indent=2, ensure_ascii=False))
+            else:
+                print_workspace_files(workspace_files)
+            return 0
         workspace = inspect_workspace()
         if args.json:
             print(json.dumps({"workspace": workspace}, indent=2, ensure_ascii=False))
@@ -281,6 +292,20 @@ def print_workspace(workspace: dict[str, object]) -> None:
         print(f"Git: {workspace.get('branch')} · changes={workspace.get('changes')}")
     else:
         print("Git: not detected")
+
+
+def print_workspace_files(payload: dict[str, object]) -> None:
+    workspace = payload.get("workspace", {})
+    assert isinstance(workspace, dict)
+    files = payload.get("files", [])
+    assert isinstance(files, list)
+    print(f"Workspace files: {workspace.get('name')}")
+    if not files:
+        print("No attachable files found.")
+        return
+    for item in files:
+        assert isinstance(item, dict)
+        print(f"- {item.get('path')}")
 
 
 if __name__ == "__main__":

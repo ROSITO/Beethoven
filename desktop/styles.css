@@ -279,7 +279,8 @@ button {
   background: #ececea;
 }
 
-.text-button.active {
+.text-button.active,
+.icon-button.active {
   border-color: var(--line-strong);
   background: var(--panel);
 }
@@ -328,7 +329,8 @@ button {
 
 .command-panel,
 .skills-panel,
-.score-panel {
+.score-panel,
+.files-panel {
   display: grid;
   gap: 16px;
   margin: 16px 26px 0;
@@ -340,13 +342,15 @@ button {
 
 .command-panel[hidden],
 .skills-panel[hidden],
-.score-panel[hidden] {
+.score-panel[hidden],
+.files-panel[hidden] {
   display: none;
 }
 
 .command-panel-header,
 .skills-panel-header,
-.score-panel-header {
+.score-panel-header,
+.files-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -356,13 +360,15 @@ button {
 .command-panel h2,
 .command-panel h3,
 .skills-panel h2,
-.score-panel h2 {
+.score-panel h2,
+.files-panel h2 {
   margin: 0;
 }
 
 .command-panel h2,
 .skills-panel h2,
-.score-panel h2 {
+.score-panel h2,
+.files-panel h2 {
   font-size: 16px;
 }
 
@@ -374,7 +380,8 @@ button {
 
 .command-panel-header span,
 .skills-panel-header span,
-.score-panel-header span {
+.score-panel-header span,
+.files-panel-header span {
   display: block;
   margin-top: 2px;
   color: var(--muted);
@@ -404,14 +411,40 @@ button {
   gap: 10px;
 }
 
+.file-list {
+  display: grid;
+  gap: 6px;
+  max-height: min(44vh, 420px);
+  overflow: auto;
+}
+
 .command-row,
-.status-row {
+.status-row,
+.file-row {
   display: grid;
   gap: 4px;
   padding: 10px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
+}
+
+.file-row {
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+  text-align: left;
+}
+
+.file-extension {
+  display: inline-grid;
+  place-items: center;
+  min-height: 24px;
+  padding: 2px 6px;
+  color: var(--blue);
+  background: #e9eef6;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .skill-card {
@@ -869,13 +902,15 @@ textarea:focus {
   .canvas,
   .command-panel,
   .skills-panel,
-  .score-panel {
+  .score-panel,
+  .files-panel {
     padding-inline: 16px;
   }
 
   .command-panel,
   .skills-panel,
-  .score-panel {
+  .score-panel,
+  .files-panel {
     margin: 14px 16px 0;
   }
 

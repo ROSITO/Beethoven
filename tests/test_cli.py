@@ -86,6 +86,15 @@ def test_workspace_command_prints_current_project(capsys) -> None:
     assert "Git:" in captured.out
 
 
+def test_workspace_files_command_prints_attachable_files(capsys) -> None:
+    exit_code = main(["workspace", "files", "--limit", "5"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Workspace files: Beethoven" in captured.out
+    assert "- " in captured.out
+
+
 def test_package_sidecar_command_writes_launcher(tmp_path, capsys) -> None:
     output = tmp_path / "beethoven-sidecar"
 

@@ -32,6 +32,9 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
         workspace = urlopen(f"http://{host}:{port}/api/workspace", timeout=2)
         workspace_data = json.loads(workspace.read().decode("utf-8"))
 
+        files = urlopen(f"http://{host}:{port}/api/files", timeout=2)
+        files_data = json.loads(files.read().decode("utf-8"))
+
         request = Request(
             f"http://{host}:{port}/api/run",
             data=json.dumps(
@@ -86,3 +89,5 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
     assert skills_data["skills"][0]["status"] == "available"
     assert workspace_data["workspace"]["name"] == "Beethoven"
     assert "changes" in workspace_data["workspace"]
+    assert files_data["workspace"]["name"] == "Beethoven"
+    assert any(item["path"] == "README.md" for item in files_data["files"])

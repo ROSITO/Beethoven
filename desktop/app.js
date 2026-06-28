@@ -51,6 +51,7 @@ const composerBranch = document.querySelector("#composerBranch");
 const workspaceChanges = document.querySelector("#workspaceChanges");
 const terminalButton = document.querySelector("#terminalButton");
 const runScoreButton = document.querySelector("#runScoreButton");
+const attachFilesButton = document.querySelector("#attachFilesButton");
 const slashCommandsButton = document.querySelector("#slashCommandsButton");
 const scorePreviewButton = document.querySelector("#scorePreviewButton");
 const commandPanel = document.querySelector("#commandPanel");
@@ -64,11 +65,17 @@ const scorePanel = document.querySelector("#scorePanel");
 const closeScorePanel = document.querySelector("#closeScorePanel");
 const scorePreviewMeta = document.querySelector("#scorePreviewMeta");
 const scorePreviewList = document.querySelector("#scorePreviewList");
+const filesPanel = document.querySelector("#filesPanel");
+const closeFilesPanel = document.querySelector("#closeFilesPanel");
+const filesPanelMeta = document.querySelector("#filesPanelMeta");
+const fileSearch = document.querySelector("#fileSearch");
+const fileList = document.querySelector("#fileList");
 
 let currentWorkspace = null;
 let allSessions = [];
 let activeSessionId = null;
 let allSkills = [];
+let allFiles = [];
 
 const modeCopy = {
   chat: {
@@ -97,6 +104,10 @@ const cliCommands = [
   {
     command: "beethoven workspace",
     description: "Inspect the current project, branch, and Git status."
+  },
+  {
+    command: "beethoven workspace files",
+    description: "List files that can be attached as composer context."
   },
   {
     command: "beethoven run \"<objective>\" --permission ask --effort medium",
@@ -307,6 +318,36 @@ function renderScorePreview(score) {
     .join("");
 }
 
+function renderFiles(files) {
+  if (!files.length) {
+    fileList.innerHTML = '<div class="session-empty">No matching files</div>';
+    return;
+  }
+
+  fileList.innerHTML = files
+    .map(
+      (file) => `
+        <button class="file-row" type="button" data-file-path="${escapeHtml(file.path)}">
+          <span class="file-extension">${escapeHtml(file.extension)}</span>
+          <span>${escapeHtml(file.path)}</span>
+        </button>
+      `
+    )
+    .join("");
+}
+
+function filterFiles(files, query) {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) {
+    return files;
+  }
+  return files.filter((file) => file.path.toLowerCase().includes(normalized));
+}
+
+function renderFilteredFiles() {
+  renderFiles(filterFiles(allFiles, fileSearch.value));
+}
+
 function setMode(mode) {
   const copy = modeCopy[mode] ?? modeCopy.code;
   modeTabs.forEach((tab) => {
@@ -368,8 +409,10 @@ function toggleCommandPanel(force) {
   if (shouldOpen) {
     skillsPanel.hidden = true;
     scorePanel.hidden = true;
+    filesPanel.hidden = true;
     skillsButton.classList.remove("active");
     scorePreviewButton.classList.remove("active");
+    attachFilesButton.classList.remove("active");
   }
   if (shouldOpen && currentWorkspace) {
     renderWorkspaceStatus(currentWorkspace);
@@ -383,8 +426,10 @@ function toggleSkillsPanel(force) {
   if (shouldOpen) {
     commandPanel.hidden = true;
     scorePanel.hidden = true;
+    filesPanel.hidden = true;
     renderSkills(allSkills);
     scorePreviewButton.classList.remove("active");
+    attachFilesButton.classList.remove("active");
   }
 }
 
@@ -395,8 +440,33 @@ function toggleScorePanel(force) {
   if (shouldOpen) {
     commandPanel.hidden = true;
     skillsPanel.hidden = true;
+    filesPanel.hidden = true;
     skillsButton.classList.remove("active");
+    attachFilesButton.classList.remove("active");
   }
+}
+
+function toggleFilesPanel(force) {
+  const shouldOpen = force ?? filesPanel.hidden;
+  filesPanel.hidden = !shouldOpen;
+  attachFilesButton.classList.toggle("active", shouldOpen);
+  if (shouldOpen) {
+    commandPanel.hidden = true;
+    skillsPanel.hidden = true;
+    scorePanel.hidden = true;
+    skillsButton.classList.remove("active");
+    scorePreviewButton.classList.remove("active");
+    renderFilteredFiles();
+    fileSearch.focus();
+  }
+}
+
+function attachFile(path) {
+  const prefix = composer.value.trim() ? " " : "";
+  composer.value = `${composer.value}${prefix}@${path}`;
+  composer.focus();
+  composerStatus.classList.remove("error");
+  composerStatus.textContent = `Attached ${path}`;
 }
 
 function taskFromApi(task, context) {
@@ -601,6 +671,28 @@ async function loadSkills() {
   renderSkills(allSkills);
 }
 
+async function loadFiles() {
+  try {
+    const response = await fetch("/api/files");
+    if (!response.ok) {
+      throw new Error(`Files API returned ${response.status}`);
+    }
+    const payload = await response.json();
+    allFiles = payload.files ?? [];
+    filesPanelMeta.textContent = `${allFiles.length} files available in ${payload.workspace?.name ?? "workspace"}`;
+  } catch {
+    allFiles = [
+      {
+        path: "README.md",
+        name: "README.md",
+        extension: "md"
+      }
+    ];
+    filesPanelMeta.textContent = "Static preview mode";
+  }
+  renderFilteredFiles();
+}
+
 async function loadWorkspace() {
   try {
     const response = await fetch("/api/workspace");
@@ -636,7 +728,9 @@ async function startNewTask() {
   commandPanel.hidden = true;
   skillsPanel.hidden = true;
   scorePanel.hidden = true;
+  filesPanel.hidden = true;
   scorePreviewButton.classList.remove("active");
+  attachFilesButton.classList.remove("active");
   document.querySelectorAll(".nav-action").forEach((button) => {
     button.classList.toggle("active", button === newTaskButton);
   });
@@ -667,11 +761,20 @@ sessionSearch.addEventListener("keydown", (event) => {
   }
 });
 terminalButton.addEventListener("click", () => toggleCommandPanel());
+attachFilesButton.addEventListener("click", () => toggleFilesPanel());
 slashCommandsButton.addEventListener("click", () => toggleCommandPanel(true));
 scorePreviewButton.addEventListener("click", previewComposerScore);
 closeCommandPanel.addEventListener("click", () => toggleCommandPanel(false));
 closeSkillsPanel.addEventListener("click", () => toggleSkillsPanel(false));
 closeScorePanel.addEventListener("click", () => toggleScorePanel(false));
+closeFilesPanel.addEventListener("click", () => toggleFilesPanel(false));
+fileSearch.addEventListener("input", renderFilteredFiles);
+fileList.addEventListener("click", (event) => {
+  const row = event.target.closest(".file-row");
+  if (row?.dataset.filePath) {
+    attachFile(row.dataset.filePath);
+  }
+});
 commandList.addEventListener("click", (event) => {
   const row = event.target.closest(".command-row");
   if (row?.dataset.commandIndex) {
@@ -693,5 +796,6 @@ renderScore();
 loadWorkspace();
 loadSoloists();
 loadSkills();
+loadFiles();
 loadSessions();
 loadInitialScore();

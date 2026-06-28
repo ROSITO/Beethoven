@@ -13,7 +13,7 @@ from urllib.parse import unquote, urlparse
 from beethoven.desktop_state import DesktopSessionStore
 from beethoven.runtime import list_skills, list_soloists, run_objective, score_objective
 from beethoven.serialization import context_to_dict, score_to_dict
-from beethoven.workspace import inspect_workspace
+from beethoven.workspace import inspect_workspace, list_workspace_files
 
 
 DESKTOP_ROOT = Path(__file__).resolve().parents[2] / "desktop"
@@ -52,6 +52,9 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             return
         if path == "/api/workspace":
             self._send_json({"workspace": inspect_workspace()})
+            return
+        if path == "/api/files":
+            self._send_json(list_workspace_files())
             return
         super().do_GET()
 

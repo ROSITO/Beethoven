@@ -121,6 +121,7 @@ beethoven sessions show <session-id>
 beethoven soloists list
 beethoven skills list
 beethoven workspace
+beethoven workspace files
 beethoven package sidecar
 beethoven plugins list
 ```
@@ -134,6 +135,7 @@ The first implemented commands are:
 - `beethoven skills list`: inspect routable capabilities and compatible
   soloists.
 - `beethoven workspace`: inspect project and Git context.
+- `beethoven workspace files`: list attachable workspace files.
 - `beethoven package sidecar`: generate a desktop sidecar launcher.
 
 ## Current Desktop Prototype
@@ -154,8 +156,8 @@ It implements the first visible shell:
 - sidebar actions for new tasks, session search, and the skill catalog;
 - conversation/progression canvas;
 - score inspector with routing reasons, cost, privacy, and task state;
-- composer with project context, permission mode, router policy, score preview,
-  and effort.
+- composer with project context, file attachments, permission mode, router
+  policy, score preview, and effort.
 - a Tauri v2 native shell scaffold for desktop development.
 
 When served with `beethoven desktop`, the workbench uses the local API endpoints:
@@ -165,6 +167,7 @@ When served with `beethoven desktop`, the workbench uses the local API endpoints
 - `GET /api/soloists`;
 - `GET /api/skills`;
 - `GET /api/workspace`;
+- `GET /api/files`;
 - `POST /api/score`;
 - `POST /api/run`.
 

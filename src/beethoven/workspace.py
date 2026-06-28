@@ -2,9 +2,36 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 from typing import Any
+
+
+IGNORED_DIRS = {
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+    "dist",
+    "node_modules",
+    "target",
+}
+IGNORED_SUFFIXES = {
+    ".DS_Store",
+    ".a",
+    ".dylib",
+    ".jpeg",
+    ".jpg",
+    ".lock",
+    ".mp4",
+    ".png",
+    ".pyc",
+    ".so",
+    ".webp",
+}
 
 
 def inspect_workspace(path: str | Path | None = None) -> dict[str, Any]:
@@ -23,6 +50,42 @@ def inspect_workspace(path: str | Path | None = None) -> dict[str, Any]:
         "changes": len(status_lines),
         "status": status_lines,
     }
+
+
+def list_workspace_files(path: str | Path | None = None, limit: int = 80) -> dict[str, Any]:
+    workspace = inspect_workspace(path)
+    root = Path(str(workspace["path"]))
+    files: list[dict[str, object]] = []
+    for directory, dirnames, filenames in os.walk(root):
+        dirnames[:] = sorted(name for name in dirnames if name not in IGNORED_DIRS)
+        for filename in sorted(filenames):
+            if len(files) >= limit:
+                break
+            candidate = Path(directory) / filename
+            if _is_ignored(candidate, root):
+                continue
+            relative_path = candidate.relative_to(root).as_posix()
+            files.append(
+                {
+                    "path": relative_path,
+                    "name": candidate.name,
+                    "extension": candidate.suffix.lstrip(".") or "file",
+                }
+            )
+        if len(files) >= limit:
+            break
+    return {
+        "workspace": workspace,
+        "files": files,
+        "limit": limit,
+    }
+
+
+def _is_ignored(path: Path, root: Path) -> bool:
+    relative_parts = path.relative_to(root).parts
+    if any(part in IGNORED_DIRS for part in relative_parts[:-1]):
+        return True
+    return path.name in IGNORED_SUFFIXES or path.suffix in IGNORED_SUFFIXES
 
 
 def _git(cwd: Path, *args: str) -> str | None:

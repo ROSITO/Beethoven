@@ -10,9 +10,13 @@ from beethoven.core import ExecutionContext, Score, SoloistResult
 from beethoven.planning import create_baseline_score
 from beethoven.routing import CapabilityRouter, SoloistRegistry
 from beethoven.soloists import (
+    ClaudeCliSoloist,
+    CodexCliSoloist,
     EchoSoloist,
     LocalReaderSoloist,
     OllamaSoloist,
+    claude_cli_is_available,
+    codex_cli_is_available,
     ollama_is_available,
     ollama_is_enabled,
 )
@@ -35,6 +39,10 @@ def create_default_registry() -> SoloistRegistry:
     registry = SoloistRegistry()
     registry.register(EchoSoloist())
     registry.register(LocalReaderSoloist())
+    if claude_cli_is_available():
+        registry.register(ClaudeCliSoloist())
+    if codex_cli_is_available():
+        registry.register(CodexCliSoloist())
     if ollama_is_enabled() and ollama_is_available():
         registry.register(OllamaSoloist())
     return registry
@@ -71,6 +79,24 @@ def list_soloists() -> list[dict[str, object]]:
             "locality": "local",
             "capabilities": ["analyze", "review", "synthesize"],
             "description": "Safe local text reader for attached workspace files without external models.",
+        },
+        {
+            "id": "claude-cli",
+            "name": "Claude CLI",
+            "provider": "Claude Code",
+            "status": "available" if claude_cli_is_available() else "planned",
+            "locality": "cloud",
+            "capabilities": ["analyze", "plan", "code", "review", "synthesize"],
+            "description": "Claude Code CLI adapter using non-interactive print mode.",
+        },
+        {
+            "id": "codex-cli",
+            "name": "Codex CLI",
+            "provider": "OpenAI Codex",
+            "status": "available" if codex_cli_is_available() else "planned",
+            "locality": "cloud",
+            "capabilities": ["analyze", "plan", "code", "review", "synthesize"],
+            "description": "Codex CLI adapter using non-interactive read-only execution.",
         },
         {
             "id": "ollama",

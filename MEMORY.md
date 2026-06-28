@@ -77,6 +77,12 @@ Current available soloists:
 
 - `local-echo`: deterministic local/offline soloist used for testing and UI
   flows.
+- `local-reader`: safe local text reader for attached workspace files without a
+  model call.
+- `claude-cli`: Claude Code CLI adapter when `claude` is installed/logged in;
+  invoked only when explicitly selected.
+- `codex-cli`: Codex CLI adapter when `codex` is installed/logged in; invoked
+  only when explicitly selected and run in read-only sandbox mode.
 - `ollama`: detected when `ollama list` contains the configured model
   (`BEETHOVEN_OLLAMA_MODEL`, default `qwen3-coder:latest`), but disabled by
   default unless `BEETHOVEN_ENABLE_OLLAMA=1` is set. This is deliberate because
@@ -98,7 +104,9 @@ beethoven score "<objective>" --json
 beethoven run "<objective>"
 beethoven run "<objective>" --json
 beethoven run "<objective>" --soloist local-echo --permission ask --effort medium
-beethoven run "Review @README.md" --soloist ollama
+beethoven run "Review @README.md" --soloist local-reader
+beethoven run "Review @README.md" --soloist claude-cli
+beethoven run "Review @README.md" --soloist codex-cli
 beethoven run "<objective>" --validate "python -m pytest"
 beethoven desktop
 beethoven desktop --open
@@ -414,6 +422,9 @@ BEETHOVEN_HOME=$(mktemp -d) .venv/bin/beethoven desktop --host 127.0.0.1 --port 
 Run with local context/model/validation:
 
 ```bash
+.venv/bin/beethoven run "Review @README.md" --soloist local-reader
+.venv/bin/beethoven run "Review @README.md" --soloist claude-cli
+.venv/bin/beethoven run "Review @README.md" --soloist codex-cli
 BEETHOVEN_ENABLE_OLLAMA=1 .venv/bin/beethoven run "Review @README.md" --soloist ollama
 .venv/bin/beethoven run "Check the project" --validate ".venv/bin/python -m pytest"
 ```

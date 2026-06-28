@@ -39,6 +39,8 @@ This repository now contains the first executable orchestration kernel:
 - `Conductor`: dependency-aware score execution.
 - `beethoven` CLI: terminal surface for creating and running scores.
 - `OllamaSoloist`: first real local model adapter when Ollama is available.
+- `ClaudeCliSoloist` and `CodexCliSoloist`: CLI adapters for logged-in local
+  Claude Code and Codex installations.
 - `@path` attachments: safe workspace file context with size limits.
 - Run events: score/task/validation events for desktop streaming.
 
@@ -191,6 +193,8 @@ beethoven score "Refactor this repository"
 beethoven run "Refactor this repository"
 beethoven run "Refactor this repository" --json
 beethoven run "Review @README.md" --validate "python -m pytest"
+beethoven run "Review @README.md" --soloist claude-cli
+beethoven run "Review @README.md" --soloist codex-cli
 beethoven desktop
 beethoven desktop --open
 beethoven sessions list
@@ -213,6 +217,10 @@ to run the configured model:
 ```bash
 BEETHOVEN_ENABLE_OLLAMA=1 beethoven run "Review @README.md" --soloist ollama
 ```
+
+Claude CLI and Codex CLI are detected when installed locally. They are only
+invoked when explicitly selected with `--soloist claude-cli` or
+`--soloist codex-cli`; Codex runs in read-only sandbox mode from Beethoven.
 
 Without installing dev dependencies, the current tests can also run with:
 

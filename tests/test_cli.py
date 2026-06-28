@@ -121,6 +121,16 @@ def test_ollama_requires_explicit_opt_in(monkeypatch) -> None:
     assert next(item for item in soloists if item["id"] == "ollama")["status"] == "disabled"
 
 
+def test_cli_soloists_are_listed_when_installed(monkeypatch) -> None:
+    monkeypatch.setattr("beethoven.runtime.claude_cli_is_available", lambda: True)
+    monkeypatch.setattr("beethoven.runtime.codex_cli_is_available", lambda: True)
+
+    soloists = list_soloists()
+
+    assert next(item for item in soloists if item["id"] == "claude-cli")["status"] == "available"
+    assert next(item for item in soloists if item["id"] == "codex-cli")["status"] == "available"
+
+
 def test_skills_list_command_prints_capability_catalog(capsys) -> None:
     exit_code = main(["skills", "list"])
 

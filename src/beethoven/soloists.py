@@ -9,6 +9,8 @@ from dataclasses import dataclass
 
 from beethoven.core import Capability, ExecutionContext, SoloistResult, Task
 
+MAX_OLLAMA_ATTACHMENT_CHARS = int(os.getenv("BEETHOVEN_OLLAMA_ATTACHMENT_CHARS", "12000"))
+
 
 @dataclass(frozen=True)
 class EchoSoloist:
@@ -72,7 +74,8 @@ class OllamaSoloist:
     def _build_prompt(self, task: Task, context: ExecutionContext) -> str:
         attachments = context.score.metadata.get("attachments", [])
         attachment_text = "\n\n".join(
-            f"File: {item.get('path')}\n{item.get('content', '')}" for item in attachments
+            f"File: {item.get('path')}\n{str(item.get('content', ''))[:MAX_OLLAMA_ATTACHMENT_CHARS]}"
+            for item in attachments
         )
         previous = "\n".join(
             f"- {task_id}: {artifact.output}" for task_id, artifact in context.artifacts.items()
@@ -90,6 +93,10 @@ class OllamaSoloist:
             sections.append(f"Previous artifacts:\n{previous}")
         sections.append("Return a concise, useful result for this task.")
         return "\n\n".join(sections)
+
+
+def ollama_is_enabled() -> bool:
+    return os.getenv("BEETHOVEN_ENABLE_OLLAMA", "").lower() in {"1", "true", "yes"}
 
 
 def ollama_is_available(model: str | None = None) -> bool:

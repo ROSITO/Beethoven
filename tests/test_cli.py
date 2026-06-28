@@ -5,7 +5,7 @@ import sys
 
 from beethoven.cli import main, run_terminal_session
 from beethoven.desktop_state import DesktopSessionStore
-from beethoven.runtime import run_objective
+from beethoven.runtime import list_soloists, run_objective
 
 
 def test_score_command_prints_json(capsys) -> None:
@@ -90,6 +90,15 @@ def test_soloists_list_command_prints_catalog(capsys) -> None:
     assert exit_code == 0
     assert "Local Echo [available]" in captured.out
     assert "Ollama [" in captured.out
+
+
+def test_ollama_requires_explicit_opt_in(monkeypatch) -> None:
+    monkeypatch.delenv("BEETHOVEN_ENABLE_OLLAMA", raising=False)
+    monkeypatch.setattr("beethoven.runtime.ollama_is_available", lambda: True)
+
+    soloists = list_soloists()
+
+    assert next(item for item in soloists if item["id"] == "ollama")["status"] == "disabled"
 
 
 def test_skills_list_command_prints_capability_catalog(capsys) -> None:

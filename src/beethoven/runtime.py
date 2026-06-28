@@ -9,7 +9,7 @@ from beethoven.conductor import Conductor
 from beethoven.core import ExecutionContext, Score, SoloistResult
 from beethoven.planning import create_baseline_score
 from beethoven.routing import CapabilityRouter, SoloistRegistry
-from beethoven.soloists import EchoSoloist, OllamaSoloist, ollama_is_available
+from beethoven.soloists import EchoSoloist, OllamaSoloist, ollama_is_available, ollama_is_enabled
 from beethoven.validation import run_validation_hooks
 from beethoven.workspace import read_workspace_attachments
 
@@ -28,13 +28,16 @@ class SoloistDescriptor:
 def create_default_registry() -> SoloistRegistry:
     registry = SoloistRegistry()
     registry.register(EchoSoloist())
-    if ollama_is_available():
+    if ollama_is_enabled() and ollama_is_available():
         registry.register(OllamaSoloist())
     return registry
 
 
 def list_soloists() -> list[dict[str, object]]:
-    ollama_status = "available" if ollama_is_available() else "planned"
+    ollama_available = ollama_is_available()
+    ollama_status = "available" if ollama_is_enabled() and ollama_available else "disabled"
+    if not ollama_available:
+        ollama_status = "planned"
     return [
         {
             "id": "local-echo",
@@ -60,7 +63,10 @@ def list_soloists() -> list[dict[str, object]]:
             "status": ollama_status,
             "locality": "local",
             "capabilities": ["analyze", "plan", "code", "review", "synthesize"],
-            "description": "Local-first Ollama adapter for private orchestration.",
+            "description": (
+                "Local-first Ollama adapter. Disabled by default because large local models "
+                "can create heavy memory pressure; set BEETHOVEN_ENABLE_OLLAMA=1 to enable."
+            ),
         },
         {
             "id": "openai-compatible",
@@ -136,6 +142,8 @@ def run_objective(
     validation_commands: list[str] | None = None,
     event_sink: Callable[[dict[str, object]], None] | None = None,
 ) -> ExecutionContext:
+    if soloist == "ollama" and not ollama_is_enabled():
+        raise RuntimeError("Ollama is disabled by default. Restart with BEETHOVEN_ENABLE_OLLAMA=1 to opt in.")
     if soloist == "ollama" and not ollama_is_available():
         raise RuntimeError("Ollama soloist requested but the configured local model is unavailable.")
     score = score_objective(

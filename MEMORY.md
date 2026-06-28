@@ -77,8 +77,10 @@ Current available soloists:
 
 - `local-echo`: deterministic local/offline soloist used for testing and UI
   flows.
-- `ollama`: available when `ollama list` contains the configured model
-  (`BEETHOVEN_OLLAMA_MODEL`, default `qwen3-coder:latest`).
+- `ollama`: detected when `ollama list` contains the configured model
+  (`BEETHOVEN_OLLAMA_MODEL`, default `qwen3-coder:latest`), but disabled by
+  default unless `BEETHOVEN_ENABLE_OLLAMA=1` is set. This is deliberate because
+  large local models can create heavy memory pressure.
 
 Planned soloist catalog:
 
@@ -412,7 +414,7 @@ BEETHOVEN_HOME=$(mktemp -d) .venv/bin/beethoven desktop --host 127.0.0.1 --port 
 Run with local context/model/validation:
 
 ```bash
-.venv/bin/beethoven run "Review @README.md" --soloist ollama
+BEETHOVEN_ENABLE_OLLAMA=1 .venv/bin/beethoven run "Review @README.md" --soloist ollama
 .venv/bin/beethoven run "Check the project" --validate ".venv/bin/python -m pytest"
 ```
 

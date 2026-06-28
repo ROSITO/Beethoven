@@ -190,7 +190,6 @@ beethoven chat
 beethoven score "Refactor this repository"
 beethoven run "Refactor this repository"
 beethoven run "Refactor this repository" --json
-beethoven run "Review @README.md" --soloist ollama
 beethoven run "Review @README.md" --validate "python -m pytest"
 beethoven desktop
 beethoven desktop --open
@@ -206,6 +205,14 @@ beethoven package sidecar
 Inside `beethoven chat`, type an objective to run it directly, or use slash
 commands such as `/score`, `/run`, `/files`, `/workspace`, `/permission`,
 `/effort`, `/soloist`, and `/exit`.
+
+Ollama is detected but disabled by default in the app because large local models
+can create heavy memory pressure. Enable it explicitly only when you are ready
+to run the configured model:
+
+```bash
+BEETHOVEN_ENABLE_OLLAMA=1 beethoven run "Review @README.md" --soloist ollama
+```
 
 Without installing dev dependencies, the current tests can also run with:
 

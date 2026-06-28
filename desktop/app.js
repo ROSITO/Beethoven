@@ -56,6 +56,7 @@ const slashCommandsButton = document.querySelector("#slashCommandsButton");
 const scorePreviewButton = document.querySelector("#scorePreviewButton");
 const commandPanel = document.querySelector("#commandPanel");
 const closeCommandPanel = document.querySelector("#closeCommandPanel");
+const commandSearch = document.querySelector("#commandSearch");
 const commandList = document.querySelector("#commandList");
 const workspaceStatusList = document.querySelector("#workspaceStatusList");
 const skillsPanel = document.querySelector("#skillsPanel");
@@ -371,11 +372,27 @@ function renderWorkspace(workspace) {
   renderWorkspaceStatus(workspace);
 }
 
-function renderCommandList() {
-  commandList.innerHTML = cliCommands
+function filterCommands(commands, query) {
+  const normalized = query.trim().replace(/^\/+/, "").toLowerCase();
+  if (!normalized) {
+    return commands;
+  }
+  return commands.filter((item) => {
+    const searchable = `${item.command} ${item.description}`.toLowerCase();
+    return searchable.includes(normalized);
+  });
+}
+
+function renderCommandList(commands = filterCommands(cliCommands, commandSearch.value)) {
+  if (!commands.length) {
+    commandList.innerHTML = '<div class="session-empty">No matching commands</div>';
+    return;
+  }
+
+  commandList.innerHTML = commands
     .map(
-      (item, index) => `
-        <button class="command-row" type="button" data-command-index="${index}">
+      (item) => `
+        <button class="command-row" type="button" data-command="${escapeHtml(item.command)}">
           <code>${escapeHtml(item.command)}</code>
           <span>${escapeHtml(item.description)}</span>
         </button>
@@ -416,6 +433,10 @@ function toggleCommandPanel(force) {
   }
   if (shouldOpen && currentWorkspace) {
     renderWorkspaceStatus(currentWorkspace);
+  }
+  if (shouldOpen) {
+    renderCommandList();
+    commandSearch.focus();
   }
 }
 
@@ -467,6 +488,13 @@ function attachFile(path) {
   composer.focus();
   composerStatus.classList.remove("error");
   composerStatus.textContent = `Attached ${path}`;
+}
+
+function insertCommand(command) {
+  composer.value = command;
+  composer.focus();
+  composerStatus.classList.remove("error");
+  composerStatus.textContent = `Inserted command: ${command}`;
 }
 
 function taskFromApi(task, context) {
@@ -743,6 +771,14 @@ composer.addEventListener("keydown", (event) => {
   if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
     event.preventDefault();
     runComposer();
+    return;
+  }
+  if (event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey) {
+    setTimeout(() => {
+      commandSearch.value = composer.value.trim().replace(/^\/+/, "");
+      toggleCommandPanel(true);
+      renderCommandList();
+    }, 0);
   }
 });
 
@@ -768,6 +804,23 @@ closeCommandPanel.addEventListener("click", () => toggleCommandPanel(false));
 closeSkillsPanel.addEventListener("click", () => toggleSkillsPanel(false));
 closeScorePanel.addEventListener("click", () => toggleScorePanel(false));
 closeFilesPanel.addEventListener("click", () => toggleFilesPanel(false));
+commandSearch.addEventListener("input", () => renderCommandList());
+commandSearch.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    toggleCommandPanel(false);
+    composer.focus();
+    return;
+  }
+  if (event.key === "Enter") {
+    event.preventDefault();
+    const [firstCommand] = filterCommands(cliCommands, commandSearch.value);
+    if (firstCommand) {
+      insertCommand(firstCommand.command);
+      toggleCommandPanel(false);
+    }
+  }
+});
 fileSearch.addEventListener("input", renderFilteredFiles);
 fileList.addEventListener("click", (event) => {
   const row = event.target.closest(".file-row");
@@ -777,9 +830,9 @@ fileList.addEventListener("click", (event) => {
 });
 commandList.addEventListener("click", (event) => {
   const row = event.target.closest(".command-row");
-  if (row?.dataset.commandIndex) {
-    composer.value = cliCommands[Number(row.dataset.commandIndex)].command;
-    composer.focus();
+  if (row?.dataset.command) {
+    insertCommand(row.dataset.command);
+    toggleCommandPanel(false);
   }
 });
 sessionList.addEventListener("click", (event) => {

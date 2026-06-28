@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Beethoven Desktop Prototype</title>
-    <link rel="stylesheet" href="./styles.css?v=context-files" />
+    <link rel="stylesheet" href="./styles.css?v=command-palette" />
   </head>
   <body>
     <div class="app-shell">
@@ -112,6 +112,14 @@
           <div class="command-grid">
             <div>
               <h3>Commands</h3>
+              <label class="composer-label" for="commandSearch">Search commands</label>
+              <input
+                class="session-search"
+                id="commandSearch"
+                type="search"
+                placeholder="Type a command"
+                autocomplete="off"
+              />
               <div class="command-list" id="commandList"></div>
             </div>
             <div>
@@ -267,6 +275,6 @@
       </main>
     </div>
 
-    <script src="./app.js?v=context-files"></script>
+    <script src="./app.js?v=command-palette"></script>
   </body>
 </html>

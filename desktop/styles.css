@@ -394,6 +394,12 @@ button {
   gap: 14px;
 }
 
+.command-grid > div {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
 .command-list,
 .workspace-status-list {
   display: grid;

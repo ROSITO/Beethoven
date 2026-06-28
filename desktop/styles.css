@@ -330,7 +330,8 @@ button {
 .command-panel,
 .skills-panel,
 .score-panel,
-.files-panel {
+.files-panel,
+.session-panel {
   display: grid;
   gap: 16px;
   margin: 16px 26px 0;
@@ -343,14 +344,16 @@ button {
 .command-panel[hidden],
 .skills-panel[hidden],
 .score-panel[hidden],
-.files-panel[hidden] {
+.files-panel[hidden],
+.session-panel[hidden] {
   display: none;
 }
 
 .command-panel-header,
 .skills-panel-header,
 .score-panel-header,
-.files-panel-header {
+.files-panel-header,
+.session-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -361,14 +364,16 @@ button {
 .command-panel h3,
 .skills-panel h2,
 .score-panel h2,
-.files-panel h2 {
+.files-panel h2,
+.session-panel h2 {
   margin: 0;
 }
 
 .command-panel h2,
 .skills-panel h2,
 .score-panel h2,
-.files-panel h2 {
+.files-panel h2,
+.session-panel h2 {
   font-size: 16px;
 }
 
@@ -381,7 +386,8 @@ button {
 .command-panel-header span,
 .skills-panel-header span,
 .score-panel-header span,
-.files-panel-header span {
+.files-panel-header span,
+.session-panel-header span {
   display: block;
   margin-top: 2px;
   color: var(--muted);
@@ -424,15 +430,37 @@ button {
   overflow: auto;
 }
 
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
 .command-row,
 .status-row,
-.file-row {
+.file-row,
+.action-row {
   display: grid;
   gap: 4px;
   padding: 10px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
+}
+
+.action-row {
+  min-height: 78px;
+  text-align: left;
+}
+
+.action-row strong,
+.action-row span {
+  display: block;
+}
+
+.action-row span {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .file-row {
@@ -909,14 +937,16 @@ textarea:focus {
   .command-panel,
   .skills-panel,
   .score-panel,
-  .files-panel {
+  .files-panel,
+  .session-panel {
     padding-inline: 16px;
   }
 
   .command-panel,
   .skills-panel,
   .score-panel,
-  .files-panel {
+  .files-panel,
+  .session-panel {
     margin: 14px 16px 0;
   }
 

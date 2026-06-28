@@ -124,7 +124,9 @@ composer. The sidebar actions for new tasks, session search, and skills are
 live when served through the local API. The composer can attach workspace files
 as `@path` context and preview a score before running it, mirroring
 `beethoven workspace files` and `beethoven score`. The `/ commands` surface is
-filterable and can insert CLI commands back into the composer.
+filterable and can insert CLI commands back into the composer. The top-bar
+session menu can copy score IDs, insert session commands, and export the current
+score JSON.
 
 Open it directly, or serve it through Beethoven's local desktop API:
 

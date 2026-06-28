@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Beethoven Desktop Prototype</title>
-    <link rel="stylesheet" href="./styles.css?v=command-palette" />
+    <link rel="stylesheet" href="./styles.css?v=session-actions" />
   </head>
   <body>
     <div class="app-shell">
@@ -97,7 +97,7 @@
           <div class="topbar-actions">
             <button class="icon-button" id="terminalButton" type="button" aria-label="Open terminal">›_</button>
             <button class="icon-button" id="runScoreButton" type="button" aria-label="Run score">▶</button>
-            <button class="icon-button" type="button" aria-label="More options">⋮</button>
+            <button class="icon-button" id="moreOptionsButton" type="button" aria-label="More options">⋮</button>
           </div>
         </header>
 
@@ -168,6 +168,34 @@
             autocomplete="off"
           />
           <div class="file-list" id="fileList"></div>
+        </section>
+
+        <section class="session-panel" id="sessionPanel" aria-label="Session actions" hidden>
+          <div class="session-panel-header">
+            <div>
+              <h2>Session Actions</h2>
+              <span id="sessionPanelMeta">Score actions mirror the CLI.</span>
+            </div>
+            <button class="icon-button" id="closeSessionPanel" type="button" aria-label="Close session actions">×</button>
+          </div>
+          <div class="action-grid">
+            <button class="action-row" id="copyScoreIdButton" type="button">
+              <strong>Copy score ID</strong>
+              <span>Use the current score as a portable reference.</span>
+            </button>
+            <button class="action-row" id="insertSessionCommandButton" type="button">
+              <strong>Insert CLI restore command</strong>
+              <span>Send a session command back to the composer.</span>
+            </button>
+            <button class="action-row" id="exportScoreButton" type="button">
+              <strong>Export score JSON</strong>
+              <span>Download the current score or run context.</span>
+            </button>
+            <button class="action-row" id="openCommandsFromMenuButton" type="button">
+              <strong>Open Command Center</strong>
+              <span>Show the CLI surface for this workspace.</span>
+            </button>
+          </div>
         </section>
 
         <section class="canvas">
@@ -275,6 +303,6 @@
       </main>
     </div>
 
-    <script src="./app.js?v=command-palette"></script>
+    <script src="./app.js?v=session-actions"></script>
   </body>
 </html>

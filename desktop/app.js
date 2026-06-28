@@ -51,6 +51,7 @@ const composerBranch = document.querySelector("#composerBranch");
 const workspaceChanges = document.querySelector("#workspaceChanges");
 const terminalButton = document.querySelector("#terminalButton");
 const runScoreButton = document.querySelector("#runScoreButton");
+const moreOptionsButton = document.querySelector("#moreOptionsButton");
 const attachFilesButton = document.querySelector("#attachFilesButton");
 const slashCommandsButton = document.querySelector("#slashCommandsButton");
 const scorePreviewButton = document.querySelector("#scorePreviewButton");
@@ -71,12 +72,21 @@ const closeFilesPanel = document.querySelector("#closeFilesPanel");
 const filesPanelMeta = document.querySelector("#filesPanelMeta");
 const fileSearch = document.querySelector("#fileSearch");
 const fileList = document.querySelector("#fileList");
+const sessionPanel = document.querySelector("#sessionPanel");
+const closeSessionPanel = document.querySelector("#closeSessionPanel");
+const sessionPanelMeta = document.querySelector("#sessionPanelMeta");
+const copyScoreIdButton = document.querySelector("#copyScoreIdButton");
+const insertSessionCommandButton = document.querySelector("#insertSessionCommandButton");
+const exportScoreButton = document.querySelector("#exportScoreButton");
+const openCommandsFromMenuButton = document.querySelector("#openCommandsFromMenuButton");
 
 let currentWorkspace = null;
 let allSessions = [];
 let activeSessionId = null;
 let allSkills = [];
 let allFiles = [];
+let currentScore = null;
+let currentRunContext = null;
 
 const modeCopy = {
   chat: {
@@ -245,6 +255,8 @@ function setSearchOpen(open) {
 function applyRunContext(context) {
   scoreTasks = context.score.tasks.map((task) => taskFromApi(task, context));
   scoreId.textContent = context.score.id;
+  currentScore = context.score;
+  currentRunContext = context;
   if (context.score.metadata?.soloist) {
     soloistSelect.value = context.score.metadata.soloist;
   }
@@ -420,16 +432,24 @@ function renderWorkspaceStatus(workspace) {
     .join("");
 }
 
+function hideUtilityPanels() {
+  commandPanel.hidden = true;
+  skillsPanel.hidden = true;
+  scorePanel.hidden = true;
+  filesPanel.hidden = true;
+  sessionPanel.hidden = true;
+  skillsButton.classList.remove("active");
+  scorePreviewButton.classList.remove("active");
+  attachFilesButton.classList.remove("active");
+  moreOptionsButton.classList.remove("active");
+}
+
 function toggleCommandPanel(force) {
   const shouldOpen = force ?? commandPanel.hidden;
   commandPanel.hidden = !shouldOpen;
   if (shouldOpen) {
-    skillsPanel.hidden = true;
-    scorePanel.hidden = true;
-    filesPanel.hidden = true;
-    skillsButton.classList.remove("active");
-    scorePreviewButton.classList.remove("active");
-    attachFilesButton.classList.remove("active");
+    hideUtilityPanels();
+    commandPanel.hidden = false;
   }
   if (shouldOpen && currentWorkspace) {
     renderWorkspaceStatus(currentWorkspace);
@@ -445,12 +465,10 @@ function toggleSkillsPanel(force) {
   skillsPanel.hidden = !shouldOpen;
   skillsButton.classList.toggle("active", shouldOpen);
   if (shouldOpen) {
-    commandPanel.hidden = true;
-    scorePanel.hidden = true;
-    filesPanel.hidden = true;
+    hideUtilityPanels();
+    skillsPanel.hidden = false;
+    skillsButton.classList.add("active");
     renderSkills(allSkills);
-    scorePreviewButton.classList.remove("active");
-    attachFilesButton.classList.remove("active");
   }
 }
 
@@ -459,11 +477,9 @@ function toggleScorePanel(force) {
   scorePanel.hidden = !shouldOpen;
   scorePreviewButton.classList.toggle("active", shouldOpen);
   if (shouldOpen) {
-    commandPanel.hidden = true;
-    skillsPanel.hidden = true;
-    filesPanel.hidden = true;
-    skillsButton.classList.remove("active");
-    attachFilesButton.classList.remove("active");
+    hideUtilityPanels();
+    scorePanel.hidden = false;
+    scorePreviewButton.classList.add("active");
   }
 }
 
@@ -472,13 +488,25 @@ function toggleFilesPanel(force) {
   filesPanel.hidden = !shouldOpen;
   attachFilesButton.classList.toggle("active", shouldOpen);
   if (shouldOpen) {
-    commandPanel.hidden = true;
-    skillsPanel.hidden = true;
-    scorePanel.hidden = true;
-    skillsButton.classList.remove("active");
-    scorePreviewButton.classList.remove("active");
+    hideUtilityPanels();
+    filesPanel.hidden = false;
+    attachFilesButton.classList.add("active");
     renderFilteredFiles();
     fileSearch.focus();
+  }
+}
+
+function toggleSessionPanel(force) {
+  const shouldOpen = force ?? sessionPanel.hidden;
+  sessionPanel.hidden = !shouldOpen;
+  moreOptionsButton.classList.toggle("active", shouldOpen);
+  if (shouldOpen) {
+    hideUtilityPanels();
+    sessionPanel.hidden = false;
+    moreOptionsButton.classList.add("active");
+    sessionPanelMeta.textContent = activeSessionId
+      ? `Active session ${activeSessionId}`
+      : `Current score ${scoreId.textContent}`;
   }
 }
 
@@ -495,6 +523,32 @@ function insertCommand(command) {
   composer.focus();
   composerStatus.classList.remove("error");
   composerStatus.textContent = `Inserted command: ${command}`;
+}
+
+async function copyText(value, label) {
+  try {
+    await navigator.clipboard.writeText(value);
+    composerStatus.classList.remove("error");
+    composerStatus.textContent = `Copied ${label}.`;
+  } catch {
+    composer.value = value;
+    composer.focus();
+    composerStatus.textContent = `Inserted ${label} into composer.`;
+  }
+}
+
+function exportCurrentScore() {
+  const payload = currentRunContext ?? { score: currentScore, trace: [], statuses: {} };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `${scoreId.textContent}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
+  composerStatus.classList.remove("error");
+  composerStatus.textContent = `Exported ${scoreId.textContent}.json`;
 }
 
 function taskFromApi(task, context) {
@@ -607,6 +661,8 @@ async function loadScoreForObjective(objective) {
     const score = await response.json();
     scoreTasks = score.tasks.map((task) => taskFromScore(task));
     scoreId.textContent = score.id;
+    currentScore = score;
+    currentRunContext = null;
   } catch {
     composerStatus.textContent = "Static preview mode. Start `beethoven desktop` for live runs.";
   } finally {
@@ -630,6 +686,8 @@ async function previewComposerScore() {
     const score = await response.json();
     scoreTasks = score.tasks.map((task) => taskFromScore(task));
     scoreId.textContent = score.id;
+    currentScore = score;
+    currentRunContext = null;
     renderScore();
     renderScorePreview(score);
     toggleScorePanel(true);
@@ -757,8 +815,10 @@ async function startNewTask() {
   skillsPanel.hidden = true;
   scorePanel.hidden = true;
   filesPanel.hidden = true;
+  sessionPanel.hidden = true;
   scorePreviewButton.classList.remove("active");
   attachFilesButton.classList.remove("active");
+  moreOptionsButton.classList.remove("active");
   document.querySelectorAll(".nav-action").forEach((button) => {
     button.classList.toggle("active", button === newTaskButton);
   });
@@ -797,6 +857,7 @@ sessionSearch.addEventListener("keydown", (event) => {
   }
 });
 terminalButton.addEventListener("click", () => toggleCommandPanel());
+moreOptionsButton.addEventListener("click", () => toggleSessionPanel());
 attachFilesButton.addEventListener("click", () => toggleFilesPanel());
 slashCommandsButton.addEventListener("click", () => toggleCommandPanel(true));
 scorePreviewButton.addEventListener("click", previewComposerScore);
@@ -804,6 +865,23 @@ closeCommandPanel.addEventListener("click", () => toggleCommandPanel(false));
 closeSkillsPanel.addEventListener("click", () => toggleSkillsPanel(false));
 closeScorePanel.addEventListener("click", () => toggleScorePanel(false));
 closeFilesPanel.addEventListener("click", () => toggleFilesPanel(false));
+closeSessionPanel.addEventListener("click", () => toggleSessionPanel(false));
+copyScoreIdButton.addEventListener("click", async () => {
+  await copyText(scoreId.textContent, "score ID");
+  toggleSessionPanel(false);
+});
+insertSessionCommandButton.addEventListener("click", () => {
+  const command = activeSessionId
+    ? `beethoven sessions show ${activeSessionId}`
+    : `beethoven score "${currentScore?.objective ?? "new orchestration task"}"`;
+  insertCommand(command);
+  toggleSessionPanel(false);
+});
+exportScoreButton.addEventListener("click", () => {
+  exportCurrentScore();
+  toggleSessionPanel(false);
+});
+openCommandsFromMenuButton.addEventListener("click", () => toggleCommandPanel(true));
 commandSearch.addEventListener("input", () => renderCommandList());
 commandSearch.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {

@@ -154,6 +154,8 @@ It implements the first visible shell:
 - Chat, Cowork, and Code mode switcher;
 - top bar with project, branch, run, and terminal controls;
 - sidebar actions for new tasks, session search, and the skill catalog;
+- top-bar session actions for copying score IDs, exporting score JSON, and
+  inserting CLI session commands;
 - conversation/progression canvas;
 - score inspector with routing reasons, cost, privacy, and task state;
 - composer with project context, file attachments, filterable slash commands,

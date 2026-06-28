@@ -144,6 +144,8 @@ Required:
 
 - Python package with stable core contracts.
 - CLI for running a score.
+- Desktop workbench inspired by Codex Desktop, Claude Desktop, and ZCode
+  Desktop.
 - JSON score serialization.
 - Local echo soloist for deterministic testing.
 - Ollama adapter.
@@ -177,7 +179,8 @@ Deferred:
 
 ### Phase I: Solo
 
-Stable score model, conductor, registry, router, deterministic tests, CLI.
+Stable score model, conductor, registry, router, deterministic tests, CLI, and
+desktop product contract.
 
 ### Phase II: Ensemble
 

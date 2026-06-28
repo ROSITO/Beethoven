@@ -37,6 +37,7 @@ This repository now contains the first executable orchestration kernel:
 - `SoloistRegistry`: registry of available soloists.
 - `CapabilityRouter`: deterministic baseline routing.
 - `Conductor`: dependency-aware score execution.
+- `beethoven` CLI: first terminal surface for creating and running scores.
 
 The first implementation is intentionally small. The foundation must stay stable
 enough for future providers and plugins to attach naturally.
@@ -111,6 +112,8 @@ Core layers:
 - **Governance**: provide approvals, permissions, traces, and observability.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for more detail.
+See [docs/PRODUCT_INTERFACE.md](docs/PRODUCT_INTERFACE.md) for the desktop and
+CLI product direction.
 
 ## Supported Soloist Targets
 
@@ -143,6 +146,14 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 pytest
+```
+
+Try the CLI:
+
+```bash
+beethoven score "Refactor this repository"
+beethoven run "Refactor this repository"
+beethoven run "Refactor this repository" --json
 ```
 
 Without installing dev dependencies, the current tests can also run with:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from beethoven.cli import main
+from beethoven.cli import main, run_terminal_session
 from beethoven.desktop_state import DesktopSessionStore
 from beethoven.runtime import run_objective
 
@@ -93,6 +93,31 @@ def test_workspace_files_command_prints_attachable_files(capsys) -> None:
     assert exit_code == 0
     assert "Workspace files: Beethoven" in captured.out
     assert "- " in captured.out
+
+
+def test_terminal_session_runs_objectives_and_commands(capsys) -> None:
+    inputs = iter(
+        [
+            "/permission read-only",
+            "/score Build terminal mode",
+            "Run terminal objective",
+            "/exit",
+        ]
+    )
+    outputs: list[str] = []
+
+    exit_code = run_terminal_session(
+        input_fn=lambda _prompt: next(inputs),
+        output_fn=outputs.append,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Beethoven terminal workbench" in outputs
+    assert "permission_mode=read-only" in outputs
+    assert "Score: score-" in captured.out
+    assert "Beethoven performed score-" in captured.out
+    assert "permission=read-only" in captured.out
 
 
 def test_package_sidecar_command_writes_launcher(tmp_path, capsys) -> None:

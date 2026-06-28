@@ -112,6 +112,7 @@ The differentiating view. It should show:
 The CLI should mirror the desktop concepts:
 
 ```bash
+beethoven chat
 beethoven score "Refactor this repository"
 beethoven run "Refactor this repository"
 beethoven run score.json --policy local-first
@@ -128,6 +129,7 @@ beethoven plugins list
 
 The first implemented commands are:
 
+- `beethoven chat`: start the terminal-first interactive workbench.
 - `beethoven score <objective>`: create a deterministic baseline score.
 - `beethoven run <objective>`: execute that score with the local echo soloist.
 - `beethoven sessions list`: inspect local desktop session history.

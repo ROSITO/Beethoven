@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Callable
 from typing import Sequence
 
 from beethoven.desktop_server import serve_desktop
@@ -38,6 +39,25 @@ def build_parser() -> argparse.ArgumentParser:
         help="Permission mode for the run.",
     )
     run.add_argument(
+        "--effort",
+        default="medium",
+        choices=["low", "medium", "high"],
+        help="Execution effort preference.",
+    )
+
+    chat = subparsers.add_parser(
+        "chat",
+        help="Start the interactive terminal workbench.",
+        description="Start a real terminal-first Beethoven session.",
+    )
+    chat.add_argument("--soloist", default="local-echo", help="Soloist/router preference.")
+    chat.add_argument(
+        "--permission",
+        default="ask",
+        choices=["ask", "auto", "read-only"],
+        help="Permission mode for interactive runs.",
+    )
+    chat.add_argument(
         "--effort",
         default="medium",
         choices=["low", "medium", "high"],
@@ -121,6 +141,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         serve_desktop(host=args.host, port=args.port, open_browser=args.open)
         return 0
 
+    if args.command == "chat":
+        return run_terminal_session(
+            soloist=args.soloist,
+            permission_mode=args.permission,
+            effort=args.effort,
+        )
+
     if args.command == "sessions":
         store = DesktopSessionStore()
         sessions = store.list_sessions()
@@ -182,6 +209,173 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     parser.print_help(sys.stderr)
     return 2
+
+
+def run_terminal_session(
+    *,
+    soloist: str = "local-echo",
+    permission_mode: str = "ask",
+    effort: str = "medium",
+    input_fn: Callable[[str], str] = input,
+    output_fn: Callable[[str], None] = print,
+) -> int:
+    """Run the terminal-first Beethoven loop."""
+    controls = {
+        "soloist": soloist,
+        "permission_mode": permission_mode,
+        "effort": effort,
+    }
+    output_fn("Beethoven terminal workbench")
+    output_fn("Type an objective to run it, or /help for commands.")
+    output_fn("")
+    print_terminal_controls(controls, output_fn)
+
+    while True:
+        try:
+            raw_value = input_fn("beethoven> ")
+        except (EOFError, KeyboardInterrupt):
+            output_fn("")
+            output_fn("Session closed.")
+            return 0
+
+        value = raw_value.strip()
+        if not value:
+            continue
+        if value in {"/exit", "/quit"}:
+            output_fn("Session closed.")
+            return 0
+        if value.startswith("/"):
+            handle_terminal_command(value, controls, output_fn)
+            continue
+        run_terminal_objective(value, controls, output_fn)
+
+
+def handle_terminal_command(
+    value: str,
+    controls: dict[str, str],
+    output_fn: Callable[[str], None],
+) -> None:
+    command, _, argument = value.partition(" ")
+    argument = argument.strip()
+
+    if command == "/help":
+        print_terminal_help(output_fn)
+        return
+    if command == "/controls":
+        print_terminal_controls(controls, output_fn)
+        return
+    if command == "/score":
+        if not argument:
+            output_fn("Usage: /score <objective>")
+            return
+        print_score(score_objective(argument))
+        return
+    if command == "/run":
+        if not argument:
+            output_fn("Usage: /run <objective>")
+            return
+        run_terminal_objective(argument, controls, output_fn)
+        return
+    if command == "/sessions":
+        print_sessions(DesktopSessionStore().list_sessions())
+        return
+    if command == "/soloists":
+        print_soloists(list_soloists())
+        return
+    if command == "/skills":
+        print_skills(list_skills())
+        return
+    if command == "/workspace":
+        print_workspace(inspect_workspace())
+        return
+    if command == "/files":
+        files_payload = list_workspace_files(limit=40)
+        if argument:
+            files_payload = {
+                **files_payload,
+                "files": [
+                    item
+                    for item in files_payload["files"]
+                    if argument.lower() in str(item.get("path", "")).lower()
+                ],
+            }
+        print_workspace_files(files_payload)
+        return
+    if command == "/permission":
+        set_terminal_control("permission_mode", argument, {"ask", "auto", "read-only"}, controls, output_fn)
+        return
+    if command == "/effort":
+        set_terminal_control("effort", argument, {"low", "medium", "high"}, controls, output_fn)
+        return
+    if command == "/soloist":
+        if not argument:
+            output_fn(f"soloist={controls['soloist']}")
+            return
+        controls["soloist"] = argument
+        output_fn(f"soloist={argument}")
+        return
+
+    output_fn(f"Unknown command: {command}. Type /help.")
+
+
+def run_terminal_objective(
+    objective: str,
+    controls: dict[str, str],
+    output_fn: Callable[[str], None],
+) -> None:
+    output_fn("")
+    output_fn(f"Objective: {objective}")
+    context = run_objective(
+        objective,
+        soloist=controls["soloist"],
+        permission_mode=controls["permission_mode"],
+        effort=controls["effort"],
+    )
+    print_run(context_to_dict(context))
+    output_fn("")
+
+
+def set_terminal_control(
+    key: str,
+    value: str,
+    allowed: set[str],
+    controls: dict[str, str],
+    output_fn: Callable[[str], None],
+) -> None:
+    if not value:
+        output_fn(f"{key}={controls[key]}")
+        return
+    if value not in allowed:
+        formatted = ", ".join(sorted(allowed))
+        output_fn(f"Invalid {key}. Expected one of: {formatted}")
+        return
+    controls[key] = value
+    output_fn(f"{key}={value}")
+
+
+def print_terminal_controls(controls: dict[str, str], output_fn: Callable[[str], None]) -> None:
+    output_fn(
+        "Controls: "
+        f"soloist={controls['soloist']} · "
+        f"permission={controls['permission_mode']} · "
+        f"effort={controls['effort']}"
+    )
+
+
+def print_terminal_help(output_fn: Callable[[str], None]) -> None:
+    output_fn("Commands:")
+    output_fn("- /run <objective>       Run an objective")
+    output_fn("- /score <objective>     Preview a score")
+    output_fn("- /sessions              List local sessions")
+    output_fn("- /soloists              List soloists")
+    output_fn("- /skills                List orchestration skills")
+    output_fn("- /workspace             Show workspace/Git context")
+    output_fn("- /files [query]         List attachable files")
+    output_fn("- /permission <mode>     ask, auto, read-only")
+    output_fn("- /effort <level>        low, medium, high")
+    output_fn("- /soloist <id>          Set soloist")
+    output_fn("- /controls              Show current controls")
+    output_fn("- /exit                  Close the terminal session")
 
 
 def print_score(score: Score) -> None:

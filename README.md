@@ -123,8 +123,9 @@ conversation canvas, score inspector, execution trace, permission controls, and
 composer. The sidebar actions for new tasks, session search, and skills are
 live when served through the local API. The composer can attach workspace files
 as `@path` context and preview a score before running it, mirroring
-`beethoven workspace files` and `beethoven score`. The `/ commands` surface is
-filterable and can insert CLI commands back into the composer. The top-bar
+`beethoven workspace files` and `beethoven score`. The desktop `/ commands`
+surface is a helper palette, not the terminal CLI itself. The real terminal
+workbench is `beethoven chat`, which runs independently in a shell. The top-bar
 session menu can copy score IDs, insert session commands, and export the current
 score JSON.
 
@@ -182,6 +183,7 @@ pytest
 Try the CLI:
 
 ```bash
+beethoven chat
 beethoven score "Refactor this repository"
 beethoven run "Refactor this repository"
 beethoven run "Refactor this repository" --json
@@ -195,6 +197,10 @@ beethoven workspace
 beethoven workspace files
 beethoven package sidecar
 ```
+
+Inside `beethoven chat`, type an objective to run it directly, or use slash
+commands such as `/score`, `/run`, `/files`, `/workspace`, `/permission`,
+`/effort`, `/soloist`, and `/exit`.
 
 Without installing dev dependencies, the current tests can also run with:
 

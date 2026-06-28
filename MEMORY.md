@@ -16,6 +16,7 @@ and ZCode Desktop:
 - conversation plus execution;
 - visible score, trace, task state, soloist choice, permissions, and effort;
 - scriptable CLI parity for every important desktop action;
+- a real terminal-first CLI, not only a command palette inside the desktop;
 - local-first foundation that can later host cloud, local, agent, and tool
   soloists.
 
@@ -81,6 +82,7 @@ Planned soloist catalog:
 Implemented commands:
 
 ```bash
+beethoven chat
 beethoven score "<objective>"
 beethoven score "<objective>" --json
 beethoven run "<objective>"
@@ -104,9 +106,20 @@ beethoven workspace files --limit 20
 beethoven package sidecar
 ```
 
-The CLI is the parity contract for the desktop. When a desktop action becomes
-important, prefer giving it a CLI/API equivalent rather than leaving it as local
-browser-only behavior.
+The CLI is the parity contract for the desktop. The desktop command palette is a
+helper surface only; the real terminal CLI is `beethoven chat` plus the regular
+subcommands. When a desktop action becomes important, prefer giving it a
+CLI/API equivalent rather than leaving it as local browser-only behavior.
+
+`beethoven chat` starts an interactive terminal loop:
+
+- type a plain objective to run it;
+- `/run <objective>` runs an objective;
+- `/score <objective>` previews a score;
+- `/files [query]` lists attachable workspace files;
+- `/workspace`, `/sessions`, `/soloists`, `/skills` inspect local state;
+- `/permission`, `/effort`, and `/soloist` update terminal controls;
+- `/exit` closes the session.
 
 ## Desktop API
 
@@ -257,6 +270,7 @@ Browser QA has been done with the in-app browser for:
 ## Known Gaps
 
 - No real model/provider adapter yet.
+- The terminal CLI is line-oriented, not a full-screen TUI like OpenCode yet.
 - `soloist`, `permission_mode`, and `effort` are recorded but not deeply enforced
   beyond metadata/routing scaffolding.
 - No true file content ingestion yet; files are attached as `@path` references.

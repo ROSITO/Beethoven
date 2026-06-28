@@ -621,15 +621,24 @@ button {
   max-width: 920px;
 }
 
+.chat-thread {
+  display: grid;
+  gap: 12px;
+}
+
 .message {
-  max-width: 780px;
-  padding: 0;
+  max-width: min(760px, 88%);
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
 }
 
 .message p {
   margin: 6px 0 0;
   font-size: 18px;
   line-height: 1.55;
+  white-space: pre-wrap;
 }
 
 .message-meta {
@@ -639,8 +648,15 @@ button {
 }
 
 .assistant-message {
-  padding-left: 16px;
+  justify-self: start;
   border-left: 3px solid var(--blue);
+}
+
+.user-message {
+  justify-self: end;
+  background: #f1f5ec;
+  border-color: #d8e3cf;
+  text-align: left;
 }
 
 .execution-band {

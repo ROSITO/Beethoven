@@ -38,9 +38,7 @@ const skillsButton = document.querySelector("#skillsButton");
 const sessionFilterButton = document.querySelector("#sessionFilterButton");
 const sessionSearch = document.querySelector("#sessionSearch");
 const modeTabs = [...document.querySelectorAll(".mode-tab")];
-const modeEyebrow = document.querySelector("#modeEyebrow");
-const modeSummary = document.querySelector("#modeSummary");
-const modeConductor = document.querySelector("#modeConductor");
+const chatThread = document.querySelector("#chatThread");
 const soloistSelect = document.querySelector("#soloistSelect");
 const permissionSelect = document.querySelector("#permissionSelect");
 const effortSelect = document.querySelector("#effortSelect");
@@ -87,6 +85,7 @@ let allSkills = [];
 let allFiles = [];
 let currentScore = null;
 let currentRunContext = null;
+let chatMessages = [];
 
 const modeCopy = {
   chat: {
@@ -153,6 +152,90 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function renderChat() {
+  chatThread.innerHTML = chatMessages
+    .map(
+      (message) => `
+        <article class="message ${message.role === "user" ? "user-message" : "assistant-message"}">
+          <div class="message-meta">${escapeHtml(message.meta)}</div>
+          <p>${escapeHtml(message.content)}</p>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function setConversationForMode(mode) {
+  const copy = modeCopy[mode] ?? modeCopy.code;
+  chatMessages = [
+    {
+      role: "user",
+      meta: copy.eyebrow,
+      content: copy.summary,
+    },
+    {
+      role: "assistant",
+      meta: "Conductor",
+      content: copy.conductor,
+    },
+  ];
+  renderChat();
+}
+
+function setConversationForRun(context) {
+  chatMessages = [
+    {
+      role: "user",
+      meta: "You",
+      content: context.score.objective,
+    },
+    {
+      role: "assistant",
+      meta: soloistLabel(context),
+      content: finalResponseFromContext(context),
+    },
+  ];
+  renderChat();
+}
+
+function setPendingConversation(objective, soloistName) {
+  chatMessages = [
+    {
+      role: "user",
+      meta: "You",
+      content: objective,
+    },
+    {
+      role: "assistant",
+      meta: soloistName,
+      content: "Beethoven is running the score...",
+    },
+  ];
+  renderChat();
+}
+
+function finalResponseFromContext(context) {
+  const artifacts = context.artifacts ?? {};
+  const preferred = artifacts.synthesize?.output;
+  if (typeof preferred === "string" && preferred.trim()) {
+    return preferred.trim();
+  }
+  const trace = [...(context.trace ?? [])].reverse();
+  for (const route of trace) {
+    const taskId = route.split(":")[0];
+    const output = artifacts[taskId]?.output;
+    if (typeof output === "string" && output.trim()) {
+      return output.trim();
+    }
+  }
+  return "The run completed. Inspect the score trace on the right for task artifacts.";
+}
+
+function soloistLabel(context) {
+  const soloist = context.score.metadata?.soloist ?? context.trace?.[0]?.split(":")[1] ?? "Beethoven";
+  return String(soloist).replaceAll("-", " ");
 }
 
 function renderScore() {
@@ -267,6 +350,7 @@ function applyRunContext(context) {
   if (context.score.metadata?.effort) {
     effortSelect.value = context.score.metadata.effort;
   }
+  setConversationForRun(context);
   renderScore();
 }
 
@@ -396,9 +480,9 @@ function setMode(mode) {
   modeTabs.forEach((tab) => {
     tab.classList.toggle("active", tab.dataset.mode === mode);
   });
-  modeEyebrow.textContent = copy.eyebrow;
-  modeSummary.textContent = copy.summary;
-  modeConductor.textContent = copy.conductor;
+  if (!currentRunContext) {
+    setConversationForMode(mode);
+  }
   composer.placeholder = copy.placeholder;
 }
 
@@ -620,6 +704,7 @@ async function runComposer() {
   sendButton.textContent = "…";
   composerStatus.classList.remove("error");
   composerStatus.textContent = "Running Beethoven locally…";
+  setPendingConversation(value, soloistSelect.options[soloistSelect.selectedIndex]?.text ?? "Beethoven");
 
   try {
     const response = await fetch("/api/run/stream", {
@@ -1016,6 +1101,7 @@ modeTabs.forEach((tab) => {
   tab.addEventListener("click", () => setMode(tab.dataset.mode));
 });
 renderCommandList();
+setConversationForMode("code");
 renderScore();
 loadWorkspace();
 loadSoloists();

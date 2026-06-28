@@ -131,6 +131,15 @@ beethoven desktop --open
 
 Then visit `http://localhost:4173`.
 
+A first Tauri v2 shell is also available for native desktop development:
+
+```bash
+npm install
+npm run tauri:dev
+```
+
+See [docs/DESKTOP_PACKAGING.md](docs/DESKTOP_PACKAGING.md).
+
 ## Supported Soloist Targets
 
 Planned adapters include:

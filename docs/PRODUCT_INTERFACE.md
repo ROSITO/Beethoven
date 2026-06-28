@@ -147,6 +147,7 @@ It implements the first visible shell:
 - conversation/progression canvas;
 - score inspector with routing reasons, cost, privacy, and task state;
 - composer with project context, permission mode, router policy, and effort.
+- a Tauri v2 native shell scaffold for desktop development.
 
 When served with `beethoven desktop`, the workbench uses the local API endpoints:
 

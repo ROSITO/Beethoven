@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Beethoven",
+  "version": "0.1.0",
+  "identifier": "ai.rosito.beethoven",
+  "build": {
+    "beforeDevCommand": "beethoven desktop --host 127.0.0.1 --port 4173",
+    "devUrl": "http://127.0.0.1:4173",
+    "frontendDist": "../desktop"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Beethoven",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 960,
+        "minHeight": 680,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "DeveloperTool",
+    "shortDescription": "Universal AI orchestration workbench",
+    "longDescription": "Beethoven is a local-first desktop and CLI workbench for orchestrating AI soloists through transparent scores."
+  }
+}

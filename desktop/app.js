@@ -168,6 +168,7 @@ function renderScore() {
             <span class="pill ${statusClass}">${status}</span>
           </header>
           <p>${task.instruction}</p>
+          ${task.summary ? `<p class="route-reason">${escapeHtml(task.summary)}</p>` : ""}
           <div class="route-reason">${task.capability} → ${task.soloist}: ${task.reason}</div>
         </article>
       `;
@@ -311,8 +312,28 @@ function renderSkills(skills) {
 }
 
 function renderScorePreview(score) {
-  scorePreviewMeta.textContent = `${score.id} · ${score.tasks.length} planned tasks`;
-  scorePreviewList.innerHTML = score.tasks
+  const attachments = score.metadata?.attachments ?? [];
+  const attachedSummary = attachments.length
+    ? ` · ${attachments.length} attached file${attachments.length === 1 ? "" : "s"}`
+    : "";
+  scorePreviewMeta.textContent = `${score.id} · ${score.tasks.length} planned tasks${attachedSummary}`;
+  const attachmentMarkup = attachments.length
+    ? `
+        <article class="preview-score-card">
+          <span class="step-index">↳</span>
+          <div>
+            <header>
+              <h3>attached context</h3>
+              <span class="pill success">${attachments.length}</span>
+            </header>
+            <p>${attachments
+              .map((item) => `${escapeHtml(item.path)} · ${escapeHtml(item.status)}`)
+              .join("<br>")}</p>
+          </div>
+        </article>
+      `
+    : "";
+  scorePreviewList.innerHTML = attachmentMarkup + score.tasks
     .map(
       (task, index) => `
         <article class="preview-score-card">
@@ -329,6 +350,15 @@ function renderScorePreview(score) {
       `
     )
     .join("");
+}
+
+function preferReaderForAttachedScore(score) {
+  const attachments = score.metadata?.attachments ?? [];
+  const hasAttachedFiles = attachments.some((item) => item.status === "attached");
+  const hasLocalReader = [...soloistSelect.options].some((option) => option.value === "local-reader");
+  if (hasAttachedFiles && hasLocalReader && soloistSelect.value === "local-echo") {
+    soloistSelect.value = "local-reader";
+  }
 }
 
 function renderFiles(files) {
@@ -555,6 +585,7 @@ function taskFromApi(task, context) {
   const artifact = context.artifacts?.[task.id];
   const route = context.trace?.find((item) => item.startsWith(`${task.id}:`));
   const soloist = route?.split(":")[1] ?? "local-echo";
+  const output = typeof artifact?.output === "string" ? artifact.output.slice(0, 420) : "";
   return {
     id: task.id,
     capability: task.capability,
@@ -563,6 +594,7 @@ function taskFromApi(task, context) {
       ? `${artifact.metadata.mode} execution returned by Beethoven runtime`
       : "selected by the local Beethoven router",
     instruction: task.instruction,
+    summary: output,
     status: context.statuses?.[task.id] ?? "ready"
   };
 }
@@ -748,6 +780,7 @@ async function previewComposerScore() {
     scoreId.textContent = score.id;
     currentScore = score;
     currentRunContext = null;
+    preferReaderForAttachedScore(score);
     renderScore();
     renderScorePreview(score);
     toggleScorePanel(true);

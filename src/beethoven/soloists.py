@@ -36,6 +36,69 @@ class EchoSoloist:
 
 
 @dataclass(frozen=True)
+class LocalReaderSoloist:
+    """Safe local file reader that summarizes attached text without a model."""
+
+    name: str = "local-reader"
+    capabilities: frozenset[Capability] = frozenset(
+        {
+            Capability.ANALYZE,
+            Capability.REVIEW,
+            Capability.SYNTHESIZE,
+        }
+    )
+
+    def perform(self, task: Task, context: ExecutionContext) -> SoloistResult:
+        attachments = [
+            item
+            for item in context.score.metadata.get("attachments", [])
+            if isinstance(item, dict) and item.get("status") == "attached"
+        ]
+        if not attachments:
+            return SoloistResult(
+                output="No attached readable files were found. Mention a workspace file such as @README.md.",
+                metadata={"mode": "local-reader"},
+            )
+
+        summaries = [self._summarize_attachment(item) for item in attachments]
+        return SoloistResult(
+            output="\n\n".join(summaries),
+            metadata={
+                "mode": "local-reader",
+                "attachments": [item.get("path") for item in attachments],
+            },
+        )
+
+    def _summarize_attachment(self, attachment: dict[str, object]) -> str:
+        path = str(attachment.get("path", "attached file"))
+        content = str(attachment.get("content", ""))
+        headings = [
+            line.strip("# ")
+            for line in content.splitlines()
+            if line.lstrip().startswith("#")
+        ][:8]
+        bullets = [
+            line.strip()[2:]
+            for line in content.splitlines()
+            if line.strip().startswith(("- ", "* "))
+        ][:10]
+        paragraphs = [
+            line.strip()
+            for line in content.splitlines()
+            if line.strip() and not line.lstrip().startswith(("#", "-", "*", "```", "!", ">"))
+        ][:6]
+
+        sections = [f"{path}"]
+        if headings:
+            sections.append("Sections: " + ", ".join(headings))
+        if paragraphs:
+            sections.append("Résumé: " + " ".join(paragraphs))
+        if bullets:
+            sections.append("Points clés: " + "; ".join(bullets))
+        return "\n".join(sections)
+
+
+@dataclass(frozen=True)
 class OllamaSoloist:
     """Local Ollama adapter using the `ollama run` CLI."""
 

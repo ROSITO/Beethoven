@@ -35,6 +35,7 @@ IGNORED_SUFFIXES = {
 }
 MAX_ATTACHMENT_BYTES = 64_000
 ATTACHMENT_PATTERN = re.compile(r"(?<!\S)@([A-Za-z0-9_./-]+)")
+FILE_REFERENCE_PATTERN = re.compile(r"(?<![@\w./-])([A-Za-z0-9_.-]+\.[A-Za-z0-9]{1,8})(?![\w./-])")
 
 
 def inspect_workspace(path: str | Path | None = None) -> dict[str, Any]:
@@ -93,6 +94,30 @@ def extract_attachment_paths(objective: str) -> list[str]:
     return paths
 
 
+def infer_workspace_attachment_paths(objective: str, root: Path, limit: int = 5) -> list[str]:
+    explicit_paths = set(extract_attachment_paths(objective))
+    inferred: list[str] = []
+    references = {
+        match.group(1).lower()
+        for match in FILE_REFERENCE_PATTERN.finditer(objective)
+        if match.group(1)
+    }
+    if not references:
+        return inferred
+
+    workspace_files = list_workspace_files(root, limit=500)["files"]
+    for item in workspace_files:
+        path = str(item.get("path", ""))
+        name = str(item.get("name", ""))
+        if path in explicit_paths:
+            continue
+        if path.lower() in references or name.lower() in references:
+            inferred.append(path)
+        if len(inferred) >= limit:
+            break
+    return inferred
+
+
 def read_workspace_attachments(
     objective: str,
     path: str | Path | None = None,
@@ -102,7 +127,11 @@ def read_workspace_attachments(
     workspace = inspect_workspace(path)
     root = Path(str(workspace["path"]))
     attachments: list[dict[str, object]] = []
-    for attachment_path in extract_attachment_paths(objective):
+    attachment_paths = [
+        *extract_attachment_paths(objective),
+        *infer_workspace_attachment_paths(objective, root),
+    ]
+    for attachment_path in dict.fromkeys(attachment_paths):
         candidate = (root / attachment_path).resolve()
         if not _is_relative_to(candidate, root):
             attachments.append(

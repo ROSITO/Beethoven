@@ -53,6 +53,26 @@ def test_score_command_attaches_workspace_paths(capsys) -> None:
     assert "# Beethoven" in attachments[0]["content"]
 
 
+def test_score_command_infers_workspace_file_mentions(capsys) -> None:
+    exit_code = main(["score", "Review", "readme.md", "--json"])
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    attachments = data["metadata"]["attachments"]
+    assert exit_code == 0
+    assert attachments[0]["path"] == "README.md"
+    assert attachments[0]["status"] == "attached"
+
+
+def test_local_reader_summarizes_attached_files(capsys) -> None:
+    exit_code = main(["run", "Explique", "readme.md", "--soloist", "local-reader"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "understand:local-reader" in captured.out
+    assert "synthesize:local-reader" in captured.out
+
+
 def test_desktop_command_is_registered(capsys) -> None:
     try:
         main(["desktop", "--help"])

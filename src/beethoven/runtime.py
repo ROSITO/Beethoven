@@ -9,7 +9,13 @@ from beethoven.conductor import Conductor
 from beethoven.core import ExecutionContext, Score, SoloistResult
 from beethoven.planning import create_baseline_score
 from beethoven.routing import CapabilityRouter, SoloistRegistry
-from beethoven.soloists import EchoSoloist, OllamaSoloist, ollama_is_available, ollama_is_enabled
+from beethoven.soloists import (
+    EchoSoloist,
+    LocalReaderSoloist,
+    OllamaSoloist,
+    ollama_is_available,
+    ollama_is_enabled,
+)
 from beethoven.validation import run_validation_hooks
 from beethoven.workspace import read_workspace_attachments
 
@@ -28,6 +34,7 @@ class SoloistDescriptor:
 def create_default_registry() -> SoloistRegistry:
     registry = SoloistRegistry()
     registry.register(EchoSoloist())
+    registry.register(LocalReaderSoloist())
     if ollama_is_enabled() and ollama_is_available():
         registry.register(OllamaSoloist())
     return registry
@@ -55,6 +62,15 @@ def list_soloists() -> list[dict[str, object]]:
                 "tool_use",
             ],
             "description": "Deterministic offline soloist for local testing and UI flows.",
+        },
+        {
+            "id": "local-reader",
+            "name": "Local Reader",
+            "provider": "Beethoven",
+            "status": "available",
+            "locality": "local",
+            "capabilities": ["analyze", "review", "synthesize"],
+            "description": "Safe local text reader for attached workspace files without external models.",
         },
         {
             "id": "ollama",

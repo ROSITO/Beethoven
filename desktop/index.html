@@ -159,7 +159,12 @@
               Beethoven
             </button>
             <button class="context-chip" type="button">main</button>
-            <button class="context-chip warning" type="button">Ask before changes</button>
+            <label class="select-label" for="permissionSelect">Permission</label>
+            <select class="control-select warning" id="permissionSelect">
+              <option value="ask">Ask before changes</option>
+              <option value="auto">Auto</option>
+              <option value="read-only">Read-only</option>
+            </select>
           </div>
           <label class="composer-label" for="composer">Prompt Beethoven</label>
           <textarea
@@ -176,8 +181,13 @@
             </div>
             <div class="right-tools">
               <label class="select-label" for="soloistSelect">Soloist</label>
-              <select class="soloist-select" id="soloistSelect"></select>
-              <button class="text-button" type="button">Medium</button>
+              <select class="control-select soloist-select" id="soloistSelect"></select>
+              <label class="select-label" for="effortSelect">Effort</label>
+              <select class="control-select" id="effortSelect">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+              </select>
               <button class="send-button" id="sendButton" type="button" aria-label="Run Beethoven">↑</button>
             </div>
           </div>

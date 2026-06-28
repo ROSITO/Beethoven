@@ -53,11 +53,22 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             objective = self._read_objective(payload)
             if objective is None:
                 return
-            context = run_objective(objective)
+            soloist = str(payload.get("soloist", "local-echo"))
+            permission_mode = str(payload.get("permission_mode", "ask"))
+            effort = str(payload.get("effort", "medium"))
+            context = run_objective(
+                objective,
+                soloist=soloist,
+                permission_mode=permission_mode,
+                effort=effort,
+            )
             session = self.store.save_run(
                 context,
                 project=str(payload.get("project", "Beethoven")),
                 branch=str(payload.get("branch", "main")),
+                soloist=soloist,
+                permission_mode=permission_mode,
+                effort=effort,
             )
             response = context_to_dict(context)
             response["session"] = session

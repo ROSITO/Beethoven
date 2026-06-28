@@ -18,11 +18,13 @@ def test_score_command_prints_json(capsys) -> None:
 
 
 def test_run_command_prints_trace(capsys) -> None:
-    exit_code = main(["run", "Build", "a", "CLI"])
+    exit_code = main(["run", "Build", "a", "CLI", "--permission", "read-only", "--effort", "high"])
 
     captured = capsys.readouterr()
     assert exit_code == 0
     assert "Beethoven performed score-" in captured.out
+    assert "permission=read-only" in captured.out
+    assert "effort=high" in captured.out
     assert "understand:local-echo" in captured.out
     assert "synthesize:local-echo" in captured.out
 

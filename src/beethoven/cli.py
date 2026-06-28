@@ -28,6 +28,19 @@ def build_parser() -> argparse.ArgumentParser:
     run = subparsers.add_parser("run", help="Run a baseline score with the local echo soloist.")
     run.add_argument("objective", nargs="+", help="Objective to orchestrate.")
     run.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+    run.add_argument("--soloist", default="local-echo", help="Soloist/router preference.")
+    run.add_argument(
+        "--permission",
+        default="ask",
+        choices=["ask", "auto", "read-only"],
+        help="Permission mode for the run.",
+    )
+    run.add_argument(
+        "--effort",
+        default="medium",
+        choices=["low", "medium", "high"],
+        help="Execution effort preference.",
+    )
 
     desktop = subparsers.add_parser(
         "desktop",
@@ -66,7 +79,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "run":
         objective = " ".join(args.objective)
-        context = run_objective(objective)
+        context = run_objective(
+            objective,
+            soloist=args.soloist,
+            permission_mode=args.permission,
+            effort=args.effort,
+        )
         if args.json:
             print(json.dumps(context_to_dict(context), indent=2, ensure_ascii=False))
         else:
@@ -117,6 +135,15 @@ def print_run(data: dict[str, object]) -> None:
     assert isinstance(score, dict)
     print(f"Beethoven performed {score['id']}")
     print(f"Objective: {score['objective']}")
+    metadata = score.get("metadata", {})
+    assert isinstance(metadata, dict)
+    if metadata:
+        print(
+            "Controls: "
+            f"soloist={metadata.get('soloist')} · "
+            f"permission={metadata.get('permission_mode')} · "
+            f"effort={metadata.get('effort')}"
+        )
     print()
     print("Trace")
     for event in data["trace"]:

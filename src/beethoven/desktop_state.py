@@ -41,6 +41,9 @@ class DesktopSessionStore:
         *,
         project: str = "Beethoven",
         branch: str = "main",
+        soloist: str = "local-echo",
+        permission_mode: str = "ask",
+        effort: str = "medium",
     ) -> dict[str, Any]:
         sessions = [session for session in self.list_sessions() if session.get("id") != context.score.id]
         session = {
@@ -50,6 +53,9 @@ class DesktopSessionStore:
             "project": project,
             "branch": branch,
             "score_id": context.score.id,
+            "soloist": soloist,
+            "permission_mode": permission_mode,
+            "effort": effort,
             "trace": context.trace,
             "status": "completed",
             "updated_at": datetime.now(UTC).isoformat(),

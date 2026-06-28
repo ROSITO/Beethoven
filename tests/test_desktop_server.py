@@ -28,7 +28,14 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
 
         request = Request(
             f"http://{host}:{port}/api/run",
-            data=json.dumps({"objective": "test desktop api"}).encode("utf-8"),
+            data=json.dumps(
+                {
+                    "objective": "test desktop api",
+                    "soloist": "local-echo",
+                    "permission_mode": "read-only",
+                    "effort": "high",
+                }
+            ).encode("utf-8"),
             headers={"Content-Type": "application/json"},
             method="POST",
         )
@@ -50,6 +57,9 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
     ]
     assert payload["statuses"]["synthesize"] == "completed"
     assert payload["session"]["title"] == "test desktop api"
+    assert payload["session"]["permission_mode"] == "read-only"
+    assert payload["session"]["effort"] == "high"
+    assert payload["score"]["metadata"]["permission_mode"] == "read-only"
     assert sessions_data["sessions"][0]["id"] == payload["score"]["id"]
     assert soloists_data["soloists"][0]["id"] == "local-echo"
     assert soloists_data["soloists"][0]["status"] == "available"

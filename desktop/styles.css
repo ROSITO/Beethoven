@@ -574,14 +574,23 @@ button {
   clip: rect(0 0 0 0);
 }
 
-.soloist-select {
+.control-select {
   min-height: 30px;
-  max-width: 170px;
+  max-width: 100%;
   padding: 5px 30px 5px 10px;
   color: var(--ink);
   background: #efefec;
   border: 1px solid transparent;
   border-radius: 8px;
+}
+
+.control-select.warning {
+  color: var(--gold);
+  background: #f5edd8;
+}
+
+.soloist-select {
+  max-width: 170px;
 }
 
 textarea {
@@ -693,6 +702,13 @@ textarea:focus {
   .right-tools {
     width: 100%;
     margin-left: 0;
+    flex-wrap: wrap;
     justify-content: space-between;
+  }
+
+  .control-select,
+  .soloist-select {
+    flex: 1 1 130px;
+    min-width: 0;
   }
 }

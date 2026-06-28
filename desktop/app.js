@@ -37,6 +37,8 @@ const modeEyebrow = document.querySelector("#modeEyebrow");
 const modeSummary = document.querySelector("#modeSummary");
 const modeConductor = document.querySelector("#modeConductor");
 const soloistSelect = document.querySelector("#soloistSelect");
+const permissionSelect = document.querySelector("#permissionSelect");
+const effortSelect = document.querySelector("#effortSelect");
 
 const modeCopy = {
   chat: {
@@ -194,7 +196,12 @@ async function runComposer() {
     const response = await fetch("/api/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ objective: value, soloist: soloistSelect.value })
+      body: JSON.stringify({
+        objective: value,
+        soloist: soloistSelect.value,
+        permission_mode: permissionSelect.value,
+        effort: effortSelect.value
+      })
     });
     if (!response.ok) {
       throw new Error(`Desktop API returned ${response.status}`);

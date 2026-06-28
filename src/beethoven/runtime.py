@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from beethoven.conductor import Conductor
 from beethoven.core import ExecutionContext, Score
@@ -77,11 +77,27 @@ def list_soloists() -> list[dict[str, object]]:
     ]
 
 
-def score_objective(objective: str) -> Score:
-    return create_baseline_score(objective)
+def score_objective(objective: str, metadata: dict[str, object] | None = None) -> Score:
+    score = create_baseline_score(objective)
+    if not metadata:
+        return score
+    return replace(score, metadata={**score.metadata, **metadata})
 
 
-def run_objective(objective: str) -> ExecutionContext:
-    score = score_objective(objective)
+def run_objective(
+    objective: str,
+    *,
+    soloist: str = "local-echo",
+    permission_mode: str = "ask",
+    effort: str = "medium",
+) -> ExecutionContext:
+    score = score_objective(
+        objective,
+        metadata={
+            "soloist": soloist,
+            "permission_mode": permission_mode,
+            "effort": effort,
+        },
+    )
     registry = create_default_registry()
     return Conductor(CapabilityRouter(registry)).perform(score)

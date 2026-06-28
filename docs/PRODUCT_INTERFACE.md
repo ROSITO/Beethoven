@@ -132,6 +132,7 @@ directly or served with:
 
 ```bash
 beethoven desktop
+beethoven desktop --open
 ```
 
 It implements the first visible shell:
@@ -146,6 +147,7 @@ It implements the first visible shell:
 When served with `beethoven desktop`, the workbench uses the local API endpoints:
 
 - `GET /api/health`;
+- `GET /api/sessions`;
 - `POST /api/score`;
 - `POST /api/run`.
 

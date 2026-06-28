@@ -35,6 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     desktop.add_argument("--host", default="127.0.0.1", help="Host to bind.")
     desktop.add_argument("--port", default=4173, type=int, help="Port to bind.")
+    desktop.add_argument("--open", action="store_true", help="Open the workbench in a browser.")
 
     return parser
 
@@ -62,7 +63,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.command == "desktop":
-        serve_desktop(host=args.host, port=args.port)
+        serve_desktop(host=args.host, port=args.port, open_browser=args.open)
         return 0
 
     parser.print_help(sys.stderr)

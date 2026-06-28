@@ -31,6 +31,7 @@ const timeline = document.querySelector("#timeline");
 const progressPill = document.querySelector("#progressPill");
 const scoreId = document.querySelector("#scoreId");
 const composerStatus = document.querySelector("#composerStatus");
+const sessionList = document.querySelector("#sessionList");
 
 function titleCase(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -39,16 +40,20 @@ function titleCase(value) {
 function renderScore() {
   scoreList.innerHTML = scoreTasks
     .map(
-      (task) => `
+      (task) => {
+        const status = task.status ?? "done";
+        const statusClass = status === "completed" ? "success" : "neutral";
+        return `
         <article class="score-card">
           <header>
             <h3>${task.id}</h3>
-            <span class="pill success">completed</span>
+            <span class="pill ${statusClass}">${status}</span>
           </header>
           <p>${task.instruction}</p>
           <div class="route-reason">${task.capability} → ${task.soloist}: ${task.reason}</div>
         </article>
-      `
+      `;
+      }
     )
     .join("");
 
@@ -72,6 +77,28 @@ function renderScore() {
     completed > 0 ? `${completed} tasks completed` : `${scoreTasks.length} tasks ready`;
 }
 
+function renderSessions(sessions) {
+  if (!sessions.length) {
+    sessionList.innerHTML = '<div class="session-empty">No runs yet</div>';
+    return;
+  }
+
+  sessionList.innerHTML = sessions
+    .map((session, index) => {
+      const recency = index === 0 ? "now" : session.branch ?? "main";
+      const activeClass = index === 0 ? " active" : "";
+      const runningClass = index === 0 ? " running" : "";
+      return `
+        <button class="session-row${activeClass}" type="button" data-session-id="${session.id}">
+          <span class="status-dot${runningClass}"></span>
+          ${session.title}
+          <span class="row-meta">${recency}</span>
+        </button>
+      `;
+    })
+    .join("");
+}
+
 function taskFromApi(task, context) {
   const artifact = context.artifacts?.[task.id];
   const route = context.trace?.find((item) => item.startsWith(`${task.id}:`));
@@ -85,6 +112,17 @@ function taskFromApi(task, context) {
       : "selected by the local Beethoven router",
     instruction: task.instruction,
     status: context.statuses?.[task.id] ?? "ready"
+  };
+}
+
+function taskFromScore(task) {
+  return {
+    id: task.id,
+    capability: task.capability,
+    soloist: "pending",
+    reason: "ready for local Beethoven routing",
+    instruction: task.instruction,
+    status: "ready"
   };
 }
 
@@ -112,6 +150,8 @@ async function runComposer() {
     scoreTasks = context.score.tasks.map((task) => taskFromApi(task, context));
     scoreId.textContent = context.score.id;
     renderScore();
+    const sessions = await fetchSessions();
+    renderSessions([context.session, ...sessions.filter((item) => item.id !== context.session.id)]);
     sendButton.textContent = "✓";
     composerStatus.textContent = `Trace: ${context.trace.join(" → ")}`;
   } catch (error) {
@@ -128,7 +168,7 @@ async function runComposer() {
 
 async function loadInitialScore() {
   try {
-    const response = await fetch("/api/run", {
+    const response = await fetch("/api/score", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ objective: "desktop and CLI foundation" })
@@ -136,14 +176,32 @@ async function loadInitialScore() {
     if (!response.ok) {
       return;
     }
-    const context = await response.json();
-    scoreTasks = context.score.tasks.map((task) => taskFromApi(task, context));
-    scoreId.textContent = context.score.id;
+    const score = await response.json();
+    scoreTasks = score.tasks.map((task) => taskFromScore(task));
+    scoreId.textContent = score.id;
   } catch {
     composerStatus.textContent = "Static preview mode. Start `beethoven desktop` for live runs.";
   } finally {
     renderScore();
   }
+}
+
+async function fetchSessions() {
+  try {
+    const response = await fetch("/api/sessions");
+    if (!response.ok) {
+      return [];
+    }
+    const payload = await response.json();
+    return payload.sessions ?? [];
+  } catch {
+    return [];
+  }
+}
+
+async function loadSessions() {
+  const sessions = await fetchSessions();
+  renderSessions(sessions);
 }
 
 composer.addEventListener("keydown", (event) => {
@@ -155,4 +213,5 @@ composer.addEventListener("keydown", (event) => {
 
 sendButton.addEventListener("click", runComposer);
 renderScore();
+loadSessions();
 loadInitialScore();

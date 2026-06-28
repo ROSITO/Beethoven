@@ -154,6 +154,11 @@ button {
   gap: 6px;
 }
 
+#sessionList {
+  display: grid;
+  gap: 6px;
+}
+
 .recent {
   flex: 1;
   min-height: 0;
@@ -224,6 +229,12 @@ button {
 .status-dot.running {
   border-color: var(--red);
   background: var(--red);
+}
+
+.session-empty {
+  padding: 8px 10px;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .icon-button,

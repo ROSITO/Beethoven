@@ -33,3 +33,4 @@ def test_desktop_command_is_registered(capsys) -> None:
 
     captured = capsys.readouterr()
     assert "Serve the local desktop workbench" in captured.out
+    assert "--open" in captured.out

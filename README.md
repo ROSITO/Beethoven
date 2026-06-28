@@ -126,6 +126,7 @@ Open it directly, or serve it through Beethoven's local desktop API:
 
 ```bash
 beethoven desktop
+beethoven desktop --open
 ```
 
 Then visit `http://localhost:4173`.
@@ -170,6 +171,7 @@ beethoven score "Refactor this repository"
 beethoven run "Refactor this repository"
 beethoven run "Refactor this repository" --json
 beethoven desktop
+beethoven desktop --open
 ```
 
 Without installing dev dependencies, the current tests can also run with:

@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+import webbrowser
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
+from beethoven.desktop_state import DesktopSessionStore
 from beethoven.runtime import run_objective, score_objective
 from beethoven.serialization import context_to_dict, score_to_dict
 
@@ -19,6 +21,7 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
     """Serve desktop assets and the first local orchestration API."""
 
     server_version = "BeethovenDesktop/0.1"
+    store = DesktopSessionStore()
 
     def __init__(self, *args: Any, directory: str | None = None, **kwargs: Any) -> None:
         super().__init__(*args, directory=directory or str(DESKTOP_ROOT), **kwargs)
@@ -26,6 +29,9 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
     def do_GET(self) -> None:
         if self.path == "/api/health":
             self._send_json({"status": "ok", "surface": "desktop"})
+            return
+        if self.path == "/api/sessions":
+            self._send_json({"sessions": self.store.list_sessions()})
             return
         super().do_GET()
 
@@ -38,10 +44,21 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             return
 
         if self.path == "/api/run":
-            objective = self._read_objective()
+            payload = self._read_payload()
+            if payload is None:
+                return
+            objective = self._read_objective(payload)
             if objective is None:
                 return
-            self._send_json(context_to_dict(run_objective(objective)))
+            context = run_objective(objective)
+            session = self.store.save_run(
+                context,
+                project=str(payload.get("project", "Beethoven")),
+                branch=str(payload.get("branch", "main")),
+            )
+            response = context_to_dict(context)
+            response["session"] = session
+            self._send_json(response)
             return
 
         self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
@@ -49,7 +66,7 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
     def log_message(self, format: str, *args: Any) -> None:
         return
 
-    def _read_objective(self) -> str | None:
+    def _read_payload(self) -> dict[str, Any] | None:
         content_length = int(self.headers.get("Content-Length", "0"))
         try:
             raw_body = self.rfile.read(content_length).decode("utf-8")
@@ -57,7 +74,16 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
         except json.JSONDecodeError:
             self._send_json({"error": "Request body must be valid JSON"}, HTTPStatus.BAD_REQUEST)
             return None
+        if not isinstance(payload, dict):
+            self._send_json({"error": "Request body must be a JSON object"}, HTTPStatus.BAD_REQUEST)
+            return None
+        return payload
 
+    def _read_objective(self, payload: dict[str, Any] | None = None) -> str | None:
+        if payload is None:
+            payload = self._read_payload()
+        if payload is None:
+            return None
         objective = str(payload.get("objective", "")).strip()
         if not objective:
             self._send_json({"error": "Missing objective"}, HTTPStatus.BAD_REQUEST)
@@ -73,10 +99,13 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
 
-def serve_desktop(host: str = "127.0.0.1", port: int = 4173) -> None:
+def serve_desktop(host: str = "127.0.0.1", port: int = 4173, open_browser: bool = False) -> None:
     server = ThreadingHTTPServer((host, port), BeethovenDesktopHandler)
-    print(f"Beethoven desktop running at http://{host}:{port}")
+    url = f"http://{host}:{port}"
+    print(f"Beethoven desktop running at {url}")
     print("Press Ctrl+C to stop.")
+    if open_browser:
+        webbrowser.open(url)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

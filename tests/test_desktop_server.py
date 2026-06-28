@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import threading
 from http.server import ThreadingHTTPServer
 from urllib.request import Request, urlopen
@@ -43,6 +44,7 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
                     "soloist": "local-echo",
                     "permission_mode": "read-only",
                     "effort": "high",
+                    "validation_commands": [f"{sys.executable} -c \"print('ok')\""],
                 }
             ).encode("utf-8"),
             headers={"Content-Type": "application/json"},
@@ -58,6 +60,19 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
             method="POST",
         )
         urlopen(second_request, timeout=2).read()
+
+        stream_request = Request(
+            f"http://{host}:{port}/api/run/stream",
+            data=json.dumps({"objective": "stream desktop api"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        stream_response = urlopen(stream_request, timeout=2)
+        stream_events = [
+            json.loads(line.decode("utf-8"))
+            for line in stream_response.readlines()
+            if line.strip()
+        ]
 
         sessions = urlopen(f"http://{host}:{port}/api/sessions", timeout=2)
         sessions_data = json.loads(sessions.read().decode("utf-8"))
@@ -76,13 +91,19 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
         "synthesize:local-echo",
     ]
     assert payload["statuses"]["synthesize"] == "completed"
+    assert payload["events"][0]["type"] == "score_started"
+    assert payload["events"][-1]["type"] == "score_completed"
+    assert payload["artifacts"]["validation"]["output"][0]["passed"] is True
     assert payload["session"]["title"] == "test desktop api"
     assert payload["session"]["permission_mode"] == "read-only"
     assert payload["session"]["effort"] == "high"
     assert payload["score"]["metadata"]["permission_mode"] == "read-only"
-    assert sessions_data["sessions"][1]["id"] == payload["score"]["id"]
+    assert any(session["id"] == payload["score"]["id"] for session in sessions_data["sessions"])
     assert "run" not in sessions_data["sessions"][0]
     assert detail_data["session"]["run"]["score"]["id"] == payload["score"]["id"]
+    assert stream_events[0]["event"]["type"] == "score_started"
+    assert stream_events[-1]["event"]["type"] == "run_completed"
+    assert stream_events[-1]["event"]["context"]["score"]["objective"] == "stream desktop api"
     assert soloists_data["soloists"][0]["id"] == "local-echo"
     assert soloists_data["soloists"][0]["status"] == "available"
     assert skills_data["skills"][0]["id"] == "analyze"

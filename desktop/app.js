@@ -590,7 +590,7 @@ async function runComposer() {
   composerStatus.textContent = "Running Beethoven locally…";
 
   try {
-    const response = await fetch("/api/run", {
+    const response = await fetch("/api/run/stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -603,7 +603,7 @@ async function runComposer() {
     if (!response.ok) {
       throw new Error(`Desktop API returned ${response.status}`);
     }
-    const context = await response.json();
+    const context = await readRunStream(response);
     applyRunContext(context);
     const sessions = await fetchSessions();
     activeSessionId = context.session.id;
@@ -620,6 +620,66 @@ async function runComposer() {
     setTimeout(() => {
       sendButton.textContent = "↑";
     }, 900);
+  }
+}
+
+async function readRunStream(response) {
+  if (!response.body) {
+    throw new Error("Streaming response is unavailable");
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let finalContext = null;
+
+  while (true) {
+    const { value, done } = await reader.read();
+    buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      if (!line.trim()) {
+        continue;
+      }
+      const payload = JSON.parse(line);
+      const event = payload.event ?? {};
+      updateRunEventStatus(event);
+      if (event.type === "run_completed") {
+        finalContext = event.context;
+      }
+      if (event.type === "run_failed") {
+        throw new Error(event.error ?? "Run failed");
+      }
+    }
+    if (done) {
+      break;
+    }
+  }
+  if (!finalContext) {
+    throw new Error("Run stream ended without a final context");
+  }
+  return finalContext;
+}
+
+function updateRunEventStatus(event) {
+  if (event.type === "task_routed") {
+    composerStatus.textContent = `${event.task_id} routed to ${event.soloist}`;
+    return;
+  }
+  if (event.type === "task_started") {
+    composerStatus.textContent = `${event.task_id} running…`;
+    return;
+  }
+  if (event.type === "task_completed") {
+    composerStatus.textContent = `${event.task_id} completed`;
+    return;
+  }
+  if (event.type === "validation_started") {
+    composerStatus.textContent = "Running validation…";
+    return;
+  }
+  if (event.type === "score_completed") {
+    composerStatus.textContent = "Score completed. Saving session…";
   }
 }
 

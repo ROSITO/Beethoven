@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 
 from beethoven.cli import main, run_terminal_session
 from beethoven.desktop_state import DesktopSessionStore
@@ -27,6 +28,29 @@ def test_run_command_prints_trace(capsys) -> None:
     assert "effort=high" in captured.out
     assert "understand:local-echo" in captured.out
     assert "synthesize:local-echo" in captured.out
+
+
+def test_run_command_can_execute_validation_hook(capsys) -> None:
+    command = f"{sys.executable} -c \"print('ok')\""
+
+    exit_code = main(["run", "Validate", "hook", "--validate", command])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Validation" in captured.out
+    assert f"{command}: passed" in captured.out
+
+
+def test_score_command_attaches_workspace_paths(capsys) -> None:
+    exit_code = main(["score", "Review", "@README.md", "--json"])
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    attachments = data["metadata"]["attachments"]
+    assert exit_code == 0
+    assert attachments[0]["path"] == "README.md"
+    assert attachments[0]["status"] == "attached"
+    assert "# Beethoven" in attachments[0]["content"]
 
 
 def test_desktop_command_is_registered(capsys) -> None:
@@ -65,7 +89,7 @@ def test_soloists_list_command_prints_catalog(capsys) -> None:
     captured = capsys.readouterr()
     assert exit_code == 0
     assert "Local Echo [available]" in captured.out
-    assert "Ollama [planned]" in captured.out
+    assert "Ollama [" in captured.out
 
 
 def test_skills_list_command_prints_capability_catalog(capsys) -> None:

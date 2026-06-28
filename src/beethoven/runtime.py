@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 
 from beethoven.conductor import Conductor
-from beethoven.core import ExecutionContext, Score
+from beethoven.core import ExecutionContext, Score, SoloistResult
 from beethoven.planning import create_baseline_score
 from beethoven.routing import CapabilityRouter, SoloistRegistry
-from beethoven.soloists import EchoSoloist
+from beethoven.soloists import EchoSoloist, OllamaSoloist, ollama_is_available
+from beethoven.validation import run_validation_hooks
+from beethoven.workspace import read_workspace_attachments
 
 
 @dataclass(frozen=True)
@@ -25,10 +28,13 @@ class SoloistDescriptor:
 def create_default_registry() -> SoloistRegistry:
     registry = SoloistRegistry()
     registry.register(EchoSoloist())
+    if ollama_is_available():
+        registry.register(OllamaSoloist())
     return registry
 
 
 def list_soloists() -> list[dict[str, object]]:
+    ollama_status = "available" if ollama_is_available() else "planned"
     return [
         {
             "id": "local-echo",
@@ -51,10 +57,10 @@ def list_soloists() -> list[dict[str, object]]:
             "id": "ollama",
             "name": "Ollama",
             "provider": "Local model",
-            "status": "planned",
+            "status": ollama_status,
             "locality": "local",
-            "capabilities": ["analyze", "plan", "synthesize"],
-            "description": "Local-first model adapter planned for private orchestration.",
+            "capabilities": ["analyze", "plan", "code", "review", "synthesize"],
+            "description": "Local-first Ollama adapter for private orchestration.",
         },
         {
             "id": "openai-compatible",
@@ -110,9 +116,15 @@ def list_skills() -> list[dict[str, object]]:
 
 def score_objective(objective: str, metadata: dict[str, object] | None = None) -> Score:
     score = create_baseline_score(objective)
-    if not metadata:
+    attachments = read_workspace_attachments(objective)
+    combined_metadata: dict[str, object] = {**score.metadata}
+    if attachments:
+        combined_metadata["attachments"] = attachments
+    if metadata:
+        combined_metadata.update(metadata)
+    if not combined_metadata:
         return score
-    return replace(score, metadata={**score.metadata, **metadata})
+    return replace(score, metadata=combined_metadata)
 
 
 def run_objective(
@@ -121,14 +133,32 @@ def run_objective(
     soloist: str = "local-echo",
     permission_mode: str = "ask",
     effort: str = "medium",
+    validation_commands: list[str] | None = None,
+    event_sink: Callable[[dict[str, object]], None] | None = None,
 ) -> ExecutionContext:
+    if soloist == "ollama" and not ollama_is_available():
+        raise RuntimeError("Ollama soloist requested but the configured local model is unavailable.")
     score = score_objective(
         objective,
         metadata={
             "soloist": soloist,
             "permission_mode": permission_mode,
             "effort": effort,
+            "validation_commands": validation_commands or [],
         },
     )
     registry = create_default_registry()
-    return Conductor(CapabilityRouter(registry)).perform(score)
+    context = Conductor(
+        CapabilityRouter(registry, preferred_soloist=soloist),
+        event_sink=event_sink,
+    ).perform(score)
+    if validation_commands:
+        if event_sink is not None:
+            event_sink({"type": "validation_started", "commands": validation_commands})
+        context.artifacts["validation"] = SoloistResult(
+            output=run_validation_hooks(validation_commands),
+            metadata={"mode": "validation"},
+        )
+        if event_sink is not None:
+            event_sink({"type": "validation_completed", "commands": validation_commands})
+    return context

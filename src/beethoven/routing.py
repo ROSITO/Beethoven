@@ -38,6 +38,7 @@ class CapabilityRouter:
     """
 
     registry: SoloistRegistry
+    preferred_soloist: str | None = None
 
     def choose(self, task: Task) -> Soloist:
         candidates = self.registry.capable_of(task.capability)
@@ -45,4 +46,8 @@ class CapabilityRouter:
             raise SoloistNotFoundError(
                 f"No soloist registered for capability '{task.capability.value}'"
             )
+        if self.preferred_soloist:
+            for candidate in candidates:
+                if candidate.name == self.preferred_soloist:
+                    return candidate
         return candidates[0]

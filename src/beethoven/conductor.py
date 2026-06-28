@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from beethoven.core import ExecutionContext, Score, Task, TaskStatus
@@ -17,6 +18,7 @@ class Conductor:
     """Execute a score by routing every task to an appropriate soloist."""
 
     router: CapabilityRouter
+    event_sink: Callable[[dict[str, object]], None] | None = None
 
     def perform(self, score: Score) -> ExecutionContext:
         self._validate(score)
@@ -24,6 +26,7 @@ class Conductor:
             score=score,
             statuses={task.id: TaskStatus.PENDING for task in score.tasks},
         )
+        self._emit({"type": "score_started", "score_id": score.id, "objective": score.objective})
 
         remaining = list(score.tasks)
         while remaining:
@@ -36,21 +39,31 @@ class Conductor:
                 self._perform_task(task, context)
                 remaining.remove(task)
 
+        self._emit({"type": "score_completed", "score_id": score.id, "status": "completed"})
         return context
 
     def _perform_task(self, task: Task, context: ExecutionContext) -> None:
         soloist = self.router.choose(task)
         context.statuses[task.id] = TaskStatus.RUNNING
         context.trace.append(f"{task.id}:{soloist.name}")
+        self._emit({"type": "task_routed", "task_id": task.id, "soloist": soloist.name})
+        self._emit({"type": "task_started", "task_id": task.id})
 
         try:
             result = soloist.perform(task, context)
         except Exception:
             context.statuses[task.id] = TaskStatus.FAILED
+            self._emit({"type": "task_failed", "task_id": task.id, "status": TaskStatus.FAILED.value})
             raise
 
         context.artifacts[task.id] = result
         context.statuses[task.id] = TaskStatus.COMPLETED
+        self._emit({"type": "artifact_produced", "task_id": task.id})
+        self._emit({"type": "task_completed", "task_id": task.id, "status": TaskStatus.COMPLETED.value})
+
+    def _emit(self, event: dict[str, object]) -> None:
+        if self.event_sink is not None:
+            self.event_sink(event)
 
     @staticmethod
     def _dependencies_completed(task: Task, context: ExecutionContext) -> bool:

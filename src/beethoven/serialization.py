@@ -7,6 +7,7 @@ from enum import Enum
 from typing import Any
 
 from beethoven.core import ExecutionContext, Score, SoloistResult
+from beethoven.events import context_events
 
 
 def to_jsonable(value: Any) -> Any:
@@ -34,5 +35,6 @@ def context_to_dict(context: ExecutionContext) -> dict[str, Any]:
         "score": score_to_dict(context.score),
         "trace": context.trace,
         "statuses": to_jsonable(context.statuses),
+        "events": context_events(context),
         "artifacts": artifacts,
     }

@@ -77,11 +77,13 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             soloist = str(payload.get("soloist", "local-echo"))
             permission_mode = str(payload.get("permission_mode", "ask"))
             effort = str(payload.get("effort", "medium"))
+            validation_commands = self._read_validation_commands(payload)
             context = run_objective(
                 objective,
                 soloist=soloist,
                 permission_mode=permission_mode,
                 effort=effort,
+                validation_commands=validation_commands,
             )
             session = self.store.save_run(
                 context,
@@ -94,6 +96,50 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             response = context_to_dict(context)
             response["session"] = session
             self._send_json(response)
+            return
+
+        if path == "/api/run/stream":
+            payload = self._read_payload()
+            if payload is None:
+                return
+            objective = self._read_objective(payload)
+            if objective is None:
+                return
+            soloist = str(payload.get("soloist", "local-echo"))
+            permission_mode = str(payload.get("permission_mode", "ask"))
+            effort = str(payload.get("effort", "medium"))
+            validation_commands = self._read_validation_commands(payload)
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+
+            def write_event(event: dict[str, object]) -> None:
+                self.wfile.write(json.dumps({"event": event}, ensure_ascii=False).encode("utf-8") + b"\n")
+                self.wfile.flush()
+
+            try:
+                context = run_objective(
+                    objective,
+                    soloist=soloist,
+                    permission_mode=permission_mode,
+                    effort=effort,
+                    validation_commands=validation_commands,
+                    event_sink=write_event,
+                )
+                session = self.store.save_run(
+                    context,
+                    project=str(payload.get("project", "Beethoven")),
+                    branch=str(payload.get("branch", "main")),
+                    soloist=soloist,
+                    permission_mode=permission_mode,
+                    effort=effort,
+                )
+                response = context_to_dict(context)
+                response["session"] = session
+                write_event({"type": "run_completed", "context": response})
+            except Exception as error:
+                write_event({"type": "run_failed", "error": str(error)})
             return
 
         self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
@@ -128,6 +174,18 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             self._send_json({"error": "Missing objective"}, HTTPStatus.BAD_REQUEST)
             return None
         return objective
+
+    def _read_validation_commands(self, payload: dict[str, Any]) -> list[str]:
+        raw_validation_commands = payload.get("validation_commands", [])
+        return (
+            [
+                str(command)
+                for command in raw_validation_commands
+                if str(command).strip()
+            ]
+            if isinstance(raw_validation_commands, list)
+            else []
+        )
 
     def _send_json(self, payload: dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> None:
         body = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")

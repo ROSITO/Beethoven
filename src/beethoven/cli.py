@@ -44,6 +44,12 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["low", "medium", "high"],
         help="Execution effort preference.",
     )
+    run.add_argument(
+        "--validate",
+        action="append",
+        default=[],
+        help="Validation command to run after orchestration. Can be repeated.",
+    )
 
     chat = subparsers.add_parser(
         "chat",
@@ -130,6 +136,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             soloist=args.soloist,
             permission_mode=args.permission,
             effort=args.effort,
+            validation_commands=args.validate,
         )
         if args.json:
             print(json.dumps(context_to_dict(context), indent=2, ensure_ascii=False))
@@ -414,6 +421,17 @@ def print_run(data: dict[str, object]) -> None:
     assert isinstance(statuses, dict)
     for task_id, status in statuses.items():
         print(f"- {task_id}: {status}")
+    artifacts = data.get("artifacts", {})
+    if isinstance(artifacts, dict) and "validation" in artifacts:
+        validation = artifacts["validation"]
+        if isinstance(validation, dict):
+            print()
+            print("Validation")
+            for result in validation.get("output", []):
+                if not isinstance(result, dict):
+                    continue
+                marker = "passed" if result.get("passed") else "failed"
+                print(f"- {result.get('command')}: {marker}")
 
 
 def print_sessions(sessions: list[dict[str, object]]) -> None:

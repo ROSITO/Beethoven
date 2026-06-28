@@ -37,7 +37,10 @@ This repository now contains the first executable orchestration kernel:
 - `SoloistRegistry`: registry of available soloists.
 - `CapabilityRouter`: deterministic baseline routing.
 - `Conductor`: dependency-aware score execution.
-- `beethoven` CLI: first terminal surface for creating and running scores.
+- `beethoven` CLI: terminal surface for creating and running scores.
+- `OllamaSoloist`: first real local model adapter when Ollama is available.
+- `@path` attachments: safe workspace file context with size limits.
+- Run events: score/task/validation events for desktop streaming.
 
 The first implementation is intentionally small. The foundation must stay stable
 enough for future providers and plugins to attach naturally.
@@ -187,6 +190,8 @@ beethoven chat
 beethoven score "Refactor this repository"
 beethoven run "Refactor this repository"
 beethoven run "Refactor this repository" --json
+beethoven run "Review @README.md" --soloist ollama
+beethoven run "Review @README.md" --validate "python -m pytest"
 beethoven desktop
 beethoven desktop --open
 beethoven sessions list

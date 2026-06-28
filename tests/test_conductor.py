@@ -56,6 +56,17 @@ def test_conductor_executes_score_in_dependency_order() -> None:
     assert context.artifacts["code"].output == "coder:Implement the work"
 
 
+def test_router_prefers_named_soloist_when_capable() -> None:
+    registry = SoloistRegistry()
+    registry.register(FakeSoloist("first", frozenset({Capability.PLAN})))
+    registry.register(FakeSoloist("preferred", frozenset({Capability.PLAN})))
+    task = Task(id="plan", instruction="Plan", capability=Capability.PLAN)
+
+    chosen = CapabilityRouter(registry, preferred_soloist="preferred").choose(task)
+
+    assert chosen.name == "preferred"
+
+
 def test_conductor_rejects_unknown_dependencies() -> None:
     registry = SoloistRegistry()
     registry.register(FakeSoloist("planner", frozenset({Capability.PLAN})))

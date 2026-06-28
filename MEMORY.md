@@ -29,15 +29,18 @@ The foundation is pre-alpha but executable. It includes:
 
 - a Python orchestration kernel;
 - a local echo soloist;
+- a first Ollama soloist adapter when the configured local model is available;
 - deterministic score planning;
 - dependency-aware execution;
+- run event emission from the conductor;
 - JSON serialization;
 - a CLI;
 - a local desktop HTTP API;
 - a static desktop workbench;
 - session history;
 - workspace and Git context;
-- workspace file discovery;
+- workspace file discovery and safe `@path` file attachment reads;
+- validation command hooks after a run;
 - a Tauri v2 desktop shell scaffold;
 - tests for core execution, CLI, and desktop API.
 
@@ -47,14 +50,18 @@ Important modules:
 
 - `src/beethoven/core.py`: core contracts: `Capability`, `TaskStatus`, `Task`,
   `Score`, `ExecutionContext`, `SoloistResult`, `Soloist`.
-- `src/beethoven/conductor.py`: `Conductor` executes tasks in dependency order
-  and records trace/status/artifacts.
-- `src/beethoven/routing.py`: `SoloistRegistry` and `CapabilityRouter`.
+- `src/beethoven/conductor.py`: `Conductor` executes tasks in dependency order,
+  records trace/status/artifacts, and emits run events through `event_sink`.
+- `src/beethoven/routing.py`: `SoloistRegistry` and `CapabilityRouter`, with
+  preferred soloist selection when a requested soloist can satisfy the task.
 - `src/beethoven/planning.py`: deterministic baseline score generator.
-- `src/beethoven/soloists.py`: `EchoSoloist`, the offline deterministic worker.
+- `src/beethoven/soloists.py`: `EchoSoloist`, the offline deterministic worker,
+  plus `OllamaSoloist`, the first local model adapter.
 - `src/beethoven/runtime.py`: shared runtime helpers for CLI and desktop:
   `score_objective`, `run_objective`, `list_soloists`, `list_skills`.
 - `src/beethoven/serialization.py`: `score_to_dict` and `context_to_dict`.
+- `src/beethoven/events.py`: event reconstruction for non-streaming clients.
+- `src/beethoven/validation.py`: local validation command hooks.
 - `src/beethoven/desktop_state.py`: local JSON-backed session store.
 - `src/beethoven/workspace.py`: Git/workspace inspection and attachable file
   listing.
@@ -66,14 +73,15 @@ Current baseline score tasks:
 2. `plan` with capability `plan`, depends on `understand`.
 3. `synthesize` with capability `synthesize`, depends on `plan`.
 
-Current available soloist:
+Current available soloists:
 
 - `local-echo`: deterministic local/offline soloist used for testing and UI
   flows.
+- `ollama`: available when `ollama list` contains the configured model
+  (`BEETHOVEN_OLLAMA_MODEL`, default `qwen3-coder:latest`).
 
 Planned soloist catalog:
 
-- `ollama`;
 - `openai-compatible`;
 - `codex`.
 
@@ -88,6 +96,8 @@ beethoven score "<objective>" --json
 beethoven run "<objective>"
 beethoven run "<objective>" --json
 beethoven run "<objective>" --soloist local-echo --permission ask --effort medium
+beethoven run "Review @README.md" --soloist ollama
+beethoven run "<objective>" --validate "python -m pytest"
 beethoven desktop
 beethoven desktop --open
 beethoven sessions list
@@ -139,7 +149,9 @@ Implemented endpoints:
 - `GET /api/workspace`;
 - `GET /api/files`;
 - `POST /api/score`;
-- `POST /api/run`.
+- `POST /api/run`;
+- `POST /api/run/stream` returning NDJSON run events and a final
+  `run_completed` event with the full run context.
 
 Development notes:
 
@@ -166,7 +178,8 @@ Implemented UI:
 - `New task` resets composer and score state;
 - composer with permission mode, soloist selector, effort selector;
 - score preview through `/api/score`;
-- run through `/api/run`;
+- run through `/api/run/stream`, with live composer status updates while events
+  arrive;
 - score inspector and progress timeline;
 - workspace/Git context through `/api/workspace`;
 - attachable context files through `/api/files`, inserted as `@path`;
@@ -269,76 +282,76 @@ Browser QA has been done with the in-app browser for:
 
 ## Known Gaps
 
-- No real model/provider adapter yet.
+- Ollama is the first real local adapter, but there is no OpenAI-compatible
+  adapter, credential/config system, or adapter SDK yet.
 - The terminal CLI is line-oriented, not a full-screen TUI like OpenCode yet.
 - `soloist`, `permission_mode`, and `effort` are recorded but not deeply enforced
   beyond metadata/routing scaffolding.
-- No true file content ingestion yet; files are attached as `@path` references.
-- No streaming run output yet.
-- No diff, patch, approval, or test execution workflow yet.
+- `@path` file ingestion exists with workspace and size guards, but there is no
+  richer context packing, binary detection, token budgeting, or UI inspector yet.
+- Desktop consumes NDJSON run events, but the visual timeline is still mostly
+  rendered from final context.
+- Validation hooks can run local commands, but there is no policy/approval layer,
+  no configured test profiles, and no validation task graph yet.
+- No diff, patch, or approval workflow yet.
 - No persistent conversation message history beyond saved run/session summaries.
 - No plugin SDK.
 - No real automation/scheduled scores.
 - No production desktop installer.
-- No OpenAI/Ollama/Codex adapter implementation.
 - No semantic memory/cache layer.
 - No security policy sandbox beyond the current local prototype assumptions.
 
 ## Recommended Next Plan
 
-### 1. Add A Real Soloist Adapter Boundary
+### 1. Harden The Soloist Adapter Boundary
 
-Goal: move from `local-echo` only to a real adapter architecture without
-hard-coding one provider.
-
-Suggested steps:
-
-- Define a provider adapter interface or extend the `Soloist` contract with
-  config/availability metadata.
-- Add an `OpenAICompatibleSoloist` or `OllamaSoloist` behind environment
-  variables/config.
-- Keep `local-echo` as fallback.
-- Expose adapter availability in `beethoven soloists list` and `/api/soloists`.
-- Add tests that do not require network/API keys.
-
-### 2. Make Context Attachments Semantically Useful
-
-Goal: attached `@path` files should influence scoring/runs.
+Goal: turn the first `OllamaSoloist` into a provider boundary that can host
+Ollama, OpenAI-compatible APIs, Codex, tools, and future workers consistently.
 
 Suggested steps:
 
-- Parse `@path` references from composer objective.
-- Add selected file paths to score metadata.
-- Add a safe file reader with size limits and ignored paths.
-- Show attached files in the score inspector.
-- Add CLI parity, for example:
+- Add adapter metadata/config objects instead of hard-coded env reads in
+  `soloists.py`.
+- Add an `OpenAICompatibleSoloist` behind `OPENAI_BASE_URL` /
+  `OPENAI_API_KEY`-style config.
+- Add tests that mock subprocess/API calls and never require network/API keys.
+- Decide how routing handles requested-but-unavailable soloists in desktop UI.
+- Keep `local-echo` as deterministic fallback for tests and demos.
 
-```bash
-beethoven run "Review @README.md"
-```
+### 2. Upgrade Context Attachments
 
-### 3. Add Run Streaming And Event Trace
+Goal: make `@path` context useful enough for real coding work without creating
+unsafe reads or runaway prompts.
+
+Suggested steps:
+
+- Add binary detection and MIME/extension metadata.
+- Add token/byte budgeting across multiple attachments.
+- Show attached file status/content snippets in the desktop inspector.
+- Add support for directories as bounded file bundles.
+- Add tests for ignored paths, missing files, traversal attempts, and truncation.
+
+### 3. Make Streaming Visibly Useful
 
 Goal: desktop should feel alive during execution, closer to Codex/Claude/ZCode.
 
 Suggested steps:
 
-- Introduce a run event model: task started, routed, artifact produced, task
-  completed, run completed.
-- Add an API endpoint for event polling or Server-Sent Events.
-- Update the timeline progressively instead of after the whole run.
-- Keep CLI output compatible with streaming or verbose mode.
+- Render timeline rows progressively from NDJSON events.
+- Add CLI verbose/stream mode that prints events as they arrive.
+- Add cancellation support for active runs.
+- Persist event logs with sessions, not only reconstructed final trace.
 
-### 4. Add Validation Hooks
+### 4. Turn Validation Hooks Into Profiles
 
-Goal: turn Beethoven from planner/executor into a trustworthy coding workflow.
+Goal: make validation trustworthy and repeatable rather than ad hoc commands.
 
 Suggested steps:
 
-- Define validation tasks/capabilities.
-- Add a local command validator that can run configured commands.
-- Add CLI options such as `--validate`.
-- Surface validation status in desktop inspector.
+- Add named validation profiles in config/metadata.
+- Route validation through a real `validate` task capability.
+- Surface stdout/stderr and pass/fail summary in the desktop inspector.
+- Add permission prompts before commands that mutate the workspace.
 
 ### 5. Strengthen Native Desktop Packaging
 
@@ -346,10 +359,25 @@ Goal: make the Tauri shell closer to a usable app.
 
 Suggested steps:
 
-- Generate and wire app icons.
-- Decide production sidecar strategy.
-- Ensure Tauri dev/build works on a clean machine.
-- Add packaging documentation for macOS first.
+- Implement a Tauri startup supervisor for the Python sidecar.
+- Replace the shell launcher with a bundled Python runtime sidecar.
+- Generate and wire app icons and platform bundle metadata.
+- Add CI checks for `npm run tauri:dev` smoke tests where Tauri is available.
+- Document macOS notarization/signing expectations.
+
+### 6. Begin Fugu-Like Orchestration Research
+
+Goal: define how Beethoven differs from ordinary agent frameworks and moves
+toward a universal orchestration layer.
+
+Suggested steps:
+
+- Define score schemas for multi-agent debate, tool use, critic loops, and
+  validation loops.
+- Add a routing policy layer: local-first, fastest, cheapest, best-quality,
+  privacy-first.
+- Add cost/latency/quality metadata to soloist results.
+- Add replayable traces and run comparison.
 
 ## Useful Commands
 
@@ -379,6 +407,13 @@ Run desktop with isolated history:
 
 ```bash
 BEETHOVEN_HOME=$(mktemp -d) .venv/bin/beethoven desktop --host 127.0.0.1 --port 4173
+```
+
+Run with local context/model/validation:
+
+```bash
+.venv/bin/beethoven run "Review @README.md" --soloist ollama
+.venv/bin/beethoven run "Check the project" --validate ".venv/bin/python -m pytest"
 ```
 
 Run Tauri dev:

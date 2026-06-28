@@ -39,6 +39,29 @@ beethoven desktop --host "$BEETHOVEN_HOST" --port "$BEETHOVEN_PORT"
 
 with defaults of `127.0.0.1` and `4173`.
 
+## Python Sidecar Strategy
+
+The desktop app should treat Python as Beethoven's orchestration engine, not as
+an implementation detail hidden inside the frontend. The packaging path is:
+
+1. **Development**: Tauri starts `beethoven desktop` with the editable Python
+   package installed in the active environment.
+2. **Local sidecar launcher**: `beethoven package sidecar` writes a launcher in
+   `src-tauri/bin/` that delegates to the installed `beethoven` console script.
+3. **Bundled sidecar**: production builds should ship a hermetic Python runtime
+   containing the `beethoven` package and its dependencies, then launch it as a
+   Tauri sidecar process.
+4. **Health and streaming contract**: the app waits for `/api/health`, sends
+   runs to `/api/run/stream`, and consumes newline-delimited run events until a
+   final `run_completed` event arrives.
+5. **Configuration**: `BEETHOVEN_HOST`, `BEETHOVEN_PORT`, `BEETHOVEN_HOME`,
+   `BEETHOVEN_OLLAMA_MODEL`, and `BEETHOVEN_OLLAMA_TIMEOUT` remain the stable
+   environment boundary between Tauri and the Python engine.
+
+The sidecar must own local state under `BEETHOVEN_HOME`, expose only localhost
+HTTP endpoints, and keep provider credentials or model configuration outside the
+frontend bundle.
+
 ## Current Scope
 
 This is intentionally the first native-app bridge, not the final installer:
@@ -46,13 +69,13 @@ This is intentionally the first native-app bridge, not the final installer:
 - the desktop UI remains the static workbench in `desktop/`;
 - the Python runtime remains the source of truth for orchestration;
 - Tauri provides the native window and app shell;
-- production bundling will need a Python sidecar or a dedicated backend process
-  strategy before installers are considered complete.
+- production bundling needs the bundled sidecar phase above before installers
+  are considered complete.
 
 ## Next Packaging Steps
 
 1. Replace the shell launcher with a fully bundled Python runtime sidecar.
 2. Add app icons and platform bundle metadata.
 3. Add CI checks for `npm run tauri:dev` smoke tests where Tauri is available.
-4. Decide whether production builds load `frontendDist` directly or always start
-   a local backend sidecar.
+4. Add a startup supervisor that launches the sidecar, waits for health, and
+   reports failures inside the desktop UI.

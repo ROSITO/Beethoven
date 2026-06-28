@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from beethoven.desktop_state import DesktopSessionStore
-from beethoven.runtime import run_objective, score_objective
+from beethoven.runtime import list_soloists, run_objective, score_objective
 from beethoven.serialization import context_to_dict, score_to_dict
 
 
@@ -32,6 +32,9 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             return
         if self.path == "/api/sessions":
             self._send_json({"sessions": self.store.list_sessions()})
+            return
+        if self.path == "/api/soloists":
+            self._send_json({"soloists": list_soloists()})
             return
         super().do_GET()
 

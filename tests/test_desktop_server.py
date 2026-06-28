@@ -23,6 +23,9 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
         health_data = json.loads(health.read().decode("utf-8"))
         assert health_data == {"status": "ok", "surface": "desktop"}
 
+        soloists = urlopen(f"http://{host}:{port}/api/soloists", timeout=2)
+        soloists_data = json.loads(soloists.read().decode("utf-8"))
+
         request = Request(
             f"http://{host}:{port}/api/run",
             data=json.dumps({"objective": "test desktop api"}).encode("utf-8"),
@@ -48,3 +51,5 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
     assert payload["statuses"]["synthesize"] == "completed"
     assert payload["session"]["title"] == "test desktop api"
     assert sessions_data["sessions"][0]["id"] == payload["score"]["id"]
+    assert soloists_data["soloists"][0]["id"] == "local-echo"
+    assert soloists_data["soloists"][0]["status"] == "available"

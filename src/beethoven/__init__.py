@@ -12,7 +12,7 @@ from beethoven.core import (
 )
 from beethoven.planning import create_baseline_score
 from beethoven.routing import CapabilityRouter, SoloistRegistry
-from beethoven.runtime import run_objective, score_objective
+from beethoven.runtime import list_soloists, run_objective, score_objective
 from beethoven.soloists import EchoSoloist
 
 __all__ = [
@@ -28,6 +28,7 @@ __all__ = [
     "TaskStatus",
     "EchoSoloist",
     "create_baseline_score",
+    "list_soloists",
     "run_objective",
     "score_objective",
 ]

@@ -49,3 +49,12 @@ def test_sessions_list_command_prints_history(tmp_path, monkeypatch, capsys) -> 
     assert exit_code == 0
     assert "review desktop session history" in captured.out
     assert "project: Beethoven" in captured.out
+
+
+def test_soloists_list_command_prints_catalog(capsys) -> None:
+    exit_code = main(["soloists", "list"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Local Echo [available]" in captured.out
+    assert "Ollama [planned]" in captured.out

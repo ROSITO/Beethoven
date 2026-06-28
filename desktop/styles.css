@@ -45,6 +45,10 @@ textarea {
   font: inherit;
 }
 
+select {
+  font: inherit;
+}
+
 button {
   border: 0;
   cursor: pointer;
@@ -560,6 +564,24 @@ button {
   height: 1px;
   overflow: hidden;
   clip: rect(0 0 0 0);
+}
+
+.select-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.soloist-select {
+  min-height: 30px;
+  max-width: 170px;
+  padding: 5px 30px 5px 10px;
+  color: var(--ink);
+  background: #efefec;
+  border: 1px solid transparent;
+  border-radius: 8px;
 }
 
 textarea {

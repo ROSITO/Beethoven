@@ -173,6 +173,7 @@ beethoven run "Refactor this repository" --json
 beethoven desktop
 beethoven desktop --open
 beethoven sessions list
+beethoven soloists list
 ```
 
 Without installing dev dependencies, the current tests can also run with:

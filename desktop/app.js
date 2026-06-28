@@ -36,6 +36,7 @@ const modeTabs = [...document.querySelectorAll(".mode-tab")];
 const modeEyebrow = document.querySelector("#modeEyebrow");
 const modeSummary = document.querySelector("#modeSummary");
 const modeConductor = document.querySelector("#modeConductor");
+const soloistSelect = document.querySelector("#soloistSelect");
 
 const modeCopy = {
   chat: {
@@ -126,6 +127,20 @@ function renderSessions(sessions) {
     .join("");
 }
 
+function renderSoloists(soloists) {
+  const available = soloists.filter((soloist) => soloist.status === "available");
+  const planned = soloists.filter((soloist) => soloist.status !== "available");
+  const options = [
+    ...available.map(
+      (soloist) => `<option value="${soloist.id}">${soloist.name}</option>`
+    ),
+    ...planned.map(
+      (soloist) => `<option value="${soloist.id}" disabled>${soloist.name} (${soloist.status})</option>`
+    )
+  ];
+  soloistSelect.innerHTML = options.join("");
+}
+
 function setMode(mode) {
   const copy = modeCopy[mode] ?? modeCopy.code;
   modeTabs.forEach((tab) => {
@@ -179,7 +194,7 @@ async function runComposer() {
     const response = await fetch("/api/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ objective: value })
+      body: JSON.stringify({ objective: value, soloist: soloistSelect.value })
     });
     if (!response.ok) {
       throw new Error(`Desktop API returned ${response.status}`);
@@ -237,6 +252,25 @@ async function fetchSessions() {
   }
 }
 
+async function loadSoloists() {
+  try {
+    const response = await fetch("/api/soloists");
+    if (!response.ok) {
+      throw new Error(`Soloists API returned ${response.status}`);
+    }
+    const payload = await response.json();
+    renderSoloists(payload.soloists ?? []);
+  } catch {
+    renderSoloists([
+      {
+        id: "local-echo",
+        name: "Local Echo",
+        status: "available"
+      }
+    ]);
+  }
+}
+
 async function loadSessions() {
   const sessions = await fetchSessions();
   renderSessions(sessions);
@@ -254,5 +288,6 @@ modeTabs.forEach((tab) => {
   tab.addEventListener("click", () => setMode(tab.dataset.mode));
 });
 renderScore();
+loadSoloists();
 loadSessions();
 loadInitialScore();

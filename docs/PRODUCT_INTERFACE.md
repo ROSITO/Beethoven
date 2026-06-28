@@ -150,6 +150,7 @@ When served with `beethoven desktop`, the workbench uses the local API endpoints
 
 - `GET /api/health`;
 - `GET /api/sessions`;
+- `GET /api/soloists`;
 - `POST /api/score`;
 - `POST /api/run`.
 

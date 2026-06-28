@@ -279,6 +279,11 @@ button {
   background: #ececea;
 }
 
+.text-button.active {
+  border-color: var(--line-strong);
+  background: var(--panel);
+}
+
 .account-strip {
   gap: 10px;
   padding: 10px 8px 0;
@@ -322,7 +327,8 @@ button {
 }
 
 .command-panel,
-.skills-panel {
+.skills-panel,
+.score-panel {
   display: grid;
   gap: 16px;
   margin: 16px 26px 0;
@@ -333,12 +339,14 @@ button {
 }
 
 .command-panel[hidden],
-.skills-panel[hidden] {
+.skills-panel[hidden],
+.score-panel[hidden] {
   display: none;
 }
 
 .command-panel-header,
-.skills-panel-header {
+.skills-panel-header,
+.score-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -347,12 +355,14 @@ button {
 
 .command-panel h2,
 .command-panel h3,
-.skills-panel h2 {
+.skills-panel h2,
+.score-panel h2 {
   margin: 0;
 }
 
 .command-panel h2,
-.skills-panel h2 {
+.skills-panel h2,
+.score-panel h2 {
   font-size: 16px;
 }
 
@@ -363,7 +373,8 @@ button {
 }
 
 .command-panel-header span,
-.skills-panel-header span {
+.skills-panel-header span,
+.score-panel-header span {
   display: block;
   margin-top: 2px;
   color: var(--muted);
@@ -385,6 +396,11 @@ button {
 .skills-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.preview-score-list {
+  display: grid;
   gap: 10px;
 }
 
@@ -421,6 +437,40 @@ button {
 
 .skill-card p {
   margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.preview-score-card {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.preview-score-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.preview-score-card h3,
+.preview-score-card p {
+  margin: 0;
+}
+
+.preview-score-card h3 {
+  font-size: 14px;
+}
+
+.preview-score-card p {
+  margin-top: 4px;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.4;
@@ -818,12 +868,14 @@ textarea:focus {
   .topbar,
   .canvas,
   .command-panel,
-  .skills-panel {
+  .skills-panel,
+  .score-panel {
     padding-inline: 16px;
   }
 
   .command-panel,
-  .skills-panel {
+  .skills-panel,
+  .score-panel {
     margin: 14px 16px 0;
   }
 

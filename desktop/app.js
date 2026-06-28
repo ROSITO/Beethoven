@@ -52,6 +52,7 @@ const workspaceChanges = document.querySelector("#workspaceChanges");
 const terminalButton = document.querySelector("#terminalButton");
 const runScoreButton = document.querySelector("#runScoreButton");
 const slashCommandsButton = document.querySelector("#slashCommandsButton");
+const scorePreviewButton = document.querySelector("#scorePreviewButton");
 const commandPanel = document.querySelector("#commandPanel");
 const closeCommandPanel = document.querySelector("#closeCommandPanel");
 const commandList = document.querySelector("#commandList");
@@ -59,6 +60,10 @@ const workspaceStatusList = document.querySelector("#workspaceStatusList");
 const skillsPanel = document.querySelector("#skillsPanel");
 const closeSkillsPanel = document.querySelector("#closeSkillsPanel");
 const skillsGrid = document.querySelector("#skillsGrid");
+const scorePanel = document.querySelector("#scorePanel");
+const closeScorePanel = document.querySelector("#closeScorePanel");
+const scorePreviewMeta = document.querySelector("#scorePreviewMeta");
+const scorePreviewList = document.querySelector("#scorePreviewList");
 
 let currentWorkspace = null;
 let allSessions = [];
@@ -281,6 +286,27 @@ function renderSkills(skills) {
     .join("");
 }
 
+function renderScorePreview(score) {
+  scorePreviewMeta.textContent = `${score.id} · ${score.tasks.length} planned tasks`;
+  scorePreviewList.innerHTML = score.tasks
+    .map(
+      (task, index) => `
+        <article class="preview-score-card">
+          <span class="step-index">${index + 1}</span>
+          <div>
+            <header>
+              <h3>${escapeHtml(task.id)}</h3>
+              <span class="pill neutral">${escapeHtml(task.capability)}</span>
+            </header>
+            <p>${escapeHtml(task.instruction)}</p>
+            <div class="route-reason">depends on ${escapeHtml((task.depends_on ?? []).join(", ") || "none")}</div>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+}
+
 function setMode(mode) {
   const copy = modeCopy[mode] ?? modeCopy.code;
   modeTabs.forEach((tab) => {
@@ -341,7 +367,9 @@ function toggleCommandPanel(force) {
   commandPanel.hidden = !shouldOpen;
   if (shouldOpen) {
     skillsPanel.hidden = true;
+    scorePanel.hidden = true;
     skillsButton.classList.remove("active");
+    scorePreviewButton.classList.remove("active");
   }
   if (shouldOpen && currentWorkspace) {
     renderWorkspaceStatus(currentWorkspace);
@@ -354,7 +382,20 @@ function toggleSkillsPanel(force) {
   skillsButton.classList.toggle("active", shouldOpen);
   if (shouldOpen) {
     commandPanel.hidden = true;
+    scorePanel.hidden = true;
     renderSkills(allSkills);
+    scorePreviewButton.classList.remove("active");
+  }
+}
+
+function toggleScorePanel(force) {
+  const shouldOpen = force ?? scorePanel.hidden;
+  scorePanel.hidden = !shouldOpen;
+  scorePreviewButton.classList.toggle("active", shouldOpen);
+  if (shouldOpen) {
+    commandPanel.hidden = true;
+    skillsPanel.hidden = true;
+    skillsButton.classList.remove("active");
   }
 }
 
@@ -475,6 +516,33 @@ async function loadScoreForObjective(objective) {
   }
 }
 
+async function previewComposerScore() {
+  const objective = composer.value.trim() || "new orchestration task";
+  composerStatus.classList.remove("error");
+  composerStatus.textContent = "Drafting score preview…";
+  try {
+    const response = await fetch("/api/score", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ objective })
+    });
+    if (!response.ok) {
+      throw new Error(`Score API returned ${response.status}`);
+    }
+    const score = await response.json();
+    scoreTasks = score.tasks.map((task) => taskFromScore(task));
+    scoreId.textContent = score.id;
+    renderScore();
+    renderScorePreview(score);
+    toggleScorePanel(true);
+    composerStatus.textContent = `Score preview ready for: ${objective}`;
+  } catch (error) {
+    composerStatus.classList.add("error");
+    composerStatus.textContent = "Unable to preview score. Start it with: beethoven desktop";
+    console.error(error);
+  }
+}
+
 async function loadInitialScore() {
   await loadScoreForObjective("desktop and CLI foundation");
 }
@@ -567,6 +635,8 @@ async function startNewTask() {
   effortSelect.value = "medium";
   commandPanel.hidden = true;
   skillsPanel.hidden = true;
+  scorePanel.hidden = true;
+  scorePreviewButton.classList.remove("active");
   document.querySelectorAll(".nav-action").forEach((button) => {
     button.classList.toggle("active", button === newTaskButton);
   });
@@ -598,8 +668,10 @@ sessionSearch.addEventListener("keydown", (event) => {
 });
 terminalButton.addEventListener("click", () => toggleCommandPanel());
 slashCommandsButton.addEventListener("click", () => toggleCommandPanel(true));
+scorePreviewButton.addEventListener("click", previewComposerScore);
 closeCommandPanel.addEventListener("click", () => toggleCommandPanel(false));
 closeSkillsPanel.addEventListener("click", () => toggleSkillsPanel(false));
+closeScorePanel.addEventListener("click", () => toggleScorePanel(false));
 commandList.addEventListener("click", (event) => {
   const row = event.target.closest(".command-row");
   if (row?.dataset.commandIndex) {

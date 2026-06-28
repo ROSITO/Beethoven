@@ -121,7 +121,8 @@ The first desktop workbench prototype lives in `desktop/`. It is a static shell
 that captures the target product shape: project sidebar, Chat/Cowork/Code modes,
 conversation canvas, score inspector, execution trace, permission controls, and
 composer. The sidebar actions for new tasks, session search, and skills are
-live when served through the local API.
+live when served through the local API. The composer can also preview a score
+before running it, mirroring `beethoven score`.
 
 Open it directly, or serve it through Beethoven's local desktop API:
 

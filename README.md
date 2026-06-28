@@ -115,6 +115,21 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for more detail.
 See [docs/PRODUCT_INTERFACE.md](docs/PRODUCT_INTERFACE.md) for the desktop and
 CLI product direction.
 
+## Desktop Prototype
+
+The first desktop workbench prototype lives in `desktop/`. It is a static shell
+that captures the target product shape: project sidebar, Chat/Cowork/Code modes,
+conversation canvas, score inspector, execution trace, permission controls, and
+composer.
+
+Open it directly or serve it locally:
+
+```bash
+python3 -m http.server 4173 -d desktop
+```
+
+Then visit `http://localhost:4173`.
+
 ## Supported Soloist Targets
 
 Planned adapters include:

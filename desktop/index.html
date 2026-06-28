@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Beethoven Desktop Prototype</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Workspace navigation">
+        <div class="window-controls" aria-hidden="true">
+          <span class="traffic traffic-red"></span>
+          <span class="traffic traffic-yellow"></span>
+          <span class="traffic traffic-green"></span>
+        </div>
+
+        <div class="nav-actions">
+          <button class="nav-action active" type="button">
+            <span class="icon">+</span>
+            New task
+          </button>
+          <button class="nav-action" type="button">
+            <span class="icon">⌕</span>
+            Search
+          </button>
+          <button class="nav-action" type="button">
+            <span class="icon">⌘</span>
+            Skills
+          </button>
+        </div>
+
+        <div class="mode-tabs" role="tablist" aria-label="Beethoven modes">
+          <button class="mode-tab" type="button">Chat</button>
+          <button class="mode-tab" type="button">Cowork</button>
+          <button class="mode-tab active" type="button">Code</button>
+        </div>
+
+        <section class="sidebar-section" aria-labelledby="projects-title">
+          <div class="section-header">
+            <h2 id="projects-title">Projects</h2>
+            <button class="icon-button" type="button" aria-label="Add project">+</button>
+          </div>
+          <button class="project-row active" type="button">
+            <span class="folder-icon"></span>
+            Beethoven
+            <span class="row-meta">main</span>
+          </button>
+          <button class="project-row" type="button">
+            <span class="folder-icon"></span>
+            CheckMyRep
+            <span class="row-meta">1d</span>
+          </button>
+          <button class="project-row" type="button">
+            <span class="folder-icon"></span>
+            ZCodeProject
+            <span class="row-meta">idle</span>
+          </button>
+        </section>
+
+        <section class="sidebar-section recent" aria-labelledby="sessions-title">
+          <div class="section-header">
+            <h2 id="sessions-title">Recent sessions</h2>
+            <button class="icon-button" type="button" aria-label="Filter sessions">≡</button>
+          </div>
+          <button class="session-row active" type="button">
+            <span class="status-dot running"></span>
+            Desktop + CLI foundation
+            <span class="row-meta">now</span>
+          </button>
+          <button class="session-row" type="button">
+            <span class="status-dot"></span>
+            Fugu positioning
+            <span class="row-meta">3h</span>
+          </button>
+          <button class="session-row" type="button">
+            <span class="status-dot"></span>
+            Plugin SDK sketch
+            <span class="row-meta">1d</span>
+          </button>
+        </section>
+
+        <div class="account-strip">
+          <div class="avatar">B</div>
+          <div>
+            <strong>Maxime</strong>
+            <span>Local-first workspace</span>
+          </div>
+          <button class="icon-button" type="button" aria-label="Settings">⚙</button>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <div class="breadcrumb">
+              <span>Beethoven</span>
+              <span class="tag">main</span>
+            </div>
+            <h1>Desktop + CLI foundation</h1>
+          </div>
+          <div class="topbar-actions">
+            <button class="icon-button" type="button" aria-label="Open terminal">›_</button>
+            <button class="icon-button" type="button" aria-label="Run score">▶</button>
+            <button class="icon-button" type="button" aria-label="More options">⋮</button>
+          </div>
+        </header>
+
+        <section class="canvas">
+          <div class="conversation">
+            <article class="message user-message">
+              <div class="message-meta">User objective</div>
+              <p>
+                Build a Beethoven interface close to Codex Desktop, Claude Desktop,
+                ZCode Desktop, with a real CLI surface.
+              </p>
+            </article>
+
+            <article class="message assistant-message">
+              <div class="message-meta">Conductor</div>
+              <p>
+                I created a portable score, routed it through the local echo soloist,
+                and exposed the same loop through the CLI. The desktop workbench now
+                mirrors that orchestration model.
+              </p>
+            </article>
+
+            <section class="execution-band" aria-labelledby="progress-title">
+              <div class="band-header">
+                <h2 id="progress-title">Progression</h2>
+                <span class="pill success">3 tasks completed</span>
+              </div>
+              <ol class="timeline">
+                <li>
+                  <span class="step-index">1</span>
+                  <div>
+                    <strong>Understand</strong>
+                    <p>Clarify intent, constraints, interface references, and risks.</p>
+                  </div>
+                  <span class="step-state">done</span>
+                </li>
+                <li>
+                  <span class="step-index">2</span>
+                  <div>
+                    <strong>Plan</strong>
+                    <p>Create a desktop product contract plus a CLI-aligned path.</p>
+                  </div>
+                  <span class="step-state">done</span>
+                </li>
+                <li>
+                  <span class="step-index">3</span>
+                  <div>
+                    <strong>Synthesize</strong>
+                    <p>Turn the contract into a first visible workbench prototype.</p>
+                  </div>
+                  <span class="step-state">done</span>
+                </li>
+              </ol>
+            </section>
+          </div>
+
+          <aside class="inspector" aria-label="Score inspector">
+            <div class="inspector-header">
+              <div>
+                <h2>Score Inspector</h2>
+                <span>score-675dfa3bdcfe</span>
+              </div>
+              <span class="pill neutral">local echo</span>
+            </div>
+
+            <div class="metric-grid">
+              <div class="metric">
+                <span>Policy</span>
+                <strong>Local first</strong>
+              </div>
+              <div class="metric">
+                <span>Cost</span>
+                <strong>$0.00</strong>
+              </div>
+              <div class="metric">
+                <span>Privacy</span>
+                <strong>On device</strong>
+              </div>
+              <div class="metric">
+                <span>Status</span>
+                <strong>Ready</strong>
+              </div>
+            </div>
+
+            <div class="score-list" id="scoreList"></div>
+          </aside>
+        </section>
+
+        <footer class="composer-shell">
+          <div class="context-bar">
+            <button class="context-chip" type="button">
+              <span class="folder-icon"></span>
+              Beethoven
+            </button>
+            <button class="context-chip" type="button">main</button>
+            <button class="context-chip warning" type="button">Ask before changes</button>
+          </div>
+          <label class="composer-label" for="composer">Prompt Beethoven</label>
+          <textarea
+            id="composer"
+            rows="3"
+            spellcheck="true"
+            placeholder="Ask Beethoven anything, @ add files, / commands, # related score"
+          ></textarea>
+          <div class="composer-actions">
+            <div class="left-tools">
+              <button class="icon-button" type="button" aria-label="Attach files">+</button>
+              <button class="text-button" type="button">/ commands</button>
+              <button class="text-button" type="button">Score</button>
+            </div>
+            <div class="right-tools">
+              <button class="text-button" type="button">Opus Router</button>
+              <button class="text-button" type="button">Medium</button>
+              <button class="send-button" id="sendButton" type="button" aria-label="Run Beethoven">↑</button>
+            </div>
+          </div>
+        </footer>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

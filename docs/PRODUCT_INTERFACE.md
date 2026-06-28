@@ -125,6 +125,24 @@ The first implemented commands are:
 - `beethoven score <objective>`: create a deterministic baseline score.
 - `beethoven run <objective>`: execute that score with the local echo soloist.
 
+## Current Desktop Prototype
+
+The repository includes a static prototype in `desktop/` that can be opened
+directly or served with:
+
+```bash
+python3 -m http.server 4173 -d desktop
+```
+
+It implements the first visible shell:
+
+- project/session sidebar;
+- Chat, Cowork, and Code mode switcher;
+- top bar with project, branch, run, and terminal controls;
+- conversation/progression canvas;
+- score inspector with routing reasons, cost, privacy, and task state;
+- composer with project context, permission mode, router policy, and effort.
+
 ## First Product Milestone
 
 MVP 0.1 should prove the loop:

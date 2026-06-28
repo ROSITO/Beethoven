@@ -31,9 +31,9 @@
         </div>
 
         <div class="mode-tabs" role="tablist" aria-label="Beethoven modes">
-          <button class="mode-tab" type="button">Chat</button>
-          <button class="mode-tab" type="button">Cowork</button>
-          <button class="mode-tab active" type="button">Code</button>
+          <button class="mode-tab" type="button" data-mode="chat">Chat</button>
+          <button class="mode-tab" type="button" data-mode="cowork">Cowork</button>
+          <button class="mode-tab active" type="button" data-mode="code">Code</button>
         </div>
 
         <section class="sidebar-section" aria-labelledby="projects-title">
@@ -95,19 +95,19 @@
         <section class="canvas">
           <div class="conversation">
             <article class="message user-message">
-              <div class="message-meta">User objective</div>
+              <div class="message-meta" id="modeEyebrow">User objective</div>
               <p>
-                Build a Beethoven interface close to Codex Desktop, Claude Desktop,
-                ZCode Desktop, with a real CLI surface.
+                <span id="modeSummary">Build a Beethoven interface close to Codex Desktop, Claude Desktop,
+                ZCode Desktop, with a real CLI surface.</span>
               </p>
             </article>
 
             <article class="message assistant-message">
               <div class="message-meta">Conductor</div>
               <p>
-                I created a portable score, routed it through the local echo soloist,
+                <span id="modeConductor">I created a portable score, routed it through the local echo soloist,
                 and exposed the same loop through the CLI. The desktop workbench now
-                mirrors that orchestration model.
+                mirrors that orchestration model.</span>
               </p>
             </article>
 

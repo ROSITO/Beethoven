@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 
 from beethoven.cli import main
+from beethoven.desktop_state import DesktopSessionStore
+from beethoven.runtime import run_objective
 
 
 def test_score_command_prints_json(capsys) -> None:
@@ -34,3 +36,16 @@ def test_desktop_command_is_registered(capsys) -> None:
     captured = capsys.readouterr()
     assert "Serve the local desktop workbench" in captured.out
     assert "--open" in captured.out
+
+
+def test_sessions_list_command_prints_history(tmp_path, monkeypatch, capsys) -> None:
+    monkeypatch.setenv("BEETHOVEN_HOME", str(tmp_path))
+    store = DesktopSessionStore()
+    store.save_run(run_objective("review desktop session history"))
+
+    exit_code = main(["sessions", "list"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "review desktop session history" in captured.out
+    assert "project: Beethoven" in captured.out

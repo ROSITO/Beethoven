@@ -32,6 +32,33 @@ const progressPill = document.querySelector("#progressPill");
 const scoreId = document.querySelector("#scoreId");
 const composerStatus = document.querySelector("#composerStatus");
 const sessionList = document.querySelector("#sessionList");
+const modeTabs = [...document.querySelectorAll(".mode-tab")];
+const modeEyebrow = document.querySelector("#modeEyebrow");
+const modeSummary = document.querySelector("#modeSummary");
+const modeConductor = document.querySelector("#modeConductor");
+
+const modeCopy = {
+  chat: {
+    eyebrow: "Chat",
+    summary: "Explore an idea, ask questions, and turn intent into a score.",
+    conductor: "Chat mode keeps the orchestration transparent while Beethoven clarifies the user objective.",
+    placeholder: "Ask Beethoven anything, @ add files, / commands, # related score"
+  },
+  cowork: {
+    eyebrow: "Cowork",
+    summary: "Work with Beethoven step by step, with approvals and visible progress.",
+    conductor: "Cowork mode emphasizes plans, checkpoints, approval gates, and reversible actions.",
+    placeholder: "Describe the next collaborative step, approval, or checkpoint"
+  },
+  code: {
+    eyebrow: "Code",
+    summary:
+      "Build a Beethoven interface close to Codex Desktop, Claude Desktop, ZCode Desktop, with a real CLI surface.",
+    conductor:
+      "I created a portable score, routed it through the local echo soloist, and exposed the same loop through the CLI. The desktop workbench now mirrors that orchestration model.",
+    placeholder: "Ask Beethoven anything, @ add files, / commands, # related score"
+  }
+};
 
 function titleCase(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -97,6 +124,17 @@ function renderSessions(sessions) {
       `;
     })
     .join("");
+}
+
+function setMode(mode) {
+  const copy = modeCopy[mode] ?? modeCopy.code;
+  modeTabs.forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.mode === mode);
+  });
+  modeEyebrow.textContent = copy.eyebrow;
+  modeSummary.textContent = copy.summary;
+  modeConductor.textContent = copy.conductor;
+  composer.placeholder = copy.placeholder;
 }
 
 function taskFromApi(task, context) {
@@ -212,6 +250,9 @@ composer.addEventListener("keydown", (event) => {
 });
 
 sendButton.addEventListener("click", runComposer);
+modeTabs.forEach((tab) => {
+  tab.addEventListener("click", () => setMode(tab.dataset.mode));
+});
 renderScore();
 loadSessions();
 loadInitialScore();

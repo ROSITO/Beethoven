@@ -116,6 +116,7 @@ beethoven score "Refactor this repository"
 beethoven run "Refactor this repository"
 beethoven run score.json --policy local-first
 beethoven trace <run-id>
+beethoven sessions list
 beethoven soloists list
 beethoven plugins list
 ```
@@ -124,6 +125,7 @@ The first implemented commands are:
 
 - `beethoven score <objective>`: create a deterministic baseline score.
 - `beethoven run <objective>`: execute that score with the local echo soloist.
+- `beethoven sessions list`: inspect local desktop session history.
 
 ## Current Desktop Prototype
 

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Beethoven Desktop Prototype</title>
-    <link rel="stylesheet" href="./styles.css?v=restore-sessions" />
+    <link rel="stylesheet" href="./styles.css?v=sidebar-actions" />
   </head>
   <body>
     <div class="app-shell">
@@ -16,11 +16,11 @@
         </div>
 
         <div class="nav-actions">
-          <button class="nav-action active" type="button">
+          <button class="nav-action active" id="newTaskButton" type="button">
             <span class="icon">+</span>
             New task
           </button>
-          <button class="nav-action" type="button">
+          <button class="nav-action" id="searchButton" type="button">
             <span class="icon">⌕</span>
             Search
           </button>
@@ -61,8 +61,17 @@
         <section class="sidebar-section recent" aria-labelledby="sessions-title">
           <div class="section-header">
             <h2 id="sessions-title">Recent sessions</h2>
-            <button class="icon-button" type="button" aria-label="Filter sessions">≡</button>
+            <button class="icon-button" id="sessionFilterButton" type="button" aria-label="Filter sessions">≡</button>
           </div>
+          <label class="composer-label" for="sessionSearch">Search sessions</label>
+          <input
+            class="session-search"
+            id="sessionSearch"
+            type="search"
+            placeholder="Search sessions"
+            autocomplete="off"
+            hidden
+          />
           <div id="sessionList"></div>
         </section>
 
@@ -217,6 +226,6 @@
       </main>
     </div>
 
-    <script src="./app.js?v=restore-sessions"></script>
+    <script src="./app.js?v=sidebar-actions"></script>
   </body>
 </html>

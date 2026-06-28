@@ -32,6 +32,10 @@ const progressPill = document.querySelector("#progressPill");
 const scoreId = document.querySelector("#scoreId");
 const composerStatus = document.querySelector("#composerStatus");
 const sessionList = document.querySelector("#sessionList");
+const newTaskButton = document.querySelector("#newTaskButton");
+const searchButton = document.querySelector("#searchButton");
+const sessionFilterButton = document.querySelector("#sessionFilterButton");
+const sessionSearch = document.querySelector("#sessionSearch");
 const modeTabs = [...document.querySelectorAll(".mode-tab")];
 const modeEyebrow = document.querySelector("#modeEyebrow");
 const modeSummary = document.querySelector("#modeSummary");
@@ -53,6 +57,8 @@ const commandList = document.querySelector("#commandList");
 const workspaceStatusList = document.querySelector("#workspaceStatusList");
 
 let currentWorkspace = null;
+let allSessions = [];
+let activeSessionId = null;
 
 const modeCopy = {
   chat: {
@@ -104,6 +110,15 @@ function titleCase(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function renderScore() {
   scoreList.innerHTML = scoreTasks
     .map(
@@ -146,24 +161,59 @@ function renderScore() {
 
 function renderSessions(sessions) {
   if (!sessions.length) {
-    sessionList.innerHTML = '<div class="session-empty">No runs yet</div>';
+    sessionList.innerHTML = sessionSearch.value.trim()
+      ? '<div class="session-empty">No matching sessions</div>'
+      : '<div class="session-empty">No runs yet</div>';
     return;
   }
 
   sessionList.innerHTML = sessions
     .map((session, index) => {
-      const recency = index === 0 ? "now" : session.branch ?? "main";
-      const activeClass = index === 0 ? " active" : "";
-      const runningClass = index === 0 ? " running" : "";
+      const recency = session.id === allSessions[0]?.id ? "now" : session.branch ?? "main";
+      const isActive = session.id === activeSessionId;
+      const activeClass = isActive ? " active" : "";
+      const runningClass = isActive ? " running" : "";
       return `
-        <button class="session-row${activeClass}" type="button" data-session-id="${session.id}">
+        <button class="session-row${activeClass}" type="button" data-session-id="${escapeHtml(session.id)}">
           <span class="status-dot${runningClass}"></span>
-          ${session.title}
-          <span class="row-meta">${recency}</span>
+          ${escapeHtml(session.title)}
+          <span class="row-meta">${escapeHtml(recency)}</span>
         </button>
       `;
     })
     .join("");
+}
+
+function filterSessions(sessions, query) {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) {
+    return sessions;
+  }
+  return sessions.filter((session) => {
+    const searchable = [
+      session.title,
+      session.objective,
+      session.project,
+      session.branch,
+      session.id
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return searchable.includes(normalized);
+  });
+}
+
+function renderFilteredSessions() {
+  renderSessions(filterSessions(allSessions, sessionSearch.value));
+}
+
+function setSearchOpen(open) {
+  sessionSearch.hidden = !open;
+  searchButton.classList.toggle("active", open || Boolean(sessionSearch.value.trim()));
+  if (open) {
+    sessionSearch.focus();
+  }
 }
 
 function applyRunContext(context) {
@@ -310,7 +360,9 @@ async function runComposer() {
     const context = await response.json();
     applyRunContext(context);
     const sessions = await fetchSessions();
-    renderSessions([context.session, ...sessions.filter((item) => item.id !== context.session.id)]);
+    activeSessionId = context.session.id;
+    allSessions = [context.session, ...sessions.filter((item) => item.id !== context.session.id)];
+    renderFilteredSessions();
     sendButton.textContent = "✓";
     composerStatus.textContent = `Trace: ${context.trace.join(" → ")}`;
   } catch (error) {
@@ -339,11 +391,10 @@ async function restoreSession(sessionId) {
       throw new Error("Session has no run context");
     }
     applyRunContext(session.run);
+    activeSessionId = sessionId;
     composer.value = session.objective ?? "";
     composerStatus.textContent = `Restored: ${session.title}`;
-    document.querySelectorAll(".session-row").forEach((row) => {
-      row.classList.toggle("active", row.dataset.sessionId === sessionId);
-    });
+    renderFilteredSessions();
   } catch (error) {
     composerStatus.classList.add("error");
     composerStatus.textContent = "Unable to restore that session.";
@@ -351,12 +402,12 @@ async function restoreSession(sessionId) {
   }
 }
 
-async function loadInitialScore() {
+async function loadScoreForObjective(objective) {
   try {
     const response = await fetch("/api/score", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ objective: "desktop and CLI foundation" })
+      body: JSON.stringify({ objective })
     });
     if (!response.ok) {
       return;
@@ -369,6 +420,10 @@ async function loadInitialScore() {
   } finally {
     renderScore();
   }
+}
+
+async function loadInitialScore() {
+  await loadScoreForObjective("desktop and CLI foundation");
 }
 
 async function fetchSessions() {
@@ -422,8 +477,26 @@ async function loadWorkspace() {
 }
 
 async function loadSessions() {
-  const sessions = await fetchSessions();
-  renderSessions(sessions);
+  allSessions = await fetchSessions();
+  renderFilteredSessions();
+}
+
+async function startNewTask() {
+  activeSessionId = null;
+  composer.value = "";
+  sessionSearch.value = "";
+  setSearchOpen(false);
+  composerStatus.classList.remove("error");
+  composerStatus.textContent = "New task ready.";
+  permissionSelect.value = "ask";
+  effortSelect.value = "medium";
+  commandPanel.hidden = true;
+  document.querySelectorAll(".nav-action").forEach((button) => {
+    button.classList.toggle("active", button === newTaskButton);
+  });
+  renderFilteredSessions();
+  await loadScoreForObjective("new orchestration task");
+  composer.focus();
 }
 
 composer.addEventListener("keydown", (event) => {
@@ -435,6 +508,17 @@ composer.addEventListener("keydown", (event) => {
 
 sendButton.addEventListener("click", runComposer);
 runScoreButton.addEventListener("click", runComposer);
+newTaskButton.addEventListener("click", startNewTask);
+searchButton.addEventListener("click", () => setSearchOpen(sessionSearch.hidden));
+sessionFilterButton.addEventListener("click", () => setSearchOpen(sessionSearch.hidden));
+sessionSearch.addEventListener("input", renderFilteredSessions);
+sessionSearch.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    sessionSearch.value = "";
+    renderFilteredSessions();
+    setSearchOpen(false);
+  }
+});
 terminalButton.addEventListener("click", () => toggleCommandPanel());
 slashCommandsButton.addEventListener("click", () => toggleCommandPanel(true));
 closeCommandPanel.addEventListener("click", () => toggleCommandPanel(false));

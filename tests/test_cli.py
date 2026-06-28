@@ -43,7 +43,7 @@ def test_desktop_command_is_registered(capsys) -> None:
 def test_sessions_list_command_prints_history(tmp_path, monkeypatch, capsys) -> None:
     monkeypatch.setenv("BEETHOVEN_HOME", str(tmp_path))
     store = DesktopSessionStore()
-    store.save_run(run_objective("review desktop session history"))
+    session = store.save_run(run_objective("review desktop session history"))
 
     exit_code = main(["sessions", "list"])
 
@@ -51,6 +51,12 @@ def test_sessions_list_command_prints_history(tmp_path, monkeypatch, capsys) -> 
     assert exit_code == 0
     assert "review desktop session history" in captured.out
     assert "project: Beethoven" in captured.out
+
+    show_exit_code = main(["sessions", "show", session["id"]])
+    show_captured = capsys.readouterr()
+    assert show_exit_code == 0
+    assert "Session: review desktop session history" in show_captured.out
+    assert "Trace" in show_captured.out
 
 
 def test_soloists_list_command_prints_catalog(capsys) -> None:

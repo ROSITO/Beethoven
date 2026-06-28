@@ -117,6 +117,7 @@ beethoven run "Refactor this repository"
 beethoven run score.json --policy local-first
 beethoven trace <run-id>
 beethoven sessions list
+beethoven sessions show <session-id>
 beethoven soloists list
 beethoven plugins list
 ```

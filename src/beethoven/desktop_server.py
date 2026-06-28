@@ -8,6 +8,7 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote, urlparse
 
 from beethoven.desktop_state import DesktopSessionStore
 from beethoven.runtime import list_soloists, run_objective, score_objective
@@ -27,26 +28,36 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=directory or str(DESKTOP_ROOT), **kwargs)
 
     def do_GET(self) -> None:
-        if self.path == "/api/health":
+        path = urlparse(self.path).path
+        if path == "/api/health":
             self._send_json({"status": "ok", "surface": "desktop"})
             return
-        if self.path == "/api/sessions":
+        if path == "/api/sessions":
             self._send_json({"sessions": self.store.list_sessions()})
             return
-        if self.path == "/api/soloists":
+        if path.startswith("/api/sessions/"):
+            session_id = unquote(path.removeprefix("/api/sessions/"))
+            session = self.store.get_session(session_id)
+            if session is None:
+                self._send_json({"error": "Session not found"}, HTTPStatus.NOT_FOUND)
+                return
+            self._send_json({"session": session})
+            return
+        if path == "/api/soloists":
             self._send_json({"soloists": list_soloists()})
             return
         super().do_GET()
 
     def do_POST(self) -> None:
-        if self.path == "/api/score":
+        path = urlparse(self.path).path
+        if path == "/api/score":
             objective = self._read_objective()
             if objective is None:
                 return
             self._send_json(score_to_dict(score_objective(objective)))
             return
 
-        if self.path == "/api/run":
+        if path == "/api/run":
             payload = self._read_payload()
             if payload is None:
                 return
@@ -79,6 +90,10 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
 
     def log_message(self, format: str, *args: Any) -> None:
         return
+
+    def end_headers(self) -> None:
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
 
     def _read_payload(self) -> dict[str, Any] | None:
         content_length = int(self.headers.get("Content-Length", "0"))

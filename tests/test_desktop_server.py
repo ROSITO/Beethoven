@@ -42,8 +42,19 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
         response = urlopen(request, timeout=2)
         payload = json.loads(response.read().decode("utf-8"))
 
+        second_request = Request(
+            f"http://{host}:{port}/api/run",
+            data=json.dumps({"objective": "second desktop api"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        urlopen(second_request, timeout=2).read()
+
         sessions = urlopen(f"http://{host}:{port}/api/sessions", timeout=2)
         sessions_data = json.loads(sessions.read().decode("utf-8"))
+
+        detail = urlopen(f"http://{host}:{port}/api/sessions/{payload['score']['id']}", timeout=2)
+        detail_data = json.loads(detail.read().decode("utf-8"))
     finally:
         server.shutdown()
         server.server_close()
@@ -60,6 +71,8 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
     assert payload["session"]["permission_mode"] == "read-only"
     assert payload["session"]["effort"] == "high"
     assert payload["score"]["metadata"]["permission_mode"] == "read-only"
-    assert sessions_data["sessions"][0]["id"] == payload["score"]["id"]
+    assert sessions_data["sessions"][1]["id"] == payload["score"]["id"]
+    assert "run" not in sessions_data["sessions"][0]
+    assert detail_data["session"]["run"]["score"]["id"] == payload["score"]["id"]
     assert soloists_data["soloists"][0]["id"] == "local-echo"
     assert soloists_data["soloists"][0]["status"] == "available"

@@ -173,6 +173,7 @@ beethoven run "Refactor this repository" --json
 beethoven desktop
 beethoven desktop --open
 beethoven sessions list
+beethoven sessions show <session-id>
 beethoven soloists list
 ```
 

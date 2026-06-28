@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from beethoven.core import ExecutionContext
+from beethoven.serialization import context_to_dict
 
 
 def default_state_dir() -> Path:
@@ -26,6 +27,15 @@ class DesktopSessionStore:
     path: Path = field(default_factory=lambda: default_state_dir() / "desktop_sessions.json")
 
     def list_sessions(self) -> list[dict[str, Any]]:
+        return [self._summary(session) for session in self._read_sessions()]
+
+    def get_session(self, session_id: str) -> dict[str, Any] | None:
+        for session in self._read_sessions():
+            if session.get("id") == session_id:
+                return session
+        return None
+
+    def _read_sessions(self) -> list[dict[str, Any]]:
         if not self.path.exists():
             return []
         with self.path.open("r", encoding="utf-8") as file:
@@ -45,7 +55,7 @@ class DesktopSessionStore:
         permission_mode: str = "ask",
         effort: str = "medium",
     ) -> dict[str, Any]:
-        sessions = [session for session in self.list_sessions() if session.get("id") != context.score.id]
+        sessions = [session for session in self._read_sessions() if session.get("id") != context.score.id]
         session = {
             "id": context.score.id,
             "title": self._title_from_objective(context.score.objective),
@@ -59,6 +69,7 @@ class DesktopSessionStore:
             "trace": context.trace,
             "status": "completed",
             "updated_at": datetime.now(UTC).isoformat(),
+            "run": context_to_dict(context),
         }
         sessions.insert(0, session)
         self._write(sessions[:25])
@@ -78,3 +89,7 @@ class DesktopSessionStore:
         if len(words) > 7:
             title += "..."
         return title or "Untitled score"
+
+    @staticmethod
+    def _summary(session: dict[str, Any]) -> dict[str, Any]:
+        return {key: value for key, value in session.items() if key != "run"}

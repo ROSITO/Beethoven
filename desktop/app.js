@@ -129,6 +129,21 @@ function renderSessions(sessions) {
     .join("");
 }
 
+function applyRunContext(context) {
+  scoreTasks = context.score.tasks.map((task) => taskFromApi(task, context));
+  scoreId.textContent = context.score.id;
+  if (context.score.metadata?.soloist) {
+    soloistSelect.value = context.score.metadata.soloist;
+  }
+  if (context.score.metadata?.permission_mode) {
+    permissionSelect.value = context.score.metadata.permission_mode;
+  }
+  if (context.score.metadata?.effort) {
+    effortSelect.value = context.score.metadata.effort;
+  }
+  renderScore();
+}
+
 function renderSoloists(soloists) {
   const available = soloists.filter((soloist) => soloist.status === "available");
   const planned = soloists.filter((soloist) => soloist.status !== "available");
@@ -207,9 +222,7 @@ async function runComposer() {
       throw new Error(`Desktop API returned ${response.status}`);
     }
     const context = await response.json();
-    scoreTasks = context.score.tasks.map((task) => taskFromApi(task, context));
-    scoreId.textContent = context.score.id;
-    renderScore();
+    applyRunContext(context);
     const sessions = await fetchSessions();
     renderSessions([context.session, ...sessions.filter((item) => item.id !== context.session.id)]);
     sendButton.textContent = "✓";
@@ -223,6 +236,32 @@ async function runComposer() {
     setTimeout(() => {
       sendButton.textContent = "↑";
     }, 900);
+  }
+}
+
+async function restoreSession(sessionId) {
+  composerStatus.classList.remove("error");
+  composerStatus.textContent = "Restoring session…";
+  try {
+    const response = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`);
+    if (!response.ok) {
+      throw new Error(`Session API returned ${response.status}`);
+    }
+    const payload = await response.json();
+    const session = payload.session;
+    if (!session.run) {
+      throw new Error("Session has no run context");
+    }
+    applyRunContext(session.run);
+    composer.value = session.objective ?? "";
+    composerStatus.textContent = `Restored: ${session.title}`;
+    document.querySelectorAll(".session-row").forEach((row) => {
+      row.classList.toggle("active", row.dataset.sessionId === sessionId);
+    });
+  } catch (error) {
+    composerStatus.classList.add("error");
+    composerStatus.textContent = "Unable to restore that session.";
+    console.error(error);
   }
 }
 
@@ -291,6 +330,12 @@ composer.addEventListener("keydown", (event) => {
 });
 
 sendButton.addEventListener("click", runComposer);
+sessionList.addEventListener("click", (event) => {
+  const row = event.target.closest(".session-row");
+  if (row?.dataset.sessionId) {
+    restoreSession(row.dataset.sessionId);
+  }
+});
 modeTabs.forEach((tab) => {
   tab.addEventListener("click", () => setMode(tab.dataset.mode));
 });

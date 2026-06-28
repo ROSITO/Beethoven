@@ -55,6 +55,9 @@ def build_parser() -> argparse.ArgumentParser:
     session_subparsers = sessions.add_subparsers(dest="sessions_command", required=True)
     sessions_list = session_subparsers.add_parser("list", help="List recent desktop sessions.")
     sessions_list.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+    sessions_show = session_subparsers.add_parser("show", help="Show one desktop session.")
+    sessions_show.add_argument("session_id", help="Session or score id to inspect.")
+    sessions_show.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
 
     soloists = subparsers.add_parser("soloists", help="Inspect configured soloists.")
     soloist_subparsers = soloists.add_subparsers(dest="soloists_command", required=True)
@@ -103,6 +106,16 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print(json.dumps({"sessions": sessions}, indent=2, ensure_ascii=False))
             else:
                 print_sessions(sessions)
+            return 0
+        if args.sessions_command == "show":
+            session = store.get_session(args.session_id)
+            if session is None:
+                print(f"Session not found: {args.session_id}", file=sys.stderr)
+                return 1
+            if args.json:
+                print(json.dumps({"session": session}, indent=2, ensure_ascii=False))
+            else:
+                print_session(session)
             return 0
 
     if args.command == "soloists":
@@ -169,6 +182,21 @@ def print_sessions(sessions: list[dict[str, object]]) -> None:
         status = session.get("status", "unknown")
         print(f"- {title} [{status}]")
         print(f"  score: {score_id} · project: {project} · branch: {branch}")
+
+
+def print_session(session: dict[str, object]) -> None:
+    print(f"Session: {session.get('title', 'Untitled score')}")
+    print(f"Score: {session.get('score_id', session.get('id', 'unknown'))}")
+    print(f"Objective: {session.get('objective', '')}")
+    print(
+        "Controls: "
+        f"soloist={session.get('soloist')} · "
+        f"permission={session.get('permission_mode')} · "
+        f"effort={session.get('effort')}"
+    )
+    print("Trace")
+    for event in session.get("trace", []):
+        print(f"- {event}")
 
 
 def print_soloists(soloists: list[dict[str, object]]) -> None:

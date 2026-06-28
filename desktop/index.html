@@ -80,8 +80,8 @@
         <header class="topbar">
           <div>
             <div class="breadcrumb">
-              <span>Beethoven</span>
-              <span class="tag">main</span>
+              <span id="workspaceName">Beethoven</span>
+              <span class="tag" id="workspaceBranch">main</span>
             </div>
             <h1>Desktop + CLI foundation</h1>
           </div>
@@ -156,9 +156,10 @@
           <div class="context-bar">
             <button class="context-chip" type="button">
               <span class="folder-icon"></span>
-              Beethoven
+              <span id="composerWorkspaceName">Beethoven</span>
             </button>
-            <button class="context-chip" type="button">main</button>
+            <button class="context-chip" type="button" id="composerBranch">main</button>
+            <button class="context-chip" type="button" id="workspaceChanges">clean</button>
             <label class="select-label" for="permissionSelect">Permission</label>
             <select class="control-select warning" id="permissionSelect">
               <option value="ask">Ask before changes</option>

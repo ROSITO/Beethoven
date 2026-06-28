@@ -12,6 +12,7 @@ from beethoven.core import Score
 from beethoven.desktop_state import DesktopSessionStore
 from beethoven.runtime import list_soloists, run_objective, score_objective
 from beethoven.serialization import context_to_dict, score_to_dict
+from beethoven.workspace import inspect_workspace
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -63,6 +64,9 @@ def build_parser() -> argparse.ArgumentParser:
     soloist_subparsers = soloists.add_subparsers(dest="soloists_command", required=True)
     soloists_list = soloist_subparsers.add_parser("list", help="List available and planned soloists.")
     soloists_list.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+
+    workspace = subparsers.add_parser("workspace", help="Inspect current project and Git context.")
+    workspace.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
 
     return parser
 
@@ -126,6 +130,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             else:
                 print_soloists(soloists)
             return 0
+
+    if args.command == "workspace":
+        workspace = inspect_workspace()
+        if args.json:
+            print(json.dumps({"workspace": workspace}, indent=2, ensure_ascii=False))
+        else:
+            print_workspace(workspace)
+        return 0
 
     parser.print_help(sys.stderr)
     return 2
@@ -208,6 +220,15 @@ def print_soloists(soloists: list[dict[str, object]]) -> None:
             f"locality: {soloist.get('locality')}"
         )
         print(f"  capabilities: {capabilities}")
+
+
+def print_workspace(workspace: dict[str, object]) -> None:
+    print(f"Workspace: {workspace.get('name')}")
+    print(f"Path: {workspace.get('path')}")
+    if workspace.get("is_git"):
+        print(f"Git: {workspace.get('branch')} · changes={workspace.get('changes')}")
+    else:
+        print("Git: not detected")
 
 
 if __name__ == "__main__":

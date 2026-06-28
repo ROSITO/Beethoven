@@ -14,6 +14,7 @@ from beethoven.planning import create_baseline_score
 from beethoven.routing import CapabilityRouter, SoloistRegistry
 from beethoven.runtime import list_soloists, run_objective, score_objective
 from beethoven.soloists import EchoSoloist
+from beethoven.workspace import inspect_workspace
 
 __all__ = [
     "Capability",
@@ -29,6 +30,7 @@ __all__ = [
     "EchoSoloist",
     "create_baseline_score",
     "list_soloists",
+    "inspect_workspace",
     "run_objective",
     "score_objective",
 ]

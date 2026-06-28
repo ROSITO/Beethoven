@@ -39,6 +39,11 @@ const modeConductor = document.querySelector("#modeConductor");
 const soloistSelect = document.querySelector("#soloistSelect");
 const permissionSelect = document.querySelector("#permissionSelect");
 const effortSelect = document.querySelector("#effortSelect");
+const workspaceName = document.querySelector("#workspaceName");
+const workspaceBranch = document.querySelector("#workspaceBranch");
+const composerWorkspaceName = document.querySelector("#composerWorkspaceName");
+const composerBranch = document.querySelector("#composerBranch");
+const workspaceChanges = document.querySelector("#workspaceChanges");
 
 const modeCopy = {
   chat: {
@@ -167,6 +172,16 @@ function setMode(mode) {
   modeSummary.textContent = copy.summary;
   modeConductor.textContent = copy.conductor;
   composer.placeholder = copy.placeholder;
+}
+
+function renderWorkspace(workspace) {
+  workspaceName.textContent = workspace.name;
+  composerWorkspaceName.textContent = workspace.name;
+  const branch = workspace.branch ?? "no git";
+  workspaceBranch.textContent = branch;
+  composerBranch.textContent = branch;
+  workspaceChanges.textContent = workspace.dirty ? `${workspace.changes} changes` : "clean";
+  workspaceChanges.classList.toggle("warning", Boolean(workspace.dirty));
 }
 
 function taskFromApi(task, context) {
@@ -317,6 +332,24 @@ async function loadSoloists() {
   }
 }
 
+async function loadWorkspace() {
+  try {
+    const response = await fetch("/api/workspace");
+    if (!response.ok) {
+      throw new Error(`Workspace API returned ${response.status}`);
+    }
+    const payload = await response.json();
+    renderWorkspace(payload.workspace);
+  } catch {
+    renderWorkspace({
+      name: "Beethoven",
+      branch: "main",
+      dirty: false,
+      changes: 0
+    });
+  }
+}
+
 async function loadSessions() {
   const sessions = await fetchSessions();
   renderSessions(sessions);
@@ -340,6 +373,7 @@ modeTabs.forEach((tab) => {
   tab.addEventListener("click", () => setMode(tab.dataset.mode));
 });
 renderScore();
+loadWorkspace();
 loadSoloists();
 loadSessions();
 loadInitialScore();

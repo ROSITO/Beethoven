@@ -66,3 +66,12 @@ def test_soloists_list_command_prints_catalog(capsys) -> None:
     assert exit_code == 0
     assert "Local Echo [available]" in captured.out
     assert "Ollama [planned]" in captured.out
+
+
+def test_workspace_command_prints_current_project(capsys) -> None:
+    exit_code = main(["workspace"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Workspace: Beethoven" in captured.out
+    assert "Git:" in captured.out

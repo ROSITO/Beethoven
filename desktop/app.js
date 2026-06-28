@@ -44,6 +44,15 @@ const workspaceBranch = document.querySelector("#workspaceBranch");
 const composerWorkspaceName = document.querySelector("#composerWorkspaceName");
 const composerBranch = document.querySelector("#composerBranch");
 const workspaceChanges = document.querySelector("#workspaceChanges");
+const terminalButton = document.querySelector("#terminalButton");
+const runScoreButton = document.querySelector("#runScoreButton");
+const slashCommandsButton = document.querySelector("#slashCommandsButton");
+const commandPanel = document.querySelector("#commandPanel");
+const closeCommandPanel = document.querySelector("#closeCommandPanel");
+const commandList = document.querySelector("#commandList");
+const workspaceStatusList = document.querySelector("#workspaceStatusList");
+
+let currentWorkspace = null;
 
 const modeCopy = {
   chat: {
@@ -67,6 +76,29 @@ const modeCopy = {
     placeholder: "Ask Beethoven anything, @ add files, / commands, # related score"
   }
 };
+
+const cliCommands = [
+  {
+    command: "beethoven workspace",
+    description: "Inspect the current project, branch, and Git status."
+  },
+  {
+    command: "beethoven run \"<objective>\" --permission ask --effort medium",
+    description: "Run the same orchestration loop as the composer."
+  },
+  {
+    command: "beethoven sessions list",
+    description: "List recent desktop runs."
+  },
+  {
+    command: "beethoven soloists list",
+    description: "Show available and planned soloists."
+  },
+  {
+    command: "beethoven desktop --open",
+    description: "Start the local workbench."
+  }
+];
 
 function titleCase(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -175,6 +207,7 @@ function setMode(mode) {
 }
 
 function renderWorkspace(workspace) {
+  currentWorkspace = workspace;
   workspaceName.textContent = workspace.name;
   composerWorkspaceName.textContent = workspace.name;
   const branch = workspace.branch ?? "no git";
@@ -182,6 +215,44 @@ function renderWorkspace(workspace) {
   composerBranch.textContent = branch;
   workspaceChanges.textContent = workspace.dirty ? `${workspace.changes} changes` : "clean";
   workspaceChanges.classList.toggle("warning", Boolean(workspace.dirty));
+  renderWorkspaceStatus(workspace);
+}
+
+function renderCommandList() {
+  commandList.innerHTML = cliCommands
+    .map(
+      (item, index) => `
+        <button class="command-row" type="button" data-command-index="${index}">
+          <code>${item.command}</code>
+          <span>${item.description}</span>
+        </button>
+      `
+    )
+    .join("");
+}
+
+function renderWorkspaceStatus(workspace) {
+  const status = workspace.status ?? [];
+  if (!workspace.is_git) {
+    workspaceStatusList.innerHTML = '<div class="status-row"><code>not a git repository</code><span>No Git status is available.</span></div>';
+    return;
+  }
+  if (!status.length) {
+    workspaceStatusList.innerHTML = '<div class="status-row"><code>clean</code><span>No local changes.</span></div>';
+    return;
+  }
+  workspaceStatusList.innerHTML = status
+    .slice(0, 8)
+    .map((line) => `<div class="status-row"><code>${line}</code><span>${workspace.branch ?? "no branch"}</span></div>`)
+    .join("");
+}
+
+function toggleCommandPanel(force) {
+  const shouldOpen = force ?? commandPanel.hidden;
+  commandPanel.hidden = !shouldOpen;
+  if (shouldOpen && currentWorkspace) {
+    renderWorkspaceStatus(currentWorkspace);
+  }
 }
 
 function taskFromApi(task, context) {
@@ -363,6 +434,17 @@ composer.addEventListener("keydown", (event) => {
 });
 
 sendButton.addEventListener("click", runComposer);
+runScoreButton.addEventListener("click", runComposer);
+terminalButton.addEventListener("click", () => toggleCommandPanel());
+slashCommandsButton.addEventListener("click", () => toggleCommandPanel(true));
+closeCommandPanel.addEventListener("click", () => toggleCommandPanel(false));
+commandList.addEventListener("click", (event) => {
+  const row = event.target.closest(".command-row");
+  if (row?.dataset.commandIndex) {
+    composer.value = cliCommands[Number(row.dataset.commandIndex)].command;
+    composer.focus();
+  }
+});
 sessionList.addEventListener("click", (event) => {
   const row = event.target.closest(".session-row");
   if (row?.dataset.sessionId) {
@@ -372,6 +454,7 @@ sessionList.addEventListener("click", (event) => {
 modeTabs.forEach((tab) => {
   tab.addEventListener("click", () => setMode(tab.dataset.mode));
 });
+renderCommandList();
 renderScore();
 loadWorkspace();
 loadSoloists();

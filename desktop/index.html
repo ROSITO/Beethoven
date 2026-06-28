@@ -86,11 +86,31 @@
             <h1>Desktop + CLI foundation</h1>
           </div>
           <div class="topbar-actions">
-            <button class="icon-button" type="button" aria-label="Open terminal">›_</button>
-            <button class="icon-button" type="button" aria-label="Run score">▶</button>
+            <button class="icon-button" id="terminalButton" type="button" aria-label="Open terminal">›_</button>
+            <button class="icon-button" id="runScoreButton" type="button" aria-label="Run score">▶</button>
             <button class="icon-button" type="button" aria-label="More options">⋮</button>
           </div>
         </header>
+
+        <section class="command-panel" id="commandPanel" aria-label="Command palette" hidden>
+          <div class="command-panel-header">
+            <div>
+              <h2>CLI Command Center</h2>
+              <span>Local commands mirror the desktop workbench.</span>
+            </div>
+            <button class="icon-button" id="closeCommandPanel" type="button" aria-label="Close commands">×</button>
+          </div>
+          <div class="command-grid">
+            <div>
+              <h3>Commands</h3>
+              <div class="command-list" id="commandList"></div>
+            </div>
+            <div>
+              <h3>Workspace Status</h3>
+              <div class="workspace-status-list" id="workspaceStatusList"></div>
+            </div>
+          </div>
+        </section>
 
         <section class="canvas">
           <div class="conversation">
@@ -177,7 +197,7 @@
           <div class="composer-actions">
             <div class="left-tools">
               <button class="icon-button" type="button" aria-label="Attach files">+</button>
-              <button class="text-button" type="button">/ commands</button>
+              <button class="text-button" id="slashCommandsButton" type="button">/ commands</button>
               <button class="text-button" type="button">Score</button>
             </div>
             <div class="right-tools">

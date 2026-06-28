@@ -301,6 +301,84 @@ button {
   border-bottom: 1px solid var(--line);
 }
 
+.command-panel {
+  display: grid;
+  gap: 16px;
+  margin: 16px 26px 0;
+  padding: 16px;
+  background: #f7f7f4;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.command-panel[hidden] {
+  display: none;
+}
+
+.command-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.command-panel h2,
+.command-panel h3 {
+  margin: 0;
+}
+
+.command-panel h2 {
+  font-size: 16px;
+}
+
+.command-panel h3 {
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.command-panel-header span {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.command-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.8fr);
+  gap: 14px;
+}
+
+.command-list,
+.workspace-status-list {
+  display: grid;
+  gap: 8px;
+}
+
+.command-row,
+.status-row {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.command-row code,
+.status-row code {
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+}
+
+.command-row span,
+.status-row span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .breadcrumb {
   display: flex;
   gap: 8px;
@@ -662,6 +740,10 @@ textarea:focus {
   .canvas {
     grid-template-columns: 1fr;
   }
+
+  .command-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -674,8 +756,13 @@ textarea:focus {
   }
 
   .topbar,
-  .canvas {
+  .canvas,
+  .command-panel {
     padding-inline: 16px;
+  }
+
+  .command-panel {
+    margin: 14px 16px 0;
   }
 
   .canvas {

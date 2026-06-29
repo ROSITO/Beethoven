@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import json
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -13,6 +15,7 @@ from beethoven.core import Capability, ExecutionContext, SoloistResult, Task
 
 MAX_OLLAMA_ATTACHMENT_CHARS = int(os.getenv("BEETHOVEN_OLLAMA_ATTACHMENT_CHARS", "12000"))
 CLI_ADAPTER_TIMEOUT_SECONDS = int(os.getenv("BEETHOVEN_CLI_ADAPTER_TIMEOUT", "240"))
+RECURSIVEMAS_TIMEOUT_SECONDS = int(os.getenv("BEETHOVEN_RECURSIVEMAS_TIMEOUT", "240"))
 MODEL_ADAPTER_CAPABILITIES = frozenset(
     {
         Capability.ANALYZE,
@@ -22,6 +25,7 @@ MODEL_ADAPTER_CAPABILITIES = frozenset(
         Capability.SYNTHESIZE,
     }
 )
+RECURSIVE_ADAPTER_CAPABILITIES = frozenset(Capability)
 
 
 @dataclass(frozen=True)
@@ -227,6 +231,37 @@ class OllamaSoloist:
         )
 
 
+@dataclass(frozen=True)
+class RecursiveMASSoloist:
+    """Optional RecursiveMAS sidecar adapter using a JSON stdin/stdout protocol."""
+
+    name: str = "recursivemas"
+    command: str | None = None
+    timeout_seconds: int = RECURSIVEMAS_TIMEOUT_SECONDS
+    capabilities: frozenset[Capability] = RECURSIVE_ADAPTER_CAPABILITIES
+
+    def perform(self, task: Task, context: ExecutionContext) -> SoloistResult:
+        command = self.command or os.getenv("BEETHOVEN_RECURSIVEMAS_COMMAND", "")
+        argv = shlex.split(command)
+        if not argv:
+            raise RuntimeError(
+                "RecursiveMAS sidecar is not configured. Set BEETHOVEN_RECURSIVEMAS_COMMAND."
+            )
+
+        payload = _recursive_mas_payload(task, context)
+        result = subprocess.run(
+            argv,
+            check=False,
+            capture_output=True,
+            input=json.dumps(payload, ensure_ascii=False),
+            text=True,
+            timeout=self.timeout_seconds,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(result.stderr.strip() or "RecursiveMAS sidecar returned a non-zero exit code")
+        return _recursive_mas_result(result.stdout)
+
+
 def ollama_is_enabled() -> bool:
     return os.getenv("BEETHOVEN_ENABLE_OLLAMA", "").lower() in {"1", "true", "yes"}
 
@@ -256,6 +291,17 @@ def codex_cli_is_available() -> bool:
     return shutil.which("codex") is not None
 
 
+def recursivemas_is_available(command: str | None = None) -> bool:
+    selected_command = command or os.getenv("BEETHOVEN_RECURSIVEMAS_COMMAND", "")
+    argv = shlex.split(selected_command)
+    if not argv:
+        return False
+    executable = argv[0]
+    if Path(executable).exists():
+        return True
+    return shutil.which(executable) is not None
+
+
 def _build_model_prompt(task: Task, context: ExecutionContext) -> str:
     attachments = context.score.metadata.get("attachments", [])
     attachment_text = "\n\n".join(
@@ -280,3 +326,64 @@ def _build_model_prompt(task: Task, context: ExecutionContext) -> str:
         sections.append(f"Previous artifacts:\n{previous}")
     sections.append("Return a concise, useful result for this task.")
     return "\n\n".join(sections)
+
+
+def _recursive_mas_payload(task: Task, context: ExecutionContext) -> dict[str, object]:
+    return {
+        "protocol": "beethoven.recursivemas.v1",
+        "task": {
+            "id": task.id,
+            "instruction": task.instruction,
+            "capability": task.capability.value,
+            "depends_on": list(task.depends_on),
+            "metadata": task.metadata,
+        },
+        "score": {
+            "id": context.score.id,
+            "objective": context.score.objective,
+            "metadata": context.score.metadata,
+            "tasks": [
+                {
+                    "id": score_task.id,
+                    "instruction": score_task.instruction,
+                    "capability": score_task.capability.value,
+                    "depends_on": list(score_task.depends_on),
+                    "metadata": score_task.metadata,
+                }
+                for score_task in context.score.tasks
+            ],
+        },
+        "artifacts": {
+            task_id: {
+                "output": artifact.output,
+                "metadata": artifact.metadata,
+                "cost": artifact.cost,
+                "tokens": artifact.tokens,
+            }
+            for task_id, artifact in context.artifacts.items()
+        },
+    }
+
+
+def _recursive_mas_result(stdout: str) -> SoloistResult:
+    stripped = stdout.strip()
+    if not stripped:
+        return SoloistResult(output="", metadata={"mode": "recursivemas"})
+    try:
+        payload = json.loads(stripped)
+    except json.JSONDecodeError:
+        return SoloistResult(output=stripped, metadata={"mode": "recursivemas", "format": "text"})
+    if not isinstance(payload, dict):
+        return SoloistResult(output=payload, metadata={"mode": "recursivemas", "format": "json"})
+    metadata = payload.get("metadata", {})
+    if not isinstance(metadata, dict):
+        metadata = {}
+    return SoloistResult(
+        output=payload.get("output", payload),
+        cost=float(payload.get("cost", 0.0) or 0.0),
+        tokens=int(payload.get("tokens", 0) or 0),
+        metadata={
+            "mode": "recursivemas",
+            **metadata,
+        },
+    )

@@ -160,7 +160,7 @@ def test_soloists_list_command_prints_catalog(capsys) -> None:
     assert exit_code == 0
     assert "Local Echo [available]" in captured.out
     assert "Ollama [" in captured.out
-    assert "RecursiveMAS [experimental]" in captured.out
+    assert "RecursiveMAS [planned]" in captured.out
 
 
 def test_ollama_requires_explicit_opt_in(monkeypatch) -> None:

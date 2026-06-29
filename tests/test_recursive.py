@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import sys
+
 from beethoven.recursive import create_recursive_score
-from beethoven.runtime import run_objective, score_objective
+from beethoven.runtime import list_soloists, run_objective, score_objective
 
 
 def test_recursive_score_creates_deliberation_rounds() -> None:
@@ -53,3 +55,44 @@ def test_run_objective_executes_recursive_score() -> None:
         "synthesize:local-echo",
     ]
     assert context.statuses["synthesize"] == "completed"
+
+
+def test_recursivemas_sidecar_executes_recursive_score(tmp_path, monkeypatch) -> None:
+    sidecar = tmp_path / "recursivemas_sidecar.py"
+    sidecar.write_text(
+        """
+from __future__ import annotations
+
+import json
+import sys
+
+payload = json.loads(sys.stdin.read())
+task = payload["task"]
+print(json.dumps({
+    "output": f"sidecar:{task['id']}:{task['capability']}",
+    "metadata": {"backend": "fake-recursivemas"},
+    "tokens": 7,
+}))
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("BEETHOVEN_RECURSIVEMAS_COMMAND", f"{sys.executable} {sidecar}")
+
+    soloists = list_soloists()
+    context = run_objective(
+        "Use RecursiveMAS backend",
+        soloist="recursivemas",
+        strategy="recursive",
+        recursive_style="sequential",
+        recursive_rounds=1,
+    )
+
+    assert next(item for item in soloists if item["id"] == "recursivemas")["status"] == "available"
+    assert context.trace == [
+        "decompose:recursivemas",
+        "execute_round_1:recursivemas",
+        "synthesize:recursivemas",
+    ]
+    assert context.artifacts["decompose"].output == "sidecar:decompose:plan"
+    assert context.artifacts["synthesize"].metadata["backend"] == "fake-recursivemas"
+    assert context.artifacts["synthesize"].tokens == 7

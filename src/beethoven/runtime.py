@@ -16,10 +16,12 @@ from beethoven.soloists import (
     EchoSoloist,
     LocalReaderSoloist,
     OllamaSoloist,
+    RecursiveMASSoloist,
     claude_cli_is_available,
     codex_cli_is_available,
     ollama_is_available,
     ollama_is_enabled,
+    recursivemas_is_available,
 )
 from beethoven.validation import run_validation_hooks
 from beethoven.workspace import read_workspace_attachments
@@ -46,6 +48,8 @@ def create_default_registry() -> SoloistRegistry:
         registry.register(CodexCliSoloist())
     if ollama_is_enabled() and ollama_is_available():
         registry.register(OllamaSoloist())
+    if recursivemas_is_available():
+        registry.register(RecursiveMASSoloist())
     return registry
 
 
@@ -54,6 +58,7 @@ def list_soloists() -> list[dict[str, object]]:
     ollama_status = "available" if ollama_is_enabled() and ollama_available else "disabled"
     if not ollama_available:
         ollama_status = "planned"
+    recursivemas_status = "available" if recursivemas_is_available() else "planned"
     return [
         {
             "id": "local-echo",
@@ -115,12 +120,12 @@ def list_soloists() -> list[dict[str, object]]:
             "id": "recursivemas",
             "name": "RecursiveMAS",
             "provider": "RecursiveMAS",
-            "status": "experimental",
+            "status": recursivemas_status,
             "locality": "local",
             "capabilities": ["analyze", "plan", "code", "review", "validate", "synthesize"],
             "description": (
-                "Experimental backend target for RecursiveMAS-style latent multi-agent collaboration. "
-                "Use Beethoven's recursive strategy now; attach the external backend as a sidecar later."
+                "Optional RecursiveMAS sidecar target using BEETHOVEN_RECURSIVEMAS_COMMAND "
+                "and Beethoven's JSON stdin/stdout protocol."
             ),
         },
         {

@@ -76,6 +76,15 @@ target. The current production-safe integration point is the recursive score
 strategy; a future sidecar can implement the latent RecursiveMAS runtime behind
 the same score/event contracts.
 
+See [docs/RECURSIVEMAS.md](docs/RECURSIVEMAS.md) for the optional sidecar
+protocol. When `BEETHOVEN_RECURSIVEMAS_COMMAND` is configured, the
+`recursivemas` soloist becomes available:
+
+```bash
+BEETHOVEN_RECURSIVEMAS_COMMAND="python /path/to/bridge.py" \
+  beethoven run "Solve with RecursiveMAS" --soloist recursivemas --strategy recursive
+```
+
 ## Example
 
 ```python
@@ -180,6 +189,8 @@ npm run tauri:dev
 ```
 
 See [docs/DESKTOP_PACKAGING.md](docs/DESKTOP_PACKAGING.md).
+See [docs/RECURSIVEMAS.md](docs/RECURSIVEMAS.md) for the RecursiveMAS sidecar
+protocol.
 
 ## Supported Soloist Targets
 

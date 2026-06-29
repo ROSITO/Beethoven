@@ -63,7 +63,8 @@ Important modules:
   express sequential, deliberation, mixture, and distillation patterns as
   portable Beethoven tasks.
 - `src/beethoven/soloists.py`: `EchoSoloist`, the offline deterministic worker,
-  plus `OllamaSoloist`, the first local model adapter.
+  plus `OllamaSoloist`, the first local model adapter, and
+  `RecursiveMASSoloist`, the optional JSON sidecar adapter.
 - `src/beethoven/runtime.py`: shared runtime helpers for CLI and desktop:
   `score_objective`, `run_objective`, `list_soloists`, `list_skills`.
 - `src/beethoven/serialization.py`: `score_to_dict` and `context_to_dict`.
@@ -110,8 +111,9 @@ Current available soloists:
   (`BEETHOVEN_OLLAMA_MODEL`, default `qwen3-coder:latest`), but disabled by
   default unless `BEETHOVEN_ENABLE_OLLAMA=1` is set. This is deliberate because
   large local models can create heavy memory pressure.
-- `recursivemas`: experimental catalog target for a future RecursiveMAS backend
-  sidecar. The usable integration today is `--strategy recursive`.
+- `recursivemas`: optional RecursiveMAS backend sidecar. It becomes available
+  when `BEETHOVEN_RECURSIVEMAS_COMMAND` points to an executable command that
+  speaks the `beethoven.recursivemas.v1` JSON stdin/stdout protocol.
 
 Planned soloist catalog:
 
@@ -131,6 +133,7 @@ beethoven run "<objective>"
 beethoven run "<objective>" --json
 beethoven run "<objective>" --soloist local-echo --permission ask --effort medium
 beethoven run "<objective>" --strategy recursive --recursive-style sequential --recursive-rounds 1
+BEETHOVEN_RECURSIVEMAS_COMMAND="python /path/to/bridge.py" beethoven run "<objective>" --soloist recursivemas --strategy recursive
 beethoven run "Review @README.md" --soloist local-reader
 beethoven run "Review @README.md" --soloist claude-cli
 beethoven run "Review @README.md" --soloist codex-cli
@@ -242,6 +245,20 @@ Tauri v2 scaffold exists:
 - `src-tauri/src/main.rs`;
 - `src-tauri/src/lib.rs`;
 - `src-tauri/build.rs`.
+
+## RecursiveMAS Integration
+
+Current integration is two-layer:
+
+- native recursive scores in `src/beethoven/recursive.py`, always available via
+  `--strategy recursive`;
+- optional `recursivemas` soloist in `src/beethoven/soloists.py`, enabled by
+  `BEETHOVEN_RECURSIVEMAS_COMMAND`.
+
+The sidecar protocol is documented in `docs/RECURSIVEMAS.md`. Beethoven sends
+one JSON payload per task with `protocol`, `task`, `score`, and prior
+`artifacts`. The sidecar can reply with plain text or JSON containing `output`,
+`metadata`, `tokens`, and `cost`.
 
 Current Tauri dev mode starts:
 

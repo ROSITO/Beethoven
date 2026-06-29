@@ -96,3 +96,39 @@ print(json.dumps({
     assert context.artifacts["decompose"].output == "sidecar:decompose:plan"
     assert context.artifacts["synthesize"].metadata["backend"] == "fake-recursivemas"
     assert context.artifacts["synthesize"].tokens == 7
+
+
+def test_recursive_strategy_prefers_recursivemas_when_available(tmp_path, monkeypatch) -> None:
+    sidecar = tmp_path / "recursivemas_sidecar.py"
+    sidecar.write_text(
+        """
+from __future__ import annotations
+
+import json
+import sys
+
+payload = json.loads(sys.stdin.read())
+task = payload["task"]
+print(json.dumps({
+    "output": f"auto:{task['id']}:{task['metadata'].get('preferred_soloist')}",
+    "metadata": {"backend": "fake-recursivemas"},
+}))
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("BEETHOVEN_RECURSIVEMAS_COMMAND", f"{sys.executable} {sidecar}")
+
+    context = run_objective(
+        "Coordinate recursive backend automatically",
+        strategy="recursive",
+        recursive_style="sequential",
+        recursive_rounds=1,
+    )
+
+    assert context.score.metadata["recursive_backend"] == "recursivemas"
+    assert all(task.metadata["preferred_soloist"] == "recursivemas" for task in context.score.tasks)
+    assert context.trace == [
+        "decompose:recursivemas",
+        "execute_round_1:recursivemas",
+        "synthesize:recursivemas",
+    ]

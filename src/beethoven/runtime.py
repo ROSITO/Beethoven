@@ -7,7 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 
 from beethoven.conductor import Conductor
-from beethoven.core import ExecutionContext, Score, SoloistResult
+from beethoven.core import ExecutionContext, Score, SoloistResult, Task
 from beethoven.orchestrator import check_local_orchestrator, create_local_orchestrator
 from beethoven.planning import create_baseline_score, create_dynamic_score
 from beethoven.recursive import DEFAULT_RECURSIVE_STYLE, create_recursive_score
@@ -224,12 +224,15 @@ def score_objective(
     if metadata:
         combined_metadata.update(metadata)
     if strategy == "recursive":
-        return create_recursive_score(
+        recursive_score = create_recursive_score(
             objective,
             style=recursive_style,
             rounds=recursive_rounds,
             metadata=combined_metadata,
         )
+        if recursivemas_is_available():
+            return _prefer_recursivemas_for_recursive_score(recursive_score)
+        return recursive_score
     if _local_orchestrator_planning_enabled():
         orchestrator = create_local_orchestrator()
         if orchestrator is not None:
@@ -316,3 +319,25 @@ def run_objective(
 
 def _local_orchestrator_planning_enabled() -> bool:
     return os.getenv("BEETHOVEN_DYNAMIC_PLANNING", "1").lower() not in {"0", "false", "no"}
+
+
+def _prefer_recursivemas_for_recursive_score(score: Score) -> Score:
+    routed_tasks = tuple(
+        Task(
+            id=task.id,
+            instruction=task.instruction,
+            capability=task.capability,
+            depends_on=task.depends_on,
+            metadata={**task.metadata, "preferred_soloist": "recursivemas"},
+        )
+        for task in score.tasks
+    )
+    return replace(
+        score,
+        tasks=routed_tasks,
+        metadata={
+            **score.metadata,
+            "recursive_backend": "recursivemas",
+            "orchestrator_recursive_routing": "recursivemas",
+        },
+    )

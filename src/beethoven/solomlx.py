@@ -13,7 +13,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from beethoven.desktop_state import default_state_dir
-from beethoven.orchestrator import DEFAULT_SOLOMLX_BASE_URL
+from beethoven.orchestrator import DEFAULT_MINISTRAL_ORCHESTRATOR_MODEL, DEFAULT_SOLOMLX_BASE_URL
 
 
 SOLOMLX_REPOSITORY_URL = "https://github.com/ROSITO/SoloMLX-server.git"
@@ -74,6 +74,27 @@ def solomlx_install(
     }
 
 
+def solomlx_prepare_orchestrator(
+    *,
+    model: str = DEFAULT_MINISTRAL_ORCHESTRATOR_MODEL,
+    target_dir: str | Path | None = None,
+) -> dict[str, object]:
+    """Pull the lightweight orchestration model into the managed SoloMLX runtime."""
+    checkout_dir = Path(target_dir).expanduser() if target_dir else default_solomlx_dir()
+    checkout_dir = checkout_dir.resolve()
+    executable = checkout_dir / ".venv" / "bin" / "mlxserve"
+    if not executable.exists():
+        raise RuntimeError("SoloMLX is not installed. Run `beethoven solomlx install` first.")
+    result = _run([str(executable), "models-pull", "--model", model], cwd=checkout_dir)
+    return {
+        "id": "solomlx",
+        "prepared": True,
+        "model": model,
+        "path": str(checkout_dir),
+        "output": result.stdout.strip(),
+    }
+
+
 def solomlx_status(
     *,
     base_url: str | None = None,
@@ -95,6 +116,7 @@ def solomlx_status(
         "pid": pid,
         "process_running": process_running,
         "base_url": api_url,
+        "preferred_orchestrator_model": DEFAULT_MINISTRAL_ORCHESTRATOR_MODEL,
         "available": False,
         "status": "unavailable",
     }
@@ -147,6 +169,10 @@ def solomlx_start(
         **os.environ,
         "MLXSERVE_HOST": host,
         "MLXSERVE_PORT": str(port),
+        "MLXSERVE_DEFAULT_MODEL": os.getenv(
+            "BEETHOVEN_ORCHESTRATOR_MODEL",
+            DEFAULT_MINISTRAL_ORCHESTRATOR_MODEL,
+        ),
     }
     process = subprocess.Popen(
         command,

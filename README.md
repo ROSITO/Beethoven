@@ -255,6 +255,7 @@ beethoven soloists check recursivemas
 beethoven orchestrator status
 beethoven solomlx status
 beethoven solomlx install
+beethoven solomlx prepare-orchestrator
 beethoven solomlx start
 beethoven skills list
 beethoven workspace
@@ -280,6 +281,7 @@ OpenAI-compatible API and can be managed by Beethoven:
 
 ```bash
 beethoven solomlx install
+beethoven solomlx prepare-orchestrator
 beethoven solomlx start
 beethoven solomlx status
 
@@ -287,6 +289,17 @@ BEETHOVEN_ORCHESTRATOR_PROVIDER=solomlx \
 BEETHOVEN_ORCHESTRATOR_BASE_URL=http://127.0.0.1:8080/v1 \
 beethoven orchestrator status
 ```
+
+The default orchestration model profile is:
+
+```text
+mlx-community/Ministral-3-3B-Instruct-2512-4bit
+```
+
+Beethoven starts SoloMLX with `MLXSERVE_DEFAULT_MODEL` set to that model unless
+`BEETHOVEN_ORCHESTRATOR_MODEL` overrides it. The orchestrator prompt is tuned
+for compact score generation, local-first routing, and RecursiveMAS delegation
+when `recursivemas` is available.
 
 Ollama can also back the hidden orchestrator:
 

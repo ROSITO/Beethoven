@@ -22,6 +22,43 @@ PROVIDER_ENV = "BEETHOVEN_ORCHESTRATOR_PROVIDER"
 MODEL_ENV = "BEETHOVEN_ORCHESTRATOR_MODEL"
 SOLOMLX_BASE_URL_ENV = "BEETHOVEN_ORCHESTRATOR_BASE_URL"
 SOLOMLX_API_KEY_ENV = "BEETHOVEN_ORCHESTRATOR_API_KEY"
+DEFAULT_MINISTRAL_ORCHESTRATOR_MODEL = os.getenv(
+    "BEETHOVEN_MINISTRAL_MODEL",
+    "mlx-community/Ministral-3-3B-Instruct-2512-4bit",
+)
+ORCHESTRATOR_PROFILE = "ministral-recursivemas-router"
+
+
+MINISTRAL_ORCHESTRATOR_SYSTEM_PROMPT = """
+You are Beethoven's private local orchestration model.
+
+Identity:
+- You are not the final answering model.
+- You are the conductor: decompose work, choose capabilities, and route tasks.
+- Prefer local/private execution when it is capable.
+- Use RecursiveMAS/recursive routing for multi-step, uncertain, adversarial,
+  research, coding, or validation-heavy objectives when it is available.
+
+Score contract:
+- Return valid JSON only.
+- Return an object with a "tasks" array.
+- Use 3 to 6 tasks.
+- Use capabilities exactly from Beethoven's catalog.
+- Task ids must be lowercase snake_case.
+- Dependencies may only point to earlier task ids.
+- End with a synthesize task.
+- Include "soloist" only when an available soloist is clearly best.
+- Never invent unavailable soloists.
+
+Routing policy:
+- local-reader: attached file reading, summaries, safe local context.
+- recursivemas: recursive deliberation, critique, multi-agent decomposition,
+  expert mixture, distillation, and cross-model coordination.
+- codex-cli: repository-aware coding/review when available.
+- claude-cli: reasoning, writing, broad analysis when available.
+- ollama/solomlx local models: private local analysis and synthesis.
+- local-echo: fallback/smoke tests only.
+""".strip()
 
 
 @dataclass(frozen=True)
@@ -41,11 +78,7 @@ class OpenAICompatibleOrchestrator:
             "messages": [
                 {
                     "role": "system",
-                    "content": (
-                        "You are Beethoven's private local orchestration model. "
-                        "Create compact execution scores and route each task to the best "
-                        "available soloist. Return valid JSON only."
-                    ),
+                    "content": MINISTRAL_ORCHESTRATOR_SYSTEM_PROMPT,
                 },
                 {"role": "user", "content": task.instruction},
             ],
@@ -70,6 +103,7 @@ class OpenAICompatibleOrchestrator:
             metadata={
                 "mode": "beethoven-orchestrator",
                 "provider": "openai-compatible",
+                "profile": ORCHESTRATOR_PROFILE,
                 "base_url": self.base_url,
                 "model": self.model,
             },
@@ -88,8 +122,7 @@ class OllamaOrchestrator:
     def perform(self, task: Task, context: ExecutionContext) -> SoloistResult:
         prompt = "\n\n".join(
             [
-                "You are Beethoven's private local orchestration model.",
-                "Return valid JSON only. Do not include markdown.",
+                MINISTRAL_ORCHESTRATOR_SYSTEM_PROMPT,
                 task.instruction,
             ]
         )
@@ -107,6 +140,7 @@ class OllamaOrchestrator:
             metadata={
                 "mode": "beethoven-orchestrator",
                 "provider": "ollama",
+                "profile": ORCHESTRATOR_PROFILE,
                 "model": self.model,
             },
         )
@@ -195,7 +229,7 @@ def _check_solomlx() -> dict[str, object]:
             "message": f"SoloMLX/OpenAI-compatible endpoint is unreachable at {base_url}: {error}",
         }
     models = _models_from_openai_payload(payload)
-    model = configured_model or (models[0] if models else "")
+    model = configured_model or _preferred_solomlx_model(models)
     if not model:
         return {
             "provider": "solomlx",
@@ -211,6 +245,8 @@ def _check_solomlx() -> dict[str, object]:
         "base_url": base_url,
         "model": model,
         "models": models,
+        "profile": ORCHESTRATOR_PROFILE,
+        "preferred_model": DEFAULT_MINISTRAL_ORCHESTRATOR_MODEL,
         "message": "Beethoven will use the local OpenAI-compatible orchestration model.",
     }
 
@@ -239,7 +275,10 @@ def _check_ollama() -> dict[str, object]:
             "message": f"Ollama did not respond: {error}",
         }
     models = _models_from_ollama_list(result.stdout)
-    configured_model = os.getenv(MODEL_ENV, os.getenv("BEETHOVEN_ORCHESTRATOR_OLLAMA_MODEL", "")).strip()
+    configured_model = os.getenv(
+        MODEL_ENV,
+        os.getenv("BEETHOVEN_ORCHESTRATOR_OLLAMA_MODEL", ""),
+    ).strip()
     model = configured_model or _preferred_ollama_model(models)
     if result.returncode != 0:
         return {
@@ -270,6 +309,7 @@ def _check_ollama() -> dict[str, object]:
         "available": True,
         "model": model,
         "models": models,
+        "profile": ORCHESTRATOR_PROFILE,
         "message": "Beethoven will use the local Ollama orchestration model.",
     }
 
@@ -311,6 +351,17 @@ def _models_from_openai_payload(payload: dict[str, Any]) -> list[str]:
         if isinstance(item, dict) and item.get("id"):
             models.append(str(item["id"]))
     return models
+
+
+def _preferred_solomlx_model(models: list[str]) -> str:
+    if not models:
+        return ""
+    preferred_fragments = ("ministral", "mistral", "qwen", "llama")
+    for fragment in preferred_fragments:
+        for model in models:
+            if fragment in model.lower():
+                return model
+    return models[0]
 
 
 def _models_from_ollama_list(output: str) -> list[str]:

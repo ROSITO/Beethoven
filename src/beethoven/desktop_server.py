@@ -21,7 +21,7 @@ from beethoven.runtime import (
     score_objective,
 )
 from beethoven.serialization import context_to_dict, score_to_dict
-from beethoven.solomlx import solomlx_start, solomlx_status, solomlx_stop
+from beethoven.solomlx import solomlx_prepare_orchestrator, solomlx_start, solomlx_status, solomlx_stop
 from beethoven.workspace import inspect_workspace, list_workspace_files
 
 
@@ -133,6 +133,20 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
                 return
             try:
                 self._send_json({"solomlx": solomlx_start(host=host, port=port)})
+            except RuntimeError as error:
+                self._send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+            return
+
+        if path == "/api/solomlx/prepare-orchestrator":
+            payload = self._read_payload()
+            if payload is None:
+                return
+            kwargs: dict[str, Any] = {}
+            model = str(payload.get("model", "")).strip()
+            if model:
+                kwargs["model"] = model
+            try:
+                self._send_json({"solomlx": solomlx_prepare_orchestrator(**kwargs)})
             except RuntimeError as error:
                 self._send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
             return

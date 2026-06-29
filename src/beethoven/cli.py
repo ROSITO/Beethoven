@@ -23,7 +23,13 @@ from beethoven.runtime import (
     score_objective,
 )
 from beethoven.serialization import context_to_dict, score_to_dict
-from beethoven.solomlx import solomlx_install, solomlx_start, solomlx_status, solomlx_stop
+from beethoven.solomlx import (
+    solomlx_install,
+    solomlx_prepare_orchestrator,
+    solomlx_start,
+    solomlx_status,
+    solomlx_stop,
+)
 from beethoven.workspace import inspect_workspace, list_workspace_files
 
 
@@ -147,6 +153,13 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Install only the API package, without the MLX inference extra.",
     )
+    solomlx_prepare_parser = solomlx_subparsers.add_parser(
+        "prepare-orchestrator",
+        help="Pull the default Ministral orchestration model into SoloMLX.",
+    )
+    solomlx_prepare_parser.add_argument("--model", help="Model id to pull.")
+    solomlx_prepare_parser.add_argument("--dir", dest="target_dir", help="Installation directory.")
+    solomlx_prepare_parser.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
     solomlx_start_parser = solomlx_subparsers.add_parser("start", help="Start SoloMLX-server.")
     solomlx_start_parser.add_argument("--host", default="127.0.0.1", help="Host to bind.")
     solomlx_start_parser.add_argument("--port", default=8080, type=int, help="Port to bind.")
@@ -343,6 +356,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             print(f"SoloMLX installed in {report['path']}")
             print(f"Python: {report['python']}")
+            return 0
+        if args.solomlx_command == "prepare-orchestrator":
+            kwargs = {"target_dir": args.target_dir}
+            if args.model:
+                kwargs["model"] = args.model
+            report = solomlx_prepare_orchestrator(**kwargs)
+            if args.json:
+                print(json.dumps({"solomlx": report}, indent=2, ensure_ascii=False))
+            else:
+                print(f"SoloMLX orchestrator model prepared: {report['model']}")
+                if report.get("output"):
+                    print(report["output"])
             return 0
         if args.solomlx_command == "start":
             report = solomlx_start(host=args.host, port=args.port, target_dir=args.target_dir)

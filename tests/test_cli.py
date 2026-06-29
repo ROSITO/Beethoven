@@ -215,6 +215,7 @@ def test_orchestrator_status_command_reports_hidden_planner(monkeypatch, capsys)
             "status": "available",
             "provider": "solomlx",
             "model": "ministral-local",
+            "profile": "ministral-recursivemas-router",
             "message": "ready",
         },
     )
@@ -226,6 +227,7 @@ def test_orchestrator_status_command_reports_hidden_planner(monkeypatch, capsys)
     assert exit_code == 0
     assert data["orchestrator"]["provider"] == "solomlx"
     assert data["orchestrator"]["model"] == "ministral-local"
+    assert data["orchestrator"]["profile"] == "ministral-recursivemas-router"
 
 
 def test_solomlx_status_command_reports_runtime_brick(monkeypatch, capsys) -> None:
@@ -272,6 +274,31 @@ def test_solomlx_install_command_can_skip_mlx_extra(monkeypatch, capsys) -> None
     assert exit_code == 0
     assert "SoloMLX installed" in captured.out
     assert calls == [{"target_dir": "/tmp/SoloMLX-server", "upgrade": False, "with_mlx": False}]
+
+
+def test_solomlx_prepare_orchestrator_pulls_model(monkeypatch, capsys) -> None:
+    calls = []
+
+    def fake_prepare(**kwargs):
+        calls.append(kwargs)
+        return {
+            "id": "solomlx",
+            "prepared": True,
+            "model": "mlx-community/Ministral-3-3B-Instruct-2512-4bit",
+            "path": "/tmp/SoloMLX-server",
+            "output": "pulled model",
+        }
+
+    monkeypatch.setattr("beethoven.cli.solomlx_prepare_orchestrator", fake_prepare)
+
+    exit_code = main(["solomlx", "prepare-orchestrator", "--json"])
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert exit_code == 0
+    assert calls == [{"target_dir": None}]
+    assert data["solomlx"]["prepared"] is True
+    assert "Ministral" in data["solomlx"]["model"]
 
 
 def test_soloists_check_reports_unconfigured_recursivemas(monkeypatch, capsys) -> None:

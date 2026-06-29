@@ -46,7 +46,8 @@ The first implementation exposes deliberately small primitives:
   accepts suggestions that are registered and capable.
 - `SoloMLXRuntime`: managed local MLX brick backed by `ROSITO/SoloMLX-server`.
   It is installed and started by Beethoven, then consumed through the same
-  OpenAI-compatible adapter boundary.
+  OpenAI-compatible adapter boundary. Its default orchestration profile uses a
+  Ministral-class model and explicit RecursiveMAS routing rules.
 
 These contracts are the foundation for the future plugin SDK. A plugin should
 be able to add a new model, local tool, remote worker, policy, validator, or

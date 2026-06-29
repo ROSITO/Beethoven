@@ -8,6 +8,7 @@ from dataclasses import dataclass, replace
 from beethoven.conductor import Conductor
 from beethoven.core import ExecutionContext, Score, SoloistResult
 from beethoven.planning import create_baseline_score, create_dynamic_score, should_use_dynamic_planning
+from beethoven.recursive import DEFAULT_RECURSIVE_STYLE, create_recursive_score
 from beethoven.routing import CapabilityRouter, SoloistRegistry
 from beethoven.soloists import (
     ClaudeCliSoloist,
@@ -111,6 +112,18 @@ def list_soloists() -> list[dict[str, object]]:
             ),
         },
         {
+            "id": "recursivemas",
+            "name": "RecursiveMAS",
+            "provider": "RecursiveMAS",
+            "status": "experimental",
+            "locality": "local",
+            "capabilities": ["analyze", "plan", "code", "review", "validate", "synthesize"],
+            "description": (
+                "Experimental backend target for RecursiveMAS-style latent multi-agent collaboration. "
+                "Use Beethoven's recursive strategy now; attach the external backend as a sidecar later."
+            ),
+        },
+        {
             "id": "openai-compatible",
             "name": "OpenAI-compatible",
             "provider": "Cloud API",
@@ -167,6 +180,9 @@ def score_objective(
     metadata: dict[str, object] | None = None,
     *,
     planner_soloist: str | None = None,
+    strategy: str = "baseline",
+    recursive_style: str = DEFAULT_RECURSIVE_STYLE,
+    recursive_rounds: int = 2,
 ) -> Score:
     score = create_baseline_score(objective)
     attachments = read_workspace_attachments(objective)
@@ -175,6 +191,13 @@ def score_objective(
         combined_metadata["attachments"] = attachments
     if metadata:
         combined_metadata.update(metadata)
+    if strategy == "recursive":
+        return create_recursive_score(
+            objective,
+            style=recursive_style,
+            rounds=recursive_rounds,
+            metadata=combined_metadata,
+        )
     if planner_soloist and should_use_dynamic_planning(planner_soloist):
         registry = create_default_registry()
         planner = CapabilityRouter(registry, preferred_soloist=planner_soloist).choose(
@@ -192,6 +215,9 @@ def run_objective(
     soloist: str = "local-echo",
     permission_mode: str = "ask",
     effort: str = "medium",
+    strategy: str = "baseline",
+    recursive_style: str = DEFAULT_RECURSIVE_STYLE,
+    recursive_rounds: int = 2,
     validation_commands: list[str] | None = None,
     event_sink: Callable[[dict[str, object]], None] | None = None,
 ) -> ExecutionContext:
@@ -208,9 +234,15 @@ def run_objective(
             "soloist": soloist,
             "permission_mode": permission_mode,
             "effort": effort,
+            "strategy": strategy,
+            "recursive_style": recursive_style if strategy == "recursive" else None,
+            "recursive_rounds": recursive_rounds if strategy == "recursive" else None,
             "validation_commands": validation_commands or [],
         },
         planner_soloist=soloist,
+        strategy=strategy,
+        recursive_style=recursive_style,
+        recursive_rounds=recursive_rounds,
     )
     context = Conductor(
         CapabilityRouter(registry, preferred_soloist=soloist),

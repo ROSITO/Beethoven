@@ -45,9 +45,36 @@ This repository now contains the first executable orchestration kernel:
 - Run events: score/task/validation events for desktop streaming.
 - Dynamic planning: Claude/Codex CLI can propose a task score, then Beethoven
   validates and executes the normalized plan.
+- Recursive strategies: RecursiveMAS-inspired score patterns for sequential,
+  deliberation, mixture, and distillation orchestration.
 
 The first implementation is intentionally small. The foundation must stay stable
 enough for future providers and plugins to attach naturally.
+
+## Recursive Orchestration
+
+Beethoven now includes a native recursive strategy inspired by RecursiveMAS. It
+keeps the recursion inside the portable `Score` contract first, so every round
+is visible in the CLI, desktop inspector, event stream, and validation trace.
+
+Supported patterns:
+
+- `sequential`: decompose, execute each round, synthesize.
+- `deliberation`: propose, critique, revise, validate, synthesize.
+- `mixture`: route expert perspectives, aggregate, synthesize.
+- `distillation`: expert solution, distill rounds, synthesize.
+
+Try it from the terminal:
+
+```bash
+beethoven score "Integrate RecursiveMAS" --strategy recursive --recursive-style deliberation --recursive-rounds 2
+beethoven run "Integrate RecursiveMAS" --strategy recursive --recursive-style sequential --recursive-rounds 1
+```
+
+The external RecursiveMAS backend is represented as an experimental soloist
+target. The current production-safe integration point is the recursive score
+strategy; a future sidecar can implement the latent RecursiveMAS runtime behind
+the same score/event contracts.
 
 ## Example
 
@@ -197,6 +224,7 @@ beethoven run "Refactor this repository" --json
 beethoven run "Review @README.md" --validate "python -m pytest"
 beethoven run "Review @README.md" --soloist claude-cli
 beethoven run "Review @README.md" --soloist codex-cli
+beethoven run "Explore RecursiveMAS" --strategy recursive --recursive-style deliberation --recursive-rounds 2
 beethoven desktop
 beethoven desktop --open
 beethoven sessions list
@@ -210,7 +238,8 @@ beethoven package sidecar
 
 Inside `beethoven chat`, type an objective to run it directly, or use slash
 commands such as `/score`, `/run`, `/files`, `/workspace`, `/permission`,
-`/effort`, `/soloist`, and `/exit`.
+`/effort`, `/soloist`, `/strategy`, `/recursive-style`, `/recursive-rounds`,
+and `/exit`.
 
 Ollama is detected but disabled by default in the app because large local models
 can create heavy memory pressure. Enable it explicitly only when you are ready

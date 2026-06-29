@@ -926,6 +926,10 @@ button {
   max-width: 170px;
 }
 
+.compact-select {
+  max-width: 72px;
+}
+
 textarea {
   width: 100%;
   min-height: 92px;
@@ -954,6 +958,8 @@ textarea:focus {
 
 .right-tools {
   margin-left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .send-button {

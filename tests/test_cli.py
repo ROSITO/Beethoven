@@ -18,6 +18,34 @@ def test_score_command_prints_json(capsys) -> None:
     assert [task["id"] for task in data["tasks"]] == ["understand", "plan", "synthesize"]
 
 
+def test_score_command_can_print_recursive_json(capsys) -> None:
+    exit_code = main(
+        [
+            "score",
+            "Integrate",
+            "RecursiveMAS",
+            "--strategy",
+            "recursive",
+            "--recursive-style",
+            "sequential",
+            "--recursive-rounds",
+            "1",
+            "--json",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert exit_code == 0
+    assert data["metadata"]["strategy"] == "recursive"
+    assert data["metadata"]["recursive_style"] == "sequential"
+    assert [task["id"] for task in data["tasks"]] == [
+        "decompose",
+        "execute_round_1",
+        "synthesize",
+    ]
+
+
 def test_run_command_prints_trace(capsys) -> None:
     exit_code = main(["run", "Build", "a", "CLI", "--permission", "read-only", "--effort", "high"])
 
@@ -28,6 +56,28 @@ def test_run_command_prints_trace(capsys) -> None:
     assert "effort=high" in captured.out
     assert "understand:local-echo" in captured.out
     assert "synthesize:local-echo" in captured.out
+
+
+def test_run_command_accepts_recursive_strategy(capsys) -> None:
+    exit_code = main(
+        [
+            "run",
+            "Recursive",
+            "task",
+            "--strategy",
+            "recursive",
+            "--recursive-style",
+            "sequential",
+            "--recursive-rounds",
+            "1",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "strategy=recursive" in captured.out
+    assert "decompose:local-echo" in captured.out
+    assert "execute_round_1:local-echo" in captured.out
 
 
 def test_run_command_can_execute_validation_hook(capsys) -> None:
@@ -110,6 +160,7 @@ def test_soloists_list_command_prints_catalog(capsys) -> None:
     assert exit_code == 0
     assert "Local Echo [available]" in captured.out
     assert "Ollama [" in captured.out
+    assert "RecursiveMAS [experimental]" in captured.out
 
 
 def test_ollama_requires_explicit_opt_in(monkeypatch) -> None:
@@ -163,6 +214,9 @@ def test_terminal_session_runs_objectives_and_commands(capsys) -> None:
         [
             "/permission read-only",
             "/score Build terminal mode",
+            "/strategy recursive",
+            "/recursive-style sequential",
+            "/recursive-rounds 1",
             "Run terminal objective",
             "/exit",
         ]
@@ -178,9 +232,12 @@ def test_terminal_session_runs_objectives_and_commands(capsys) -> None:
     assert exit_code == 0
     assert "Beethoven terminal workbench" in outputs
     assert "permission_mode=read-only" in outputs
+    assert "strategy=recursive" in outputs
+    assert "recursive_style=sequential" in outputs
     assert "Score: score-" in captured.out
     assert "Beethoven performed score-" in captured.out
     assert "permission=read-only" in captured.out
+    assert "decompose:local-echo" in captured.out
 
 
 def test_package_sidecar_command_writes_launcher(tmp_path, capsys) -> None:

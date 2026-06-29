@@ -18,6 +18,9 @@ const chatThread = document.querySelector("#chatThread");
 const soloistSelect = document.querySelector("#soloistSelect");
 const permissionSelect = document.querySelector("#permissionSelect");
 const effortSelect = document.querySelector("#effortSelect");
+const strategySelect = document.querySelector("#strategySelect");
+const recursiveStyleSelect = document.querySelector("#recursiveStyleSelect");
+const recursiveRoundsSelect = document.querySelector("#recursiveRoundsSelect");
 const workspaceName = document.querySelector("#workspaceName");
 const workspaceBranch = document.querySelector("#workspaceBranch");
 const composerWorkspaceName = document.querySelector("#composerWorkspaceName");
@@ -98,6 +101,10 @@ const cliCommands = [
   {
     command: "beethoven run \"<objective>\" --permission ask --effort medium",
     description: "Run the same orchestration loop as the composer."
+  },
+  {
+    command: "beethoven run \"<objective>\" --strategy recursive --recursive-style deliberation --recursive-rounds 2",
+    description: "Run a RecursiveMAS-inspired multi-round Beethoven score."
   },
   {
     command: "beethoven sessions list",
@@ -327,6 +334,15 @@ function applyRunContext(context) {
   }
   if (context.score.metadata?.effort) {
     effortSelect.value = context.score.metadata.effort;
+  }
+  if (context.score.metadata?.strategy) {
+    strategySelect.value = context.score.metadata.strategy;
+  }
+  if (context.score.metadata?.recursive_style) {
+    recursiveStyleSelect.value = context.score.metadata.recursive_style;
+  }
+  if (context.score.metadata?.recursive_rounds) {
+    recursiveRoundsSelect.value = String(context.score.metadata.recursive_rounds);
   }
   setConversationForRun(context);
   renderScore();
@@ -672,6 +688,16 @@ function taskFromScore(task) {
   };
 }
 
+function scoreRequestPayload(objective) {
+  return {
+    objective,
+    soloist: soloistSelect.value,
+    strategy: strategySelect.value,
+    recursive_style: recursiveStyleSelect.value,
+    recursive_rounds: Number(recursiveRoundsSelect.value)
+  };
+}
+
 async function runComposer() {
   const value = composer.value.trim();
   if (!value) {
@@ -689,8 +715,7 @@ async function runComposer() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        objective: value,
-        soloist: soloistSelect.value,
+        ...scoreRequestPayload(value),
         permission_mode: permissionSelect.value,
         effort: effortSelect.value
       })
@@ -808,7 +833,7 @@ async function loadScoreForObjective(objective) {
     const response = await fetch("/api/score", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ objective, soloist: soloistSelect.value })
+      body: JSON.stringify(scoreRequestPayload(objective))
     });
     if (!response.ok) {
       return;
@@ -833,7 +858,7 @@ async function previewComposerScore() {
     const response = await fetch("/api/score", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ objective, soloist: soloistSelect.value })
+      body: JSON.stringify(scoreRequestPayload(objective))
     });
     if (!response.ok) {
       throw new Error(`Score API returned ${response.status}`);

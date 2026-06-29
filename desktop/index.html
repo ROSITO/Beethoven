@@ -252,6 +252,26 @@
                     <option value="medium" selected>Medium</option>
                     <option value="high">High</option>
                   </select>
+                  <label class="select-label" for="strategySelect">Strategy</label>
+                  <select class="control-select" id="strategySelect">
+                    <option value="baseline" selected>Baseline</option>
+                    <option value="recursive">Recursive</option>
+                  </select>
+                  <label class="select-label" for="recursiveStyleSelect">Pattern</label>
+                  <select class="control-select" id="recursiveStyleSelect">
+                    <option value="deliberation" selected>Deliberation</option>
+                    <option value="sequential">Sequential</option>
+                    <option value="mixture">Mixture</option>
+                    <option value="distillation">Distillation</option>
+                  </select>
+                  <label class="select-label" for="recursiveRoundsSelect">Rounds</label>
+                  <select class="control-select compact-select" id="recursiveRoundsSelect">
+                    <option value="1">1</option>
+                    <option value="2" selected>2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                  </select>
                   <button class="send-button" id="sendButton" type="button" aria-label="Run Beethoven">↑</button>
                 </div>
               </div>

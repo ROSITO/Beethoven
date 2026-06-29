@@ -12,6 +12,7 @@ from beethoven.desktop_server import serve_desktop
 from beethoven.core import Score
 from beethoven.desktop_state import DesktopSessionStore
 from beethoven.packaging import write_sidecar_script
+from beethoven.recursive import DEFAULT_RECURSIVE_STYLE, RECURSIVE_STYLES
 from beethoven.runtime import list_skills, list_soloists, run_objective, score_objective
 from beethoven.serialization import context_to_dict, score_to_dict
 from beethoven.workspace import inspect_workspace, list_workspace_files
@@ -27,6 +28,7 @@ def build_parser() -> argparse.ArgumentParser:
     score = subparsers.add_parser("score", help="Create a baseline score from an objective.")
     score.add_argument("objective", nargs="+", help="Objective to transform into a score.")
     score.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+    add_strategy_arguments(score)
 
     run = subparsers.add_parser("run", help="Run a baseline score with the local echo soloist.")
     run.add_argument("objective", nargs="+", help="Objective to orchestrate.")
@@ -50,6 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help="Validation command to run after orchestration. Can be repeated.",
     )
+    add_strategy_arguments(run)
 
     chat = subparsers.add_parser(
         "chat",
@@ -69,6 +72,7 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["low", "medium", "high"],
         help="Execution effort preference.",
     )
+    add_strategy_arguments(chat)
 
     desktop = subparsers.add_parser(
         "desktop",
@@ -116,13 +120,39 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def add_strategy_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--strategy",
+        default="baseline",
+        choices=["baseline", "recursive"],
+        help="Score strategy to use.",
+    )
+    parser.add_argument(
+        "--recursive-style",
+        default=DEFAULT_RECURSIVE_STYLE,
+        choices=list(RECURSIVE_STYLES),
+        help="Recursive collaboration pattern.",
+    )
+    parser.add_argument(
+        "--recursive-rounds",
+        default=2,
+        type=int,
+        help="Recursive rounds to include in the score.",
+    )
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
     if args.command == "score":
         objective = " ".join(args.objective)
-        generated_score = score_objective(objective)
+        generated_score = score_objective(
+            objective,
+            strategy=args.strategy,
+            recursive_style=args.recursive_style,
+            recursive_rounds=args.recursive_rounds,
+        )
         if args.json:
             print(json.dumps(score_to_dict(generated_score), indent=2, ensure_ascii=False))
         else:
@@ -136,6 +166,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             soloist=args.soloist,
             permission_mode=args.permission,
             effort=args.effort,
+            strategy=args.strategy,
+            recursive_style=args.recursive_style,
+            recursive_rounds=args.recursive_rounds,
             validation_commands=args.validate,
         )
         if args.json:
@@ -153,6 +186,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             soloist=args.soloist,
             permission_mode=args.permission,
             effort=args.effort,
+            strategy=args.strategy,
+            recursive_style=args.recursive_style,
+            recursive_rounds=args.recursive_rounds,
         )
 
     if args.command == "sessions":
@@ -223,6 +259,9 @@ def run_terminal_session(
     soloist: str = "local-echo",
     permission_mode: str = "ask",
     effort: str = "medium",
+    strategy: str = "baseline",
+    recursive_style: str = DEFAULT_RECURSIVE_STYLE,
+    recursive_rounds: int = 2,
     input_fn: Callable[[str], str] = input,
     output_fn: Callable[[str], None] = print,
 ) -> int:
@@ -231,6 +270,9 @@ def run_terminal_session(
         "soloist": soloist,
         "permission_mode": permission_mode,
         "effort": effort,
+        "strategy": strategy,
+        "recursive_style": recursive_style,
+        "recursive_rounds": str(recursive_rounds),
     }
     output_fn("Beethoven terminal workbench")
     output_fn("Type an objective to run it, or /help for commands.")
@@ -275,7 +317,14 @@ def handle_terminal_command(
         if not argument:
             output_fn("Usage: /score <objective>")
             return
-        print_score(score_objective(argument))
+        print_score(
+            score_objective(
+                argument,
+                strategy=controls["strategy"],
+                recursive_style=controls["recursive_style"],
+                recursive_rounds=int(controls["recursive_rounds"]),
+            )
+        )
         return
     if command == "/run":
         if not argument:
@@ -314,6 +363,24 @@ def handle_terminal_command(
     if command == "/effort":
         set_terminal_control("effort", argument, {"low", "medium", "high"}, controls, output_fn)
         return
+    if command == "/strategy":
+        set_terminal_control("strategy", argument, {"baseline", "recursive"}, controls, output_fn)
+        return
+    if command == "/recursive-style":
+        set_terminal_control("recursive_style", argument, set(RECURSIVE_STYLES), controls, output_fn)
+        return
+    if command == "/recursive-rounds":
+        if not argument:
+            output_fn(f"recursive_rounds={controls['recursive_rounds']}")
+            return
+        try:
+            rounds = int(argument)
+        except ValueError:
+            output_fn("Invalid recursive_rounds. Expected an integer.")
+            return
+        controls["recursive_rounds"] = str(rounds)
+        output_fn(f"recursive_rounds={rounds}")
+        return
     if command == "/soloist":
         if not argument:
             output_fn(f"soloist={controls['soloist']}")
@@ -337,6 +404,9 @@ def run_terminal_objective(
         soloist=controls["soloist"],
         permission_mode=controls["permission_mode"],
         effort=controls["effort"],
+        strategy=controls["strategy"],
+        recursive_style=controls["recursive_style"],
+        recursive_rounds=int(controls["recursive_rounds"]),
     )
     print_run(context_to_dict(context))
     output_fn("")
@@ -365,7 +435,9 @@ def print_terminal_controls(controls: dict[str, str], output_fn: Callable[[str],
         "Controls: "
         f"soloist={controls['soloist']} · "
         f"permission={controls['permission_mode']} · "
-        f"effort={controls['effort']}"
+        f"effort={controls['effort']} · "
+        f"strategy={controls['strategy']} · "
+        f"recursive={controls['recursive_style']}/{controls['recursive_rounds']}"
     )
 
 
@@ -381,6 +453,9 @@ def print_terminal_help(output_fn: Callable[[str], None]) -> None:
     output_fn("- /permission <mode>     ask, auto, read-only")
     output_fn("- /effort <level>        low, medium, high")
     output_fn("- /soloist <id>          Set soloist")
+    output_fn("- /strategy <mode>       baseline, recursive")
+    output_fn("- /recursive-style <s>   sequential, deliberation, mixture, distillation")
+    output_fn("- /recursive-rounds <n>  Set recursive rounds")
     output_fn("- /controls              Show current controls")
     output_fn("- /exit                  Close the terminal session")
 
@@ -409,7 +484,8 @@ def print_run(data: dict[str, object]) -> None:
             "Controls: "
             f"soloist={metadata.get('soloist')} · "
             f"permission={metadata.get('permission_mode')} · "
-            f"effort={metadata.get('effort')}"
+            f"effort={metadata.get('effort')} · "
+            f"strategy={metadata.get('strategy', 'baseline')}"
         )
     print()
     print("Trace")

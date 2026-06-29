@@ -53,6 +53,21 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
         response = urlopen(request, timeout=2)
         payload = json.loads(response.read().decode("utf-8"))
 
+        score_request = Request(
+            f"http://{host}:{port}/api/score",
+            data=json.dumps(
+                {
+                    "objective": "recursive desktop preview",
+                    "strategy": "recursive",
+                    "recursive_style": "sequential",
+                    "recursive_rounds": 1,
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        score_payload = json.loads(urlopen(score_request, timeout=2).read().decode("utf-8"))
+
         second_request = Request(
             f"http://{host}:{port}/api/run",
             data=json.dumps({"objective": "second desktop api"}).encode("utf-8"),
@@ -98,6 +113,13 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
     assert payload["session"]["permission_mode"] == "read-only"
     assert payload["session"]["effort"] == "high"
     assert payload["score"]["metadata"]["permission_mode"] == "read-only"
+    assert score_payload["metadata"]["strategy"] == "recursive"
+    assert score_payload["metadata"]["recursive_style"] == "sequential"
+    assert [task["id"] for task in score_payload["tasks"]] == [
+        "decompose",
+        "execute_round_1",
+        "synthesize",
+    ]
     assert any(session["id"] == payload["score"]["id"] for session in sessions_data["sessions"])
     assert "run" not in sessions_data["sessions"][0]
     assert detail_data["session"]["run"]["score"]["id"] == payload["score"]["id"]

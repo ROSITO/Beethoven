@@ -1,6 +1,6 @@
 # Beethoven Memory
 
-Last updated: 2026-06-28
+Last updated: 2026-06-29
 
 ## Vision
 
@@ -41,6 +41,7 @@ The foundation is pre-alpha but executable. It includes:
 - workspace and Git context;
 - workspace file discovery and safe `@path` file attachment reads;
 - validation command hooks after a run;
+- RecursiveMAS-inspired recursive score strategies;
 - a Tauri v2 desktop shell scaffold;
 - tests for core execution, CLI, and desktop API.
 
@@ -58,6 +59,9 @@ Important modules:
   Claude/Codex-selected runs can now use dynamic planning: the selected CLI
   soloist proposes a JSON score, and Beethoven validates/normalizes it before
   execution. `BEETHOVEN_DYNAMIC_PLANNING=0` forces baseline planning.
+- `src/beethoven/recursive.py`: RecursiveMAS-inspired score strategies that
+  express sequential, deliberation, mixture, and distillation patterns as
+  portable Beethoven tasks.
 - `src/beethoven/soloists.py`: `EchoSoloist`, the offline deterministic worker,
   plus `OllamaSoloist`, the first local model adapter.
 - `src/beethoven/runtime.py`: shared runtime helpers for CLI and desktop:
@@ -80,6 +84,18 @@ When `claude-cli` or `codex-cli` is selected and dynamic planning is enabled,
 the task list may differ. Beethoven still enforces valid capabilities, unique
 task IDs, dependency order, a maximum of six tasks, and a final synthesize task.
 
+Recursive strategy scores are selected explicitly with `strategy=recursive`.
+They do not require the external RecursiveMAS runtime. Instead, Beethoven turns
+recursive collaboration patterns into visible `Score` tasks:
+
+- `sequential`: decompose, execute round(s), synthesize.
+- `deliberation`: frame, propose, critique, revise, validate, synthesize.
+- `mixture`: route experts, produce expert views, aggregate, synthesize.
+- `distillation`: expert solution, distill round(s), synthesize.
+
+This is the first integration layer for RecursiveMAS: stable score/event
+contracts first, optional latent RecursiveMAS sidecar later.
+
 Current available soloists:
 
 - `local-echo`: deterministic local/offline soloist used for testing and UI
@@ -94,6 +110,8 @@ Current available soloists:
   (`BEETHOVEN_OLLAMA_MODEL`, default `qwen3-coder:latest`), but disabled by
   default unless `BEETHOVEN_ENABLE_OLLAMA=1` is set. This is deliberate because
   large local models can create heavy memory pressure.
+- `recursivemas`: experimental catalog target for a future RecursiveMAS backend
+  sidecar. The usable integration today is `--strategy recursive`.
 
 Planned soloist catalog:
 
@@ -108,9 +126,11 @@ Implemented commands:
 beethoven chat
 beethoven score "<objective>"
 beethoven score "<objective>" --json
+beethoven score "<objective>" --strategy recursive --recursive-style deliberation --recursive-rounds 2
 beethoven run "<objective>"
 beethoven run "<objective>" --json
 beethoven run "<objective>" --soloist local-echo --permission ask --effort medium
+beethoven run "<objective>" --strategy recursive --recursive-style sequential --recursive-rounds 1
 beethoven run "Review @README.md" --soloist local-reader
 beethoven run "Review @README.md" --soloist claude-cli
 beethoven run "Review @README.md" --soloist codex-cli
@@ -146,6 +166,8 @@ CLI/API equivalent rather than leaving it as local browser-only behavior.
 - `/files [query]` lists attachable workspace files;
 - `/workspace`, `/sessions`, `/soloists`, `/skills` inspect local state;
 - `/permission`, `/effort`, and `/soloist` update terminal controls;
+- `/strategy`, `/recursive-style`, and `/recursive-rounds` control recursive
+  scoring;
 - `/exit` closes the session.
 
 ## Desktop API
@@ -194,6 +216,8 @@ Implemented UI:
 - search/filter for recent sessions;
 - `New task` resets composer and score state;
 - composer with permission mode, soloist selector, effort selector;
+- strategy controls for baseline vs recursive score generation, recursive
+  pattern, and rounds;
 - score preview through `/api/score`;
 - run through `/api/run/stream`, with live composer status updates while events
   arrive;
@@ -259,10 +283,12 @@ Latest known status after the current implementation:
 Test coverage currently includes:
 
 - score JSON CLI;
+- recursive score JSON CLI;
 - run CLI trace and controls;
 - desktop command registration;
 - session list/show;
 - soloist catalog;
+- recursive strategy execution;
 - skills catalog;
 - workspace command;
 - workspace files command;

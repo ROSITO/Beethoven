@@ -68,7 +68,20 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             if objective is None:
                 return
             soloist = str(payload.get("soloist", "local-echo"))
-            self._send_json(score_to_dict(score_objective(objective, planner_soloist=soloist)))
+            strategy = str(payload.get("strategy", "baseline"))
+            recursive_style = str(payload.get("recursive_style", "deliberation"))
+            recursive_rounds = self._read_recursive_rounds(payload)
+            self._send_json(
+                score_to_dict(
+                    score_objective(
+                        objective,
+                        planner_soloist=soloist,
+                        strategy=strategy,
+                        recursive_style=recursive_style,
+                        recursive_rounds=recursive_rounds,
+                    )
+                )
+            )
             return
 
         if path == "/api/run":
@@ -81,12 +94,18 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             soloist = str(payload.get("soloist", "local-echo"))
             permission_mode = str(payload.get("permission_mode", "ask"))
             effort = str(payload.get("effort", "medium"))
+            strategy = str(payload.get("strategy", "baseline"))
+            recursive_style = str(payload.get("recursive_style", "deliberation"))
+            recursive_rounds = self._read_recursive_rounds(payload)
             validation_commands = self._read_validation_commands(payload)
             context = run_objective(
                 objective,
                 soloist=soloist,
                 permission_mode=permission_mode,
                 effort=effort,
+                strategy=strategy,
+                recursive_style=recursive_style,
+                recursive_rounds=recursive_rounds,
                 validation_commands=validation_commands,
             )
             session = self.store.save_run(
@@ -112,6 +131,9 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             soloist = str(payload.get("soloist", "local-echo"))
             permission_mode = str(payload.get("permission_mode", "ask"))
             effort = str(payload.get("effort", "medium"))
+            strategy = str(payload.get("strategy", "baseline"))
+            recursive_style = str(payload.get("recursive_style", "deliberation"))
+            recursive_rounds = self._read_recursive_rounds(payload)
             validation_commands = self._read_validation_commands(payload)
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
@@ -128,6 +150,9 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
                     soloist=soloist,
                     permission_mode=permission_mode,
                     effort=effort,
+                    strategy=strategy,
+                    recursive_style=recursive_style,
+                    recursive_rounds=recursive_rounds,
                     validation_commands=validation_commands,
                     event_sink=write_event,
                 )
@@ -190,6 +215,12 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             if isinstance(raw_validation_commands, list)
             else []
         )
+
+    def _read_recursive_rounds(self, payload: dict[str, Any]) -> int:
+        try:
+            return int(payload.get("recursive_rounds", 2))
+        except (TypeError, ValueError):
+            return 2
 
     def _send_json(self, payload: dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> None:
         body = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")

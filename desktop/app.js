@@ -1,28 +1,4 @@
-const defaultScoreTasks = [
-  {
-    id: "understand",
-    capability: "analyze",
-    soloist: "local-echo",
-    reason: "offline capability covers early intent analysis",
-    instruction: "Clarify intent, constraints, interface references, and risks."
-  },
-  {
-    id: "plan",
-    capability: "plan",
-    soloist: "local-echo",
-    reason: "deterministic planner keeps the first score inspectable",
-    instruction: "Create an execution score with dependencies and validation gates."
-  },
-  {
-    id: "synthesize",
-    capability: "synthesize",
-    soloist: "local-echo",
-    reason: "local synthesis proves the orchestration loop without provider cost",
-    instruction: "Produce the final symphony from completed artifacts."
-  }
-];
-
-let scoreTasks = [...defaultScoreTasks];
+let scoreTasks = [];
 
 const scoreList = document.querySelector("#scoreList");
 const composer = document.querySelector("#composer");
@@ -155,6 +131,11 @@ function escapeHtml(value) {
 }
 
 function renderChat() {
+  if (!chatMessages.length) {
+    chatThread.innerHTML = '<div class="empty-chat">Start a new task from the composer below.</div>';
+    return;
+  }
+
   chatThread.innerHTML = chatMessages
     .map(
       (message) => `
@@ -169,18 +150,7 @@ function renderChat() {
 
 function setConversationForMode(mode) {
   const copy = modeCopy[mode] ?? modeCopy.code;
-  chatMessages = [
-    {
-      role: "user",
-      meta: copy.eyebrow,
-      content: copy.summary,
-    },
-    {
-      role: "assistant",
-      meta: "Conductor",
-      content: copy.conductor,
-    },
-  ];
+  composer.placeholder = copy.placeholder;
   renderChat();
 }
 
@@ -239,6 +209,14 @@ function soloistLabel(context) {
 }
 
 function renderScore() {
+  if (!scoreTasks.length) {
+    scoreList.innerHTML = '<div class="session-empty">No active score yet</div>';
+    timeline.innerHTML = '<li class="empty-timeline">No score drafted yet</li>';
+    progressPill.textContent = "Ready";
+    scoreId.textContent = currentScore?.id ?? "No active score";
+    return;
+  }
+
   scoreList.innerHTML = scoreTasks
     .map(
       (task) => {
@@ -877,10 +855,6 @@ async function previewComposerScore() {
   }
 }
 
-async function loadInitialScore() {
-  await loadScoreForObjective("desktop and CLI foundation");
-}
-
 async function fetchSessions() {
   try {
     const response = await fetch("/api/sessions");
@@ -984,6 +958,10 @@ async function startNewTask() {
   activeSessionId = null;
   composer.value = "";
   sessionSearch.value = "";
+  scoreTasks = [];
+  currentScore = null;
+  currentRunContext = null;
+  chatMessages = [];
   setSearchOpen(false);
   composerStatus.classList.remove("error");
   composerStatus.textContent = "New task ready.";
@@ -1000,8 +978,9 @@ async function startNewTask() {
   document.querySelectorAll(".nav-action").forEach((button) => {
     button.classList.toggle("active", button === newTaskButton);
   });
+  renderChat();
+  renderScore();
   renderFilteredSessions();
-  await loadScoreForObjective("new orchestration task");
   composer.focus();
 }
 
@@ -1108,4 +1087,3 @@ loadSoloists();
 loadSkills();
 loadFiles();
 loadSessions();
-loadInitialScore();

@@ -658,6 +658,15 @@ button {
   gap: 12px;
 }
 
+.empty-chat {
+  padding: 22px 18px;
+  color: var(--muted);
+  background: rgba(255, 253, 248, 0.74);
+  border: 1px dashed rgba(212, 175, 55, 0.42);
+  border-radius: 8px;
+  font-size: 15px;
+}
+
 .message {
   max-width: min(760px, 88%);
   padding: 12px 14px;
@@ -734,6 +743,13 @@ button {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
+}
+
+.timeline .empty-timeline {
+  display: block;
+  color: var(--muted);
+  border-style: dashed;
+  font-size: 14px;
 }
 
 .step-index {

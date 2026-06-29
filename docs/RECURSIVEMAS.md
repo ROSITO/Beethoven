@@ -44,6 +44,19 @@ beethoven run "Solve with RecursiveMAS" \
 When the command is configured and executable, `beethoven soloists list` reports
 `RecursiveMAS [available]`. Otherwise it remains `planned`.
 
+You can also persist the command under `BEETHOVEN_HOME/config.json` so the
+desktop and future shells can reuse it without an environment export:
+
+```bash
+beethoven soloists configure recursivemas \
+  --command "python3 /path/to/recursivemas_beethoven_bridge.py"
+beethoven soloists show recursivemas
+beethoven soloists clear recursivemas
+```
+
+`BEETHOVEN_RECURSIVEMAS_COMMAND` still takes priority over the persisted config
+when both are present.
+
 Use the healthcheck when wiring a local bridge:
 
 ```bash

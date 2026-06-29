@@ -134,6 +134,7 @@ beethoven run "<objective>" --json
 beethoven run "<objective>" --soloist local-echo --permission ask --effort medium
 beethoven run "<objective>" --strategy recursive --recursive-style sequential --recursive-rounds 1
 BEETHOVEN_RECURSIVEMAS_COMMAND="python3 /path/to/bridge.py" beethoven run "<objective>" --soloist recursivemas --strategy recursive
+beethoven soloists configure recursivemas --command "python3 /path/to/bridge.py"
 beethoven run "Review @README.md" --soloist local-reader
 beethoven run "Review @README.md" --soloist claude-cli
 beethoven run "Review @README.md" --soloist codex-cli
@@ -146,6 +147,9 @@ beethoven sessions show <session-id>
 beethoven sessions show <session-id> --json
 beethoven soloists list
 beethoven soloists list --json
+beethoven soloists configure recursivemas --command "python3 /path/to/bridge.py"
+beethoven soloists show recursivemas
+beethoven soloists clear recursivemas
 beethoven soloists check recursivemas
 beethoven soloists check recursivemas --json
 beethoven skills list
@@ -259,7 +263,8 @@ Current integration is two-layer:
 - native recursive scores in `src/beethoven/recursive.py`, always available via
   `--strategy recursive`;
 - optional `recursivemas` soloist in `src/beethoven/soloists.py`, enabled by
-  `BEETHOVEN_RECURSIVEMAS_COMMAND`.
+  `BEETHOVEN_RECURSIVEMAS_COMMAND` or persisted
+  `BEETHOVEN_HOME/config.json` config.
 
 The sidecar protocol is documented in `docs/RECURSIVEMAS.md`. Beethoven sends
 one JSON payload per task with `protocol`, `task`, `score`, and prior

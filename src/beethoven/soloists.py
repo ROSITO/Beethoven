@@ -11,6 +11,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from beethoven.config import BeethovenConfig
 from beethoven.core import Capability, ExecutionContext, Score, SoloistResult, Task
 
 MAX_OLLAMA_ATTACHMENT_CHARS = int(os.getenv("BEETHOVEN_OLLAMA_ATTACHMENT_CHARS", "12000"))
@@ -241,7 +242,7 @@ class RecursiveMASSoloist:
     capabilities: frozenset[Capability] = RECURSIVE_ADAPTER_CAPABILITIES
 
     def perform(self, task: Task, context: ExecutionContext) -> SoloistResult:
-        command = self.command or os.getenv("BEETHOVEN_RECURSIVEMAS_COMMAND", "")
+        command = self.command or recursivemas_command()
         argv = shlex.split(command)
         if not argv:
             raise RuntimeError(
@@ -292,7 +293,7 @@ def codex_cli_is_available() -> bool:
 
 
 def recursivemas_is_available(command: str | None = None) -> bool:
-    selected_command = command or os.getenv("BEETHOVEN_RECURSIVEMAS_COMMAND", "")
+    selected_command = command or recursivemas_command()
     argv = shlex.split(selected_command)
     if not argv:
         return False
@@ -305,7 +306,7 @@ def recursivemas_is_available(command: str | None = None) -> bool:
 def check_recursivemas(command: str | None = None) -> dict[str, object]:
     """Return a protocol health report for the optional RecursiveMAS sidecar."""
 
-    selected_command = command or os.getenv("BEETHOVEN_RECURSIVEMAS_COMMAND", "")
+    selected_command = command or recursivemas_command()
     argv = shlex.split(selected_command)
     report: dict[str, object] = {
         "id": "recursivemas",
@@ -373,6 +374,10 @@ def check_recursivemas(command: str | None = None) -> dict[str, object]:
         "tokens": parsed.tokens,
         "cost": parsed.cost,
     }
+
+
+def recursivemas_command() -> str:
+    return os.getenv("BEETHOVEN_RECURSIVEMAS_COMMAND", "").strip() or BeethovenConfig().get_recursivemas_command()
 
 
 def _build_model_prompt(task: Task, context: ExecutionContext) -> str:

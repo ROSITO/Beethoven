@@ -330,3 +330,49 @@ def test_package_recursivemas_bridge_writes_executable_bridge(tmp_path, monkeypa
     assert run_exit_code == 0
     assert "decompose:recursivemas" in run_output
     assert os.environ["BEETHOVEN_RECURSIVEMAS_COMMAND"].endswith(str(output))
+
+
+def test_recursivemas_command_can_be_persisted(tmp_path, monkeypatch, capsys) -> None:
+    monkeypatch.setenv("BEETHOVEN_HOME", str(tmp_path / "home"))
+    monkeypatch.delenv("BEETHOVEN_RECURSIVEMAS_COMMAND", raising=False)
+    bridge = tmp_path / "bridge.py"
+    main(["package", "recursivemas-bridge", "--output", str(bridge)])
+    capsys.readouterr()
+    command = f"{sys.executable} {bridge}"
+
+    configure_exit = main(["soloists", "configure", "recursivemas", "--command", command])
+    configure_output = capsys.readouterr().out
+    show_exit = main(["soloists", "show", "recursivemas", "--json"])
+    show_payload = json.loads(capsys.readouterr().out)
+    check_exit = main(["soloists", "check", "recursivemas"])
+    check_output = capsys.readouterr().out
+    run_exit = main(
+        [
+            "run",
+            "Persisted",
+            "bridge",
+            "--soloist",
+            "recursivemas",
+            "--strategy",
+            "recursive",
+            "--recursive-style",
+            "sequential",
+            "--recursive-rounds",
+            "1",
+        ]
+    )
+    run_output = capsys.readouterr().out
+    clear_exit = main(["soloists", "clear", "recursivemas"])
+    clear_output = capsys.readouterr().out
+
+    assert configure_exit == 0
+    assert "Configured recursivemas" in configure_output
+    assert show_exit == 0
+    assert show_payload["soloist"]["configured"] is True
+    assert show_payload["soloist"]["command"] == command
+    assert check_exit == 0
+    assert "Status: available" in check_output
+    assert run_exit == 0
+    assert "decompose:recursivemas" in run_output
+    assert clear_exit == 0
+    assert "Cleared recursivemas" in clear_output

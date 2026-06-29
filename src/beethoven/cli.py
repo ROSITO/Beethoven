@@ -10,6 +10,7 @@ from typing import Sequence
 
 from beethoven.desktop_server import serve_desktop
 from beethoven.core import Score
+from beethoven.config import BeethovenConfig
 from beethoven.desktop_state import DesktopSessionStore
 from beethoven.packaging import write_recursivemas_bridge, write_sidecar_script
 from beethoven.recursive import DEFAULT_RECURSIVE_STYLE, RECURSIVE_STYLES
@@ -98,6 +99,19 @@ def build_parser() -> argparse.ArgumentParser:
     soloists_check = soloist_subparsers.add_parser("check", help="Check one soloist adapter.")
     soloists_check.add_argument("soloist_id", help="Soloist id to check.")
     soloists_check.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+    soloists_configure = soloist_subparsers.add_parser("configure", help="Persist soloist adapter config.")
+    soloists_configure.add_argument("soloist_id", choices=["recursivemas"], help="Soloist id to configure.")
+    soloists_configure.add_argument(
+        "--command",
+        dest="adapter_command",
+        required=True,
+        help="Command used to launch the adapter.",
+    )
+    soloists_show = soloist_subparsers.add_parser("show", help="Show persisted soloist config.")
+    soloists_show.add_argument("soloist_id", choices=["recursivemas"], help="Soloist id to show.")
+    soloists_show.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+    soloists_clear = soloist_subparsers.add_parser("clear", help="Clear persisted soloist config.")
+    soloists_clear.add_argument("soloist_id", choices=["recursivemas"], help="Soloist id to clear.")
 
     skills = subparsers.add_parser("skills", help="Inspect orchestration skills.")
     skills_subparsers = skills.add_subparsers(dest="skills_command", required=True)
@@ -238,6 +252,29 @@ def main(argv: Sequence[str] | None = None) -> int:
             else:
                 print_soloist_check(report)
             return 0 if report.get("available") else 1
+        if args.soloists_command == "configure":
+            config_path = BeethovenConfig().set_recursivemas_command(args.adapter_command)
+            print(f"Configured {args.soloist_id} in {config_path}")
+            return 0
+        if args.soloists_command == "show":
+            command = BeethovenConfig().get_recursivemas_command()
+            payload = {
+                "id": args.soloist_id,
+                "command": command,
+                "configured": bool(command),
+            }
+            if args.json:
+                print(json.dumps({"soloist": payload}, indent=2, ensure_ascii=False))
+            else:
+                print(f"Soloist config: {args.soloist_id}")
+                print(f"Configured: {payload['configured']}")
+                if command:
+                    print(f"Command: {command}")
+            return 0
+        if args.soloists_command == "clear":
+            config_path = BeethovenConfig().clear_recursivemas_command()
+            print(f"Cleared {args.soloist_id} config in {config_path}")
+            return 0
 
     if args.command == "skills":
         skills = list_skills()

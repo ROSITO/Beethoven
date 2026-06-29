@@ -82,6 +82,7 @@ protocol. When `BEETHOVEN_RECURSIVEMAS_COMMAND` is configured, the
 
 ```bash
 beethoven package recursivemas-bridge --output bridges/recursivemas_beethoven_bridge.py
+beethoven soloists configure recursivemas --command "python3 /path/to/bridge.py"
 
 BEETHOVEN_RECURSIVEMAS_COMMAND="python3 /path/to/bridge.py" \
   beethoven run "Solve with RecursiveMAS" --soloist recursivemas --strategy recursive
@@ -245,6 +246,7 @@ beethoven desktop --open
 beethoven sessions list
 beethoven sessions show <session-id>
 beethoven soloists list
+beethoven soloists configure recursivemas --command "python3 /path/to/bridge.py"
 beethoven soloists check recursivemas
 beethoven skills list
 beethoven workspace

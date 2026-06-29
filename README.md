@@ -43,6 +43,8 @@ This repository now contains the first executable orchestration kernel:
   Claude Code and Codex installations.
 - Hidden local orchestrator: Beethoven can use a lightweight local model through
   SoloMLX-server/OpenAI-compatible `/v1` or Ollama to create and route scores.
+- Managed SoloMLX brick: Beethoven can install, start, stop, and inspect
+  `ROSITO/SoloMLX-server` as its local MLX runtime.
 - `@path` attachments: safe workspace file context with size limits.
 - Run events: score/task/validation events for desktop streaming.
 - Dynamic planning: Beethoven's local orchestrator proposes a task score, then
@@ -251,6 +253,9 @@ beethoven soloists list
 beethoven soloists configure recursivemas --command "python3 /path/to/bridge.py"
 beethoven soloists check recursivemas
 beethoven orchestrator status
+beethoven solomlx status
+beethoven solomlx install
+beethoven solomlx start
 beethoven skills list
 beethoven workspace
 beethoven workspace files
@@ -270,10 +275,14 @@ execution to decompose the objective and optionally suggest the best execution
 soloist for each task. If no local orchestration model is reachable, Beethoven
 falls back to the deterministic baseline score.
 
-SoloMLX-server is the preferred local boundary because it exposes an
-OpenAI-compatible API:
+SoloMLX-server is the preferred local brick because it exposes an
+OpenAI-compatible API and can be managed by Beethoven:
 
 ```bash
+beethoven solomlx install
+beethoven solomlx start
+beethoven solomlx status
+
 BEETHOVEN_ORCHESTRATOR_PROVIDER=solomlx \
 BEETHOVEN_ORCHESTRATOR_BASE_URL=http://127.0.0.1:8080/v1 \
 beethoven orchestrator status

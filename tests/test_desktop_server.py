@@ -32,6 +32,9 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
         orchestrator = urlopen(f"http://{host}:{port}/api/orchestrator", timeout=2)
         orchestrator_data = json.loads(orchestrator.read().decode("utf-8"))
 
+        solomlx = urlopen(f"http://{host}:{port}/api/solomlx", timeout=2)
+        solomlx_data = json.loads(solomlx.read().decode("utf-8"))
+
         try:
             urlopen(f"http://{host}:{port}/api/soloists/recursivemas/check", timeout=2)
         except HTTPError as error:
@@ -158,6 +161,8 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
     assert soloists_data["soloists"][0]["status"] == "available"
     assert orchestrator_data["orchestrator"]["id"] == "beethoven-orchestrator"
     assert "available" in orchestrator_data["orchestrator"]
+    assert solomlx_data["solomlx"]["id"] == "solomlx"
+    assert "installed" in solomlx_data["solomlx"]
     assert soloist_check_status == 503
     assert soloist_check_data["check"]["status"] == "not_configured"
     assert config_payload["config"]["configured"] is True

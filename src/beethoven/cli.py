@@ -23,6 +23,7 @@ from beethoven.runtime import (
     score_objective,
 )
 from beethoven.serialization import context_to_dict, score_to_dict
+from beethoven.solomlx import solomlx_install, solomlx_start, solomlx_status, solomlx_stop
 from beethoven.workspace import inspect_workspace, list_workspace_files
 
 
@@ -130,6 +131,29 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show the local orchestrator provider selected by Beethoven.",
     )
     orchestrator_status.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+
+    solomlx = subparsers.add_parser("solomlx", help="Manage the embedded SoloMLX-server runtime brick.")
+    solomlx_subparsers = solomlx.add_subparsers(dest="solomlx_command", required=True)
+    solomlx_status_parser = solomlx_subparsers.add_parser("status", help="Show SoloMLX runtime status.")
+    solomlx_status_parser.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+    solomlx_install_parser = solomlx_subparsers.add_parser(
+        "install",
+        help="Clone and install SoloMLX-server into Beethoven's local runtime directory.",
+    )
+    solomlx_install_parser.add_argument("--dir", dest="target_dir", help="Installation directory.")
+    solomlx_install_parser.add_argument("--upgrade", action="store_true", help="Pull latest changes first.")
+    solomlx_install_parser.add_argument(
+        "--without-mlx",
+        action="store_true",
+        help="Install only the API package, without the MLX inference extra.",
+    )
+    solomlx_start_parser = solomlx_subparsers.add_parser("start", help="Start SoloMLX-server.")
+    solomlx_start_parser.add_argument("--host", default="127.0.0.1", help="Host to bind.")
+    solomlx_start_parser.add_argument("--port", default=8080, type=int, help="Port to bind.")
+    solomlx_start_parser.add_argument("--dir", dest="target_dir", help="Installation directory.")
+    solomlx_start_parser.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+    solomlx_stop_parser = solomlx_subparsers.add_parser("stop", help="Stop the managed SoloMLX-server.")
+    solomlx_stop_parser.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
 
     skills = subparsers.add_parser("skills", help="Inspect orchestration skills.")
     skills_subparsers = skills.add_subparsers(dest="skills_command", required=True)
@@ -303,6 +327,38 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print_orchestrator_status(report)
             return 0 if report.get("available") else 1
 
+    if args.command == "solomlx":
+        if args.solomlx_command == "status":
+            report = solomlx_status()
+            if args.json:
+                print(json.dumps({"solomlx": report}, indent=2, ensure_ascii=False))
+            else:
+                print_solomlx_status(report)
+            return 0 if report.get("available") else 1
+        if args.solomlx_command == "install":
+            report = solomlx_install(
+                target_dir=args.target_dir,
+                upgrade=args.upgrade,
+                with_mlx=not args.without_mlx,
+            )
+            print(f"SoloMLX installed in {report['path']}")
+            print(f"Python: {report['python']}")
+            return 0
+        if args.solomlx_command == "start":
+            report = solomlx_start(host=args.host, port=args.port, target_dir=args.target_dir)
+            if args.json:
+                print(json.dumps({"solomlx": report}, indent=2, ensure_ascii=False))
+            else:
+                print_solomlx_status(report)
+            return 0
+        if args.solomlx_command == "stop":
+            report = solomlx_stop()
+            if args.json:
+                print(json.dumps({"solomlx": report}, indent=2, ensure_ascii=False))
+            else:
+                print(f"SoloMLX: {report.get('message')}")
+            return 0
+
     if args.command == "skills":
         skills = list_skills()
         if args.skills_command == "list":
@@ -429,6 +485,9 @@ def handle_terminal_command(
     if command == "/orchestrator":
         print_orchestrator_status(check_orchestrator())
         return
+    if command == "/solomlx":
+        print_solomlx_status(solomlx_status())
+        return
     if command == "/skills":
         print_skills(list_skills())
         return
@@ -539,6 +598,7 @@ def print_terminal_help(output_fn: Callable[[str], None]) -> None:
     output_fn("- /sessions              List local sessions")
     output_fn("- /soloists              List soloists")
     output_fn("- /orchestrator          Show hidden local orchestrator status")
+    output_fn("- /solomlx               Show embedded SoloMLX runtime status")
     output_fn("- /skills                List orchestration skills")
     output_fn("- /workspace             Show workspace/Git context")
     output_fn("- /files [query]         List attachable files")
@@ -667,6 +727,19 @@ def print_orchestrator_status(report: dict[str, object]) -> None:
     base_url = report.get("base_url")
     if base_url:
         print(f"Base URL: {base_url}")
+    print(f"Message: {report.get('message')}")
+
+
+def print_solomlx_status(report: dict[str, object]) -> None:
+    print(f"SoloMLX: {report.get('status')}")
+    print(f"Installed: {report.get('installed')}")
+    print(f"Running: {report.get('process_running')}")
+    print(f"Available: {report.get('available')}")
+    print(f"Path: {report.get('path')}")
+    print(f"Base URL: {report.get('base_url')}")
+    models = report.get("models")
+    if isinstance(models, list) and models:
+        print(f"Models: {', '.join(str(model) for model in models)}")
     print(f"Message: {report.get('message')}")
 
 

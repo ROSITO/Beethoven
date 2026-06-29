@@ -10,9 +10,9 @@ contracts.
 1. **Intent Layer**: understands the user's objective, constraints, risk level,
    privacy needs, and budget.
 2. **Orchestrator Layer**: Beethoven's private local planning model converts
-   intent into a routing-aware score proposal. It can use SoloMLX-server through
-   an OpenAI-compatible `/v1` API or Ollama, and it is not a user-selected
-   soloist.
+   intent into a routing-aware score proposal. It can use the managed SoloMLX
+   runtime through an OpenAI-compatible `/v1` API or Ollama, and it is not a
+   user-selected soloist.
 3. **Score Layer**: converts intent into a portable execution plan made of
    ordered tasks, dependencies, capabilities, and validation gates.
 4. **Routing Layer**: selects the right soloist for each task according to
@@ -44,6 +44,9 @@ The first implementation exposes deliberately small primitives:
 - `LocalOrchestrator`: hidden planning boundary used by Beethoven before
   execution routing. It may suggest task-level soloists, but the router only
   accepts suggestions that are registered and capable.
+- `SoloMLXRuntime`: managed local MLX brick backed by `ROSITO/SoloMLX-server`.
+  It is installed and started by Beethoven, then consumed through the same
+  OpenAI-compatible adapter boundary.
 
 These contracts are the foundation for the future plugin SDK. A plugin should
 be able to add a new model, local tool, remote worker, policy, validator, or

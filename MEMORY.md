@@ -61,6 +61,9 @@ Important modules:
 - `src/beethoven/orchestrator.py`: Beethoven's hidden local planning model
   boundary. It auto-detects SoloMLX-server/OpenAI-compatible `/v1` first, then
   Ollama, and is not exposed as a selectable soloist.
+- `src/beethoven/solomlx.py`: managed `ROSITO/SoloMLX-server` runtime brick.
+  Beethoven can clone/install it into `BEETHOVEN_HOME`, start/stop the
+  `mlxserve` server, and inspect `/v1/models`.
 - `src/beethoven/recursive.py`: RecursiveMAS-inspired score strategies that
   express sequential, deliberation, mixture, and distillation patterns as
   portable Beethoven tasks.

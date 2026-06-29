@@ -21,6 +21,7 @@ from beethoven.runtime import (
     score_objective,
 )
 from beethoven.serialization import context_to_dict, score_to_dict
+from beethoven.solomlx import solomlx_start, solomlx_status, solomlx_stop
 from beethoven.workspace import inspect_workspace, list_workspace_files
 
 
@@ -58,6 +59,9 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
         if path == "/api/orchestrator":
             report = check_orchestrator()
             self._send_json({"orchestrator": report})
+            return
+        if path == "/api/solomlx":
+            self._send_json({"solomlx": solomlx_status()})
             return
         if path.startswith("/api/soloists/") and path.endswith("/check"):
             soloist_id = unquote(path.removeprefix("/api/soloists/").removesuffix("/check"))
@@ -115,6 +119,22 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
                     )
                 )
             )
+            return
+
+        if path == "/api/solomlx/start":
+            payload = self._read_payload()
+            if payload is None:
+                return
+            host = str(payload.get("host", "127.0.0.1"))
+            try:
+                port = int(payload.get("port", 8080))
+            except (TypeError, ValueError):
+                self._send_json({"error": "Invalid port"}, HTTPStatus.BAD_REQUEST)
+                return
+            try:
+                self._send_json({"solomlx": solomlx_start(host=host, port=port)})
+            except RuntimeError as error:
+                self._send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
             return
 
         if path == "/api/run":
@@ -211,6 +231,9 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
         if path == "/api/soloists/recursivemas/config":
             config_path = BeethovenConfig().clear_recursivemas_command()
             self._send_json({"config": {"id": "recursivemas", "command": "", "configured": False, "path": str(config_path)}})
+            return
+        if path == "/api/solomlx":
+            self._send_json({"solomlx": solomlx_stop()})
             return
         self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
 

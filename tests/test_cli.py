@@ -228,6 +228,52 @@ def test_orchestrator_status_command_reports_hidden_planner(monkeypatch, capsys)
     assert data["orchestrator"]["model"] == "ministral-local"
 
 
+def test_solomlx_status_command_reports_runtime_brick(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(
+        "beethoven.cli.solomlx_status",
+        lambda: {
+            "id": "solomlx",
+            "status": "available",
+            "installed": True,
+            "process_running": True,
+            "available": True,
+            "path": "/tmp/SoloMLX-server",
+            "base_url": "http://127.0.0.1:8080/v1",
+            "models": ["mlx-community/Qwen2.5-7B-Instruct-4bit"],
+            "message": "ready",
+        },
+    )
+
+    exit_code = main(["solomlx", "status", "--json"])
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert exit_code == 0
+    assert data["solomlx"]["status"] == "available"
+    assert data["solomlx"]["models"] == ["mlx-community/Qwen2.5-7B-Instruct-4bit"]
+
+
+def test_solomlx_install_command_can_skip_mlx_extra(monkeypatch, capsys) -> None:
+    calls = []
+
+    def fake_install(**kwargs):
+        calls.append(kwargs)
+        return {
+            "id": "solomlx",
+            "path": "/tmp/SoloMLX-server",
+            "python": "/tmp/SoloMLX-server/.venv/bin/python",
+        }
+
+    monkeypatch.setattr("beethoven.cli.solomlx_install", fake_install)
+
+    exit_code = main(["solomlx", "install", "--dir", "/tmp/SoloMLX-server", "--without-mlx"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "SoloMLX installed" in captured.out
+    assert calls == [{"target_dir": "/tmp/SoloMLX-server", "upgrade": False, "with_mlx": False}]
+
+
 def test_soloists_check_reports_unconfigured_recursivemas(monkeypatch, capsys) -> None:
     monkeypatch.delenv("BEETHOVEN_RECURSIVEMAS_COMMAND", raising=False)
 

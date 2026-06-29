@@ -40,6 +40,8 @@ const workspaceStatusList = document.querySelector("#workspaceStatusList");
 const skillsPanel = document.querySelector("#skillsPanel");
 const closeSkillsPanel = document.querySelector("#closeSkillsPanel");
 const skillsGrid = document.querySelector("#skillsGrid");
+const checkRecursiveMasButton = document.querySelector("#checkRecursiveMasButton");
+const soloistCheckResult = document.querySelector("#soloistCheckResult");
 const scorePanel = document.querySelector("#scorePanel");
 const closeScorePanel = document.querySelector("#closeScorePanel");
 const scorePreviewMeta = document.querySelector("#scorePreviewMeta");
@@ -387,6 +389,19 @@ function renderSkills(skills) {
       `;
     })
     .join("");
+}
+
+function renderSoloistCheck(report) {
+  const available = Boolean(report.available);
+  soloistCheckResult.hidden = false;
+  soloistCheckResult.classList.toggle("available", available);
+  soloistCheckResult.classList.toggle("unavailable", !available);
+  soloistCheckResult.innerHTML = `
+    <strong>${escapeHtml(report.id ?? "soloist")} · ${escapeHtml(report.status ?? "unknown")}</strong>
+    <p>${escapeHtml(report.message ?? "No diagnostic message returned.")}</p>
+    ${report.command ? `<p><code>${escapeHtml(report.command)}</code></p>` : ""}
+    ${report.output_preview ? `<p>${escapeHtml(report.output_preview)}</p>` : ""}
+  `;
 }
 
 function renderScorePreview(score) {
@@ -974,6 +989,27 @@ async function loadWorkspace() {
   }
 }
 
+async function checkRecursiveMas() {
+  checkRecursiveMasButton.textContent = "Checking…";
+  checkRecursiveMasButton.disabled = true;
+  try {
+    const response = await fetch("/api/soloists/recursivemas/check");
+    const payload = await response.json();
+    renderSoloistCheck(payload.check ?? {});
+  } catch (error) {
+    renderSoloistCheck({
+      id: "recursivemas",
+      status: "unavailable",
+      available: false,
+      message: "Unable to reach the desktop RecursiveMAS check endpoint."
+    });
+    console.error(error);
+  } finally {
+    checkRecursiveMasButton.textContent = "Check RecursiveMAS";
+    checkRecursiveMasButton.disabled = false;
+  }
+}
+
 async function loadSessions() {
   allSessions = await fetchSessions();
   renderFilteredSessions();
@@ -1045,6 +1081,7 @@ slashCommandsButton.addEventListener("click", () => toggleCommandPanel(true));
 scorePreviewButton.addEventListener("click", previewComposerScore);
 closeCommandPanel.addEventListener("click", () => toggleCommandPanel(false));
 closeSkillsPanel.addEventListener("click", () => toggleSkillsPanel(false));
+checkRecursiveMasButton.addEventListener("click", checkRecursiveMas);
 closeScorePanel.addEventListener("click", () => toggleScorePanel(false));
 closeFilesPanel.addEventListener("click", () => toggleFilesPanel(false));
 closeSessionPanel.addEventListener("click", () => toggleSessionPanel(false));

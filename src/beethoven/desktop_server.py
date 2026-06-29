@@ -11,7 +11,7 @@ from typing import Any
 from urllib.parse import unquote, urlparse
 
 from beethoven.desktop_state import DesktopSessionStore
-from beethoven.runtime import list_skills, list_soloists, run_objective, score_objective
+from beethoven.runtime import check_soloist, list_skills, list_soloists, run_objective, score_objective
 from beethoven.serialization import context_to_dict, score_to_dict
 from beethoven.workspace import inspect_workspace, list_workspace_files
 
@@ -46,6 +46,11 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             return
         if path == "/api/soloists":
             self._send_json({"soloists": list_soloists()})
+            return
+        if path.startswith("/api/soloists/") and path.endswith("/check"):
+            soloist_id = unquote(path.removeprefix("/api/soloists/").removesuffix("/check"))
+            report = check_soloist(soloist_id)
+            self._send_json({"check": report}, HTTPStatus.OK if report.get("available") else HTTPStatus.SERVICE_UNAVAILABLE)
             return
         if path == "/api/skills":
             self._send_json({"skills": list_skills()})

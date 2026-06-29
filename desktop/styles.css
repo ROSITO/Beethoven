@@ -552,6 +552,40 @@ button {
   line-height: 1.4;
 }
 
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.soloist-check-result {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  background: rgba(255, 253, 248, 0.88);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.soloist-check-result strong {
+  font-size: 14px;
+}
+
+.soloist-check-result p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.soloist-check-result.available {
+  border-color: rgba(47, 132, 80, 0.32);
+}
+
+.soloist-check-result.unavailable {
+  border-color: rgba(212, 175, 55, 0.42);
+}
+
 .preview-score-card {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr);

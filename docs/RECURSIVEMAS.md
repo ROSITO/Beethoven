@@ -51,6 +51,12 @@ beethoven soloists check recursivemas
 beethoven soloists check recursivemas --json
 ```
 
+The desktop API exposes the same diagnostic:
+
+```bash
+curl http://127.0.0.1:4173/api/soloists/recursivemas/check
+```
+
 ## Input Protocol
 
 Beethoven sends this JSON shape to the sidecar:

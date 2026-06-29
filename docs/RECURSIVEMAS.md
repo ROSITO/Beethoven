@@ -31,7 +31,8 @@ Set `BEETHOVEN_RECURSIVEMAS_COMMAND` to a command that reads one JSON payload
 from stdin and writes either JSON or plain text to stdout.
 
 ```bash
-export BEETHOVEN_RECURSIVEMAS_COMMAND="python /path/to/recursivemas_beethoven_bridge.py"
+beethoven package recursivemas-bridge --output bridges/recursivemas_beethoven_bridge.py
+export BEETHOVEN_RECURSIVEMAS_COMMAND="python3 /path/to/recursivemas_beethoven_bridge.py"
 
 beethoven run "Solve with RecursiveMAS" \
   --soloist recursivemas \
@@ -100,6 +101,14 @@ For richer results, write JSON:
 ```
 
 ## Minimal Bridge
+
+Beethoven can generate this bridge for you:
+
+```bash
+beethoven package recursivemas-bridge
+```
+
+The generated file contains this shape:
 
 ```python
 from __future__ import annotations

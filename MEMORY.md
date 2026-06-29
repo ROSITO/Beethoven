@@ -154,6 +154,7 @@ beethoven workspace files
 beethoven workspace files --json
 beethoven workspace files --limit 20
 beethoven package sidecar
+beethoven package recursivemas-bridge
 ```
 
 The CLI is the parity contract for the desktop. The desktop command palette is a
@@ -260,6 +261,12 @@ one JSON payload per task with `protocol`, `task`, `score`, and prior
 `artifacts`. The sidecar can reply with plain text or JSON containing `output`,
 `metadata`, `tokens`, and `cost`.
 
+Generate a bridge scaffold with:
+
+```bash
+beethoven package recursivemas-bridge --output bridges/recursivemas_beethoven_bridge.py
+```
+
 Current Tauri dev mode starts:
 
 ```bash
@@ -310,6 +317,7 @@ Test coverage currently includes:
 - workspace command;
 - workspace files command;
 - sidecar launcher generation;
+- RecursiveMAS bridge generation;
 - desktop API health, soloists, skills, workspace, files, run, sessions, detail;
 - conductor dependency execution;
 - invalid dependency rejection.

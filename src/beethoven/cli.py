@@ -11,7 +11,7 @@ from typing import Sequence
 from beethoven.desktop_server import serve_desktop
 from beethoven.core import Score
 from beethoven.desktop_state import DesktopSessionStore
-from beethoven.packaging import write_sidecar_script
+from beethoven.packaging import write_recursivemas_bridge, write_sidecar_script
 from beethoven.recursive import DEFAULT_RECURSIVE_STYLE, RECURSIVE_STYLES
 from beethoven.runtime import list_skills, list_soloists, run_objective, score_objective
 from beethoven.serialization import context_to_dict, score_to_dict
@@ -115,6 +115,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--output",
         default="src-tauri/bin/beethoven-sidecar",
         help="Path for the generated sidecar launcher.",
+    )
+    recursivemas_bridge = package_subparsers.add_parser(
+        "recursivemas-bridge",
+        help="Write a RecursiveMAS JSON sidecar bridge.",
+    )
+    recursivemas_bridge.add_argument(
+        "--output",
+        default="bridges/recursivemas_beethoven_bridge.py",
+        help="Path for the generated RecursiveMAS bridge.",
     )
 
     return parser
@@ -248,6 +257,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.package_command == "sidecar":
             output_path = write_sidecar_script(args.output)
             print(f"Sidecar launcher written to {output_path}")
+            return 0
+        if args.package_command == "recursivemas-bridge":
+            output_path = write_recursivemas_bridge(args.output)
+            print(f"RecursiveMAS bridge written to {output_path}")
+            print(f'export BEETHOVEN_RECURSIVEMAS_COMMAND="{sys.executable} {output_path}"')
             return 0
 
     parser.print_help(sys.stderr)

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 import sys
 
 from beethoven.cli import main, run_terminal_session
@@ -251,3 +253,62 @@ def test_package_sidecar_command_writes_launcher(tmp_path, capsys) -> None:
     assert output.exists()
     assert "beethoven desktop" in output.read_text(encoding="utf-8")
     assert output.stat().st_mode & 0o111
+
+
+def test_package_recursivemas_bridge_writes_executable_bridge(tmp_path, monkeypatch, capsys) -> None:
+    output = tmp_path / "recursivemas_bridge.py"
+
+    exit_code = main(["package", "recursivemas-bridge", "--output", str(output)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "RecursiveMAS bridge written" in captured.out
+    assert "BEETHOVEN_RECURSIVEMAS_COMMAND" in captured.out
+    assert output.exists()
+    assert "beethoven.recursivemas.v1" in output.read_text(encoding="utf-8")
+    assert output.stat().st_mode & 0o111
+
+    sample_payload = {
+        "protocol": "beethoven.recursivemas.v1",
+        "task": {
+            "id": "decompose",
+            "capability": "plan",
+            "metadata": {"recursive_role": "planner"},
+        },
+        "score": {
+            "metadata": {"recursive_style": "sequential"},
+        },
+        "artifacts": {},
+    }
+    bridge_result = subprocess.run(
+        [sys.executable, str(output)],
+        check=False,
+        input=json.dumps(sample_payload),
+        capture_output=True,
+        text=True,
+    )
+    bridge_payload = json.loads(bridge_result.stdout)
+    assert bridge_result.returncode == 0
+    assert bridge_payload["metadata"]["backend"] == "recursivemas-bridge"
+    assert "decompose" in bridge_payload["output"]
+
+    monkeypatch.setenv("BEETHOVEN_RECURSIVEMAS_COMMAND", f"{sys.executable} {output}")
+    run_exit_code = main(
+        [
+            "run",
+            "Bridge",
+            "smoke",
+            "--soloist",
+            "recursivemas",
+            "--strategy",
+            "recursive",
+            "--recursive-style",
+            "sequential",
+            "--recursive-rounds",
+            "1",
+        ]
+    )
+    run_output = capsys.readouterr().out
+    assert run_exit_code == 0
+    assert "decompose:recursivemas" in run_output
+    assert os.environ["BEETHOVEN_RECURSIVEMAS_COMMAND"].endswith(str(output))

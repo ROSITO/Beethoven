@@ -81,7 +81,9 @@ protocol. When `BEETHOVEN_RECURSIVEMAS_COMMAND` is configured, the
 `recursivemas` soloist becomes available:
 
 ```bash
-BEETHOVEN_RECURSIVEMAS_COMMAND="python /path/to/bridge.py" \
+beethoven package recursivemas-bridge --output bridges/recursivemas_beethoven_bridge.py
+
+BEETHOVEN_RECURSIVEMAS_COMMAND="python3 /path/to/bridge.py" \
   beethoven run "Solve with RecursiveMAS" --soloist recursivemas --strategy recursive
 ```
 
@@ -245,6 +247,7 @@ beethoven skills list
 beethoven workspace
 beethoven workspace files
 beethoven package sidecar
+beethoven package recursivemas-bridge
 ```
 
 Inside `beethoven chat`, type an objective to run it directly, or use slash

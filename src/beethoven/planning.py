@@ -64,7 +64,7 @@ def create_dynamic_score(objective: str, planner: Soloist, metadata: dict[str, o
     try:
         result = planner.perform(planning_task, context)
         proposed = _extract_json_object(str(result.output))
-        tasks = _tasks_from_payload(proposed)
+        tasks = _tasks_from_payload(proposed, allowed_soloists=_available_soloist_ids(metadata or {}))
     except Exception as error:
         return replace(
             baseline,
@@ -148,6 +148,17 @@ def _public_score_metadata(metadata: dict[str, object]) -> dict[str, object]:
     }
 
 
+def _available_soloist_ids(metadata: dict[str, object]) -> set[str] | None:
+    raw_soloists = metadata.get("available_soloists")
+    if not isinstance(raw_soloists, list):
+        return None
+    return {
+        str(item["id"])
+        for item in raw_soloists
+        if isinstance(item, dict) and item.get("status") == "available" and item.get("id")
+    }
+
+
 def _extract_json_object(value: str) -> dict[str, Any]:
     stripped = value.strip()
     fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", stripped, flags=re.DOTALL)
@@ -161,7 +172,7 @@ def _extract_json_object(value: str) -> dict[str, Any]:
     return payload
 
 
-def _tasks_from_payload(payload: dict[str, Any]) -> list[Task]:
+def _tasks_from_payload(payload: dict[str, Any], *, allowed_soloists: set[str] | None = None) -> list[Task]:
     raw_tasks = payload.get("tasks")
     if not isinstance(raw_tasks, list):
         raise ValueError("Planner output must include tasks")
@@ -186,7 +197,9 @@ def _tasks_from_payload(payload: dict[str, Any]) -> list[Task]:
         metadata: dict[str, Any] = {}
         preferred_soloist = item.get("soloist") or item.get("preferred_soloist")
         if isinstance(preferred_soloist, str) and preferred_soloist.strip():
-            metadata["preferred_soloist"] = preferred_soloist.strip()
+            normalized_soloist = preferred_soloist.strip()
+            if allowed_soloists is None or normalized_soloist in allowed_soloists:
+                metadata["preferred_soloist"] = normalized_soloist
         tasks.append(
             Task(
                 id=task_id,

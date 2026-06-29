@@ -13,7 +13,7 @@ from beethoven.core import Score
 from beethoven.desktop_state import DesktopSessionStore
 from beethoven.packaging import write_recursivemas_bridge, write_sidecar_script
 from beethoven.recursive import DEFAULT_RECURSIVE_STYLE, RECURSIVE_STYLES
-from beethoven.runtime import list_skills, list_soloists, run_objective, score_objective
+from beethoven.runtime import check_soloist, list_skills, list_soloists, run_objective, score_objective
 from beethoven.serialization import context_to_dict, score_to_dict
 from beethoven.workspace import inspect_workspace, list_workspace_files
 
@@ -95,6 +95,9 @@ def build_parser() -> argparse.ArgumentParser:
     soloist_subparsers = soloists.add_subparsers(dest="soloists_command", required=True)
     soloists_list = soloist_subparsers.add_parser("list", help="List available and planned soloists.")
     soloists_list.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+    soloists_check = soloist_subparsers.add_parser("check", help="Check one soloist adapter.")
+    soloists_check.add_argument("soloist_id", help="Soloist id to check.")
+    soloists_check.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
 
     skills = subparsers.add_parser("skills", help="Inspect orchestration skills.")
     skills_subparsers = skills.add_subparsers(dest="skills_command", required=True)
@@ -221,13 +224,20 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
 
     if args.command == "soloists":
-        soloists = list_soloists()
         if args.soloists_command == "list":
+            soloists = list_soloists()
             if args.json:
                 print(json.dumps({"soloists": soloists}, indent=2, ensure_ascii=False))
             else:
                 print_soloists(soloists)
             return 0
+        if args.soloists_command == "check":
+            report = check_soloist(args.soloist_id)
+            if args.json:
+                print(json.dumps({"check": report}, indent=2, ensure_ascii=False))
+            else:
+                print_soloist_check(report)
+            return 0 if report.get("available") else 1
 
     if args.command == "skills":
         skills = list_skills()
@@ -563,6 +573,19 @@ def print_soloists(soloists: list[dict[str, object]]) -> None:
             f"locality: {soloist.get('locality')}"
         )
         print(f"  capabilities: {capabilities}")
+
+
+def print_soloist_check(report: dict[str, object]) -> None:
+    print(f"Soloist check: {report.get('id')}")
+    print(f"Status: {report.get('status')}")
+    print(f"Available: {report.get('available')}")
+    print(f"Message: {report.get('message')}")
+    command = report.get("command")
+    if command:
+        print(f"Command: {command}")
+    output_preview = report.get("output_preview")
+    if output_preview:
+        print(f"Output: {output_preview}")
 
 
 def print_skills(skills: list[dict[str, object]]) -> None:

@@ -19,6 +19,7 @@ from beethoven.soloists import (
     RecursiveMASSoloist,
     claude_cli_is_available,
     codex_cli_is_available,
+    check_recursivemas,
     ollama_is_available,
     ollama_is_enabled,
     recursivemas_is_available,
@@ -178,6 +179,25 @@ def list_skills() -> list[dict[str, object]]:
                 skill["status"] = "available"
 
     return sorted(grouped.values(), key=lambda item: str(item["id"]))
+
+
+def check_soloist(soloist_id: str) -> dict[str, object]:
+    if soloist_id == "recursivemas":
+        return check_recursivemas()
+    soloist = next((item for item in list_soloists() if item["id"] == soloist_id), None)
+    if soloist is None:
+        return {
+            "id": soloist_id,
+            "available": False,
+            "status": "unknown",
+            "message": f"Unknown soloist: {soloist_id}",
+        }
+    return {
+        "id": soloist_id,
+        "available": soloist["status"] == "available",
+        "status": soloist["status"],
+        "message": str(soloist["description"]),
+    }
 
 
 def score_objective(

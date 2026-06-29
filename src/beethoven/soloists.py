@@ -11,7 +11,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from beethoven.core import Capability, ExecutionContext, SoloistResult, Task
+from beethoven.core import Capability, ExecutionContext, Score, SoloistResult, Task
 
 MAX_OLLAMA_ATTACHMENT_CHARS = int(os.getenv("BEETHOVEN_OLLAMA_ATTACHMENT_CHARS", "12000"))
 CLI_ADAPTER_TIMEOUT_SECONDS = int(os.getenv("BEETHOVEN_CLI_ADAPTER_TIMEOUT", "240"))
@@ -302,6 +302,79 @@ def recursivemas_is_available(command: str | None = None) -> bool:
     return shutil.which(executable) is not None
 
 
+def check_recursivemas(command: str | None = None) -> dict[str, object]:
+    """Return a protocol health report for the optional RecursiveMAS sidecar."""
+
+    selected_command = command or os.getenv("BEETHOVEN_RECURSIVEMAS_COMMAND", "")
+    argv = shlex.split(selected_command)
+    report: dict[str, object] = {
+        "id": "recursivemas",
+        "configured": bool(argv),
+        "available": False,
+        "command": selected_command,
+        "protocol": "beethoven.recursivemas.v1",
+    }
+    if not argv:
+        return {
+            **report,
+            "status": "not_configured",
+            "message": "Set BEETHOVEN_RECURSIVEMAS_COMMAND to a bridge command.",
+        }
+
+    executable = argv[0]
+    executable_available = Path(executable).exists() or shutil.which(executable) is not None
+    report["executable_available"] = executable_available
+    if not executable_available:
+        return {
+            **report,
+            "status": "missing_executable",
+            "message": f"Executable not found: {executable}",
+        }
+
+    payload = _recursive_mas_health_payload()
+    try:
+        result = subprocess.run(
+            argv,
+            check=False,
+            capture_output=True,
+            input=json.dumps(payload, ensure_ascii=False),
+            text=True,
+            timeout=10,
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            **report,
+            "status": "timeout",
+            "message": "RecursiveMAS sidecar did not respond within 10 seconds.",
+        }
+    except OSError as error:
+        return {
+            **report,
+            "status": "launch_failed",
+            "message": str(error),
+        }
+
+    report["returncode"] = result.returncode
+    if result.returncode != 0:
+        return {
+            **report,
+            "status": "failed",
+            "message": result.stderr.strip() or "RecursiveMAS sidecar returned a non-zero exit code.",
+        }
+
+    parsed = _recursive_mas_result(result.stdout)
+    return {
+        **report,
+        "available": True,
+        "status": "available",
+        "message": "RecursiveMAS sidecar responded to the Beethoven protocol.",
+        "output_preview": str(parsed.output)[:240],
+        "metadata": parsed.metadata,
+        "tokens": parsed.tokens,
+        "cost": parsed.cost,
+    }
+
+
 def _build_model_prompt(task: Task, context: ExecutionContext) -> str:
     attachments = context.score.metadata.get("attachments", [])
     attachment_text = "\n\n".join(
@@ -326,6 +399,27 @@ def _build_model_prompt(task: Task, context: ExecutionContext) -> str:
         sections.append(f"Previous artifacts:\n{previous}")
     sections.append("Return a concise, useful result for this task.")
     return "\n\n".join(sections)
+
+
+def _recursive_mas_health_payload() -> dict[str, object]:
+    task = Task(
+        id="healthcheck",
+        instruction="Return a minimal health response for the Beethoven RecursiveMAS protocol.",
+        capability=Capability.ANALYZE,
+        metadata={"recursive_role": "healthcheck", "round": 0},
+    )
+    score = Score(
+        id="score-recursive-healthcheck",
+        objective="RecursiveMAS healthcheck",
+        tasks=(task,),
+        metadata={
+            "strategy": "recursive",
+            "recursive_style": "sequential",
+            "recursive_rounds": 1,
+        },
+    )
+    context = ExecutionContext(score=score)
+    return _recursive_mas_payload(task, context)
 
 
 def _recursive_mas_payload(task: Task, context: ExecutionContext) -> dict[str, object]:

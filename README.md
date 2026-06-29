@@ -85,6 +85,8 @@ beethoven package recursivemas-bridge --output bridges/recursivemas_beethoven_br
 
 BEETHOVEN_RECURSIVEMAS_COMMAND="python3 /path/to/bridge.py" \
   beethoven run "Solve with RecursiveMAS" --soloist recursivemas --strategy recursive
+
+beethoven soloists check recursivemas
 ```
 
 ## Example
@@ -243,6 +245,7 @@ beethoven desktop --open
 beethoven sessions list
 beethoven sessions show <session-id>
 beethoven soloists list
+beethoven soloists check recursivemas
 beethoven skills list
 beethoven workspace
 beethoven workspace files

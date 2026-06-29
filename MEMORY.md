@@ -133,7 +133,7 @@ beethoven run "<objective>"
 beethoven run "<objective>" --json
 beethoven run "<objective>" --soloist local-echo --permission ask --effort medium
 beethoven run "<objective>" --strategy recursive --recursive-style sequential --recursive-rounds 1
-BEETHOVEN_RECURSIVEMAS_COMMAND="python /path/to/bridge.py" beethoven run "<objective>" --soloist recursivemas --strategy recursive
+BEETHOVEN_RECURSIVEMAS_COMMAND="python3 /path/to/bridge.py" beethoven run "<objective>" --soloist recursivemas --strategy recursive
 beethoven run "Review @README.md" --soloist local-reader
 beethoven run "Review @README.md" --soloist claude-cli
 beethoven run "Review @README.md" --soloist codex-cli
@@ -146,6 +146,8 @@ beethoven sessions show <session-id>
 beethoven sessions show <session-id> --json
 beethoven soloists list
 beethoven soloists list --json
+beethoven soloists check recursivemas
+beethoven soloists check recursivemas --json
 beethoven skills list
 beethoven skills list --json
 beethoven workspace

@@ -44,6 +44,13 @@ beethoven run "Solve with RecursiveMAS" \
 When the command is configured and executable, `beethoven soloists list` reports
 `RecursiveMAS [available]`. Otherwise it remains `planned`.
 
+Use the healthcheck when wiring a local bridge:
+
+```bash
+beethoven soloists check recursivemas
+beethoven soloists check recursivemas --json
+```
+
 ## Input Protocol
 
 Beethoven sends this JSON shape to the sidecar:

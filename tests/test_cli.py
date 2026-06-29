@@ -165,6 +165,18 @@ def test_soloists_list_command_prints_catalog(capsys) -> None:
     assert "RecursiveMAS [planned]" in captured.out
 
 
+def test_soloists_check_reports_unconfigured_recursivemas(monkeypatch, capsys) -> None:
+    monkeypatch.delenv("BEETHOVEN_RECURSIVEMAS_COMMAND", raising=False)
+
+    exit_code = main(["soloists", "check", "recursivemas", "--json"])
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert exit_code == 1
+    assert data["check"]["status"] == "not_configured"
+    assert data["check"]["available"] is False
+
+
 def test_ollama_requires_explicit_opt_in(monkeypatch) -> None:
     monkeypatch.delenv("BEETHOVEN_ENABLE_OLLAMA", raising=False)
     monkeypatch.setattr("beethoven.runtime.ollama_is_available", lambda: True)
@@ -293,6 +305,12 @@ def test_package_recursivemas_bridge_writes_executable_bridge(tmp_path, monkeypa
     assert "decompose" in bridge_payload["output"]
 
     monkeypatch.setenv("BEETHOVEN_RECURSIVEMAS_COMMAND", f"{sys.executable} {output}")
+    check_exit_code = main(["soloists", "check", "recursivemas"])
+    check_output = capsys.readouterr().out
+    assert check_exit_code == 0
+    assert "Status: available" in check_output
+    assert "RecursiveMAS sidecar responded" in check_output
+
     run_exit_code = main(
         [
             "run",

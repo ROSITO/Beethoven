@@ -357,7 +357,7 @@ button {
 
 .workspace {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
   min-height: 100vh;
   background: rgba(255, 253, 248, 0.88);
@@ -639,6 +639,7 @@ button {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
   gap: 22px;
+  align-items: start;
   min-height: 0;
   padding: 24px 26px;
   overflow: auto;
@@ -840,7 +841,7 @@ button {
 .composer-shell {
   display: grid;
   gap: 10px;
-  margin: 0 26px 22px;
+  margin: 0;
   padding: 12px;
   background: rgba(255, 253, 248, 0.94);
   border: 1px solid var(--line);

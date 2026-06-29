@@ -61,10 +61,14 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
     def do_POST(self) -> None:
         path = urlparse(self.path).path
         if path == "/api/score":
-            objective = self._read_objective()
+            payload = self._read_payload()
+            if payload is None:
+                return
+            objective = self._read_objective(payload)
             if objective is None:
                 return
-            self._send_json(score_to_dict(score_objective(objective)))
+            soloist = str(payload.get("soloist", "local-echo"))
+            self._send_json(score_to_dict(score_objective(objective, planner_soloist=soloist)))
             return
 
         if path == "/api/run":

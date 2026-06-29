@@ -43,6 +43,8 @@ This repository now contains the first executable orchestration kernel:
   Claude Code and Codex installations.
 - `@path` attachments: safe workspace file context with size limits.
 - Run events: score/task/validation events for desktop streaming.
+- Dynamic planning: Claude/Codex CLI can propose a task score, then Beethoven
+  validates and executes the normalized plan.
 
 The first implementation is intentionally small. The foundation must stay stable
 enough for future providers and plugins to attach naturally.
@@ -221,6 +223,9 @@ BEETHOVEN_ENABLE_OLLAMA=1 beethoven run "Review @README.md" --soloist ollama
 Claude CLI and Codex CLI are detected when installed locally. They are only
 invoked when explicitly selected with `--soloist claude-cli` or
 `--soloist codex-cli`; Codex runs in read-only sandbox mode from Beethoven.
+When either is selected, Beethoven can ask it to propose the score before
+execution. Set `BEETHOVEN_DYNAMIC_PLANNING=0` to force the deterministic
+baseline planner.
 
 Without installing dev dependencies, the current tests can also run with:
 

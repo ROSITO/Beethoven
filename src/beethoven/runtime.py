@@ -7,7 +7,7 @@ from dataclasses import dataclass, replace
 
 from beethoven.conductor import Conductor
 from beethoven.core import ExecutionContext, Score, SoloistResult
-from beethoven.planning import create_baseline_score
+from beethoven.planning import create_baseline_score, create_dynamic_score, should_use_dynamic_planning
 from beethoven.routing import CapabilityRouter, SoloistRegistry
 from beethoven.soloists import (
     ClaudeCliSoloist,
@@ -162,7 +162,12 @@ def list_skills() -> list[dict[str, object]]:
     return sorted(grouped.values(), key=lambda item: str(item["id"]))
 
 
-def score_objective(objective: str, metadata: dict[str, object] | None = None) -> Score:
+def score_objective(
+    objective: str,
+    metadata: dict[str, object] | None = None,
+    *,
+    planner_soloist: str | None = None,
+) -> Score:
     score = create_baseline_score(objective)
     attachments = read_workspace_attachments(objective)
     combined_metadata: dict[str, object] = {**score.metadata}
@@ -170,6 +175,12 @@ def score_objective(objective: str, metadata: dict[str, object] | None = None) -
         combined_metadata["attachments"] = attachments
     if metadata:
         combined_metadata.update(metadata)
+    if planner_soloist and should_use_dynamic_planning(planner_soloist):
+        registry = create_default_registry()
+        planner = CapabilityRouter(registry, preferred_soloist=planner_soloist).choose(
+            next(task for task in score.tasks if task.capability.value == "plan")
+        )
+        return create_dynamic_score(objective, planner, combined_metadata)
     if not combined_metadata:
         return score
     return replace(score, metadata=combined_metadata)
@@ -188,6 +199,9 @@ def run_objective(
         raise RuntimeError("Ollama is disabled by default. Restart with BEETHOVEN_ENABLE_OLLAMA=1 to opt in.")
     if soloist == "ollama" and not ollama_is_available():
         raise RuntimeError("Ollama soloist requested but the configured local model is unavailable.")
+    registry = create_default_registry()
+    if not any(candidate.name == soloist for candidate in registry.all()):
+        raise RuntimeError(f"Soloist requested but unavailable: {soloist}")
     score = score_objective(
         objective,
         metadata={
@@ -196,8 +210,8 @@ def run_objective(
             "effort": effort,
             "validation_commands": validation_commands or [],
         },
+        planner_soloist=soloist,
     )
-    registry = create_default_registry()
     context = Conductor(
         CapabilityRouter(registry, preferred_soloist=soloist),
         event_sink=event_sink,

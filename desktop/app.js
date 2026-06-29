@@ -830,7 +830,7 @@ async function loadScoreForObjective(objective) {
     const response = await fetch("/api/score", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ objective })
+      body: JSON.stringify({ objective, soloist: soloistSelect.value })
     });
     if (!response.ok) {
       return;
@@ -855,7 +855,7 @@ async function previewComposerScore() {
     const response = await fetch("/api/score", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ objective })
+      body: JSON.stringify({ objective, soloist: soloistSelect.value })
     });
     if (!response.ok) {
       throw new Error(`Score API returned ${response.status}`);

@@ -55,6 +55,9 @@ Important modules:
 - `src/beethoven/routing.py`: `SoloistRegistry` and `CapabilityRouter`, with
   preferred soloist selection when a requested soloist can satisfy the task.
 - `src/beethoven/planning.py`: deterministic baseline score generator.
+  Claude/Codex-selected runs can now use dynamic planning: the selected CLI
+  soloist proposes a JSON score, and Beethoven validates/normalizes it before
+  execution. `BEETHOVEN_DYNAMIC_PLANNING=0` forces baseline planning.
 - `src/beethoven/soloists.py`: `EchoSoloist`, the offline deterministic worker,
   plus `OllamaSoloist`, the first local model adapter.
 - `src/beethoven/runtime.py`: shared runtime helpers for CLI and desktop:
@@ -72,6 +75,10 @@ Current baseline score tasks:
 1. `understand` with capability `analyze`.
 2. `plan` with capability `plan`, depends on `understand`.
 3. `synthesize` with capability `synthesize`, depends on `plan`.
+
+When `claude-cli` or `codex-cli` is selected and dynamic planning is enabled,
+the task list may differ. Beethoven still enforces valid capabilities, unique
+task IDs, dependency order, a maximum of six tasks, and a final synthesize task.
 
 Current available soloists:
 

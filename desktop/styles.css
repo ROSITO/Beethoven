@@ -586,6 +586,23 @@ button {
   border-color: rgba(212, 175, 55, 0.42);
 }
 
+.soloist-config-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.soloist-config-row input {
+  min-width: 0;
+  min-height: 34px;
+  padding: 7px 10px;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
 .preview-score-card {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr);

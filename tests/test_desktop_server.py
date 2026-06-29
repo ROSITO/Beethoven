@@ -7,6 +7,7 @@ from http.server import ThreadingHTTPServer
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
+from beethoven.packaging import write_recursivemas_bridge
 from beethoven.desktop_server import BeethovenDesktopHandler
 from beethoven.desktop_state import DesktopSessionStore
 
@@ -33,6 +34,23 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
         except HTTPError as error:
             soloist_check_status = error.code
             soloist_check_data = json.loads(error.read().decode("utf-8"))
+
+        bridge = tmp_path / "recursivemas_bridge.py"
+        write_recursivemas_bridge(bridge)
+        config_request = Request(
+            f"http://{host}:{port}/api/soloists/recursivemas/config",
+            data=json.dumps({"command": f"{sys.executable} {bridge}"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        config_payload = json.loads(urlopen(config_request, timeout=2).read().decode("utf-8"))
+        configured_check = urlopen(f"http://{host}:{port}/api/soloists/recursivemas/check", timeout=2)
+        configured_check_data = json.loads(configured_check.read().decode("utf-8"))
+        delete_request = Request(
+            f"http://{host}:{port}/api/soloists/recursivemas/config",
+            method="DELETE",
+        )
+        clear_payload = json.loads(urlopen(delete_request, timeout=2).read().decode("utf-8"))
 
         skills = urlopen(f"http://{host}:{port}/api/skills", timeout=2)
         skills_data = json.loads(skills.read().decode("utf-8"))
@@ -137,6 +155,9 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
     assert soloists_data["soloists"][0]["status"] == "available"
     assert soloist_check_status == 503
     assert soloist_check_data["check"]["status"] == "not_configured"
+    assert config_payload["config"]["configured"] is True
+    assert configured_check_data["check"]["status"] == "available"
+    assert clear_payload["config"]["configured"] is False
     assert skills_data["skills"][0]["id"] == "analyze"
     assert skills_data["skills"][0]["status"] == "available"
     assert workspace_data["workspace"]["name"] == "Beethoven"

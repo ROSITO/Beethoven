@@ -202,6 +202,8 @@ Implemented endpoints:
 - `POST /api/run/stream` returning NDJSON run events and a final
   `run_completed` event with the full run context.
 - `GET /api/soloists/<id>/check`, currently used for RecursiveMAS diagnostics.
+- `GET`, `POST`, `DELETE /api/soloists/recursivemas/config` for persisted
+  RecursiveMAS bridge command management.
 
 Development notes:
 
@@ -239,6 +241,7 @@ Implemented UI:
 - skills panel from `/api/skills`;
 - RecursiveMAS healthcheck from the skills panel through
   `/api/soloists/recursivemas/check`;
+- RecursiveMAS command save/clear controls in the skills panel;
 - command center showing CLI commands and Git status;
 - top-bar session actions for copying score IDs, inserting session commands,
   exporting score JSON, and opening command center;

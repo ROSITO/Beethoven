@@ -41,6 +41,9 @@ const skillsPanel = document.querySelector("#skillsPanel");
 const closeSkillsPanel = document.querySelector("#closeSkillsPanel");
 const skillsGrid = document.querySelector("#skillsGrid");
 const checkRecursiveMasButton = document.querySelector("#checkRecursiveMasButton");
+const saveRecursiveMasButton = document.querySelector("#saveRecursiveMasButton");
+const clearRecursiveMasButton = document.querySelector("#clearRecursiveMasButton");
+const recursiveMasCommand = document.querySelector("#recursiveMasCommand");
 const soloistCheckResult = document.querySelector("#soloistCheckResult");
 const scorePanel = document.querySelector("#scorePanel");
 const closeScorePanel = document.querySelector("#closeScorePanel");
@@ -404,6 +407,10 @@ function renderSoloistCheck(report) {
   `;
 }
 
+function renderRecursiveMasConfig(config) {
+  recursiveMasCommand.value = config.command ?? "";
+}
+
 function renderScorePreview(score) {
   const attachments = score.metadata?.attachments ?? [];
   const attachedSummary = attachments.length
@@ -592,6 +599,7 @@ function toggleSkillsPanel(force) {
     skillsPanel.hidden = false;
     skillsButton.classList.add("active");
     renderSkills(allSkills);
+    loadRecursiveMasConfig();
   }
 }
 
@@ -949,6 +957,82 @@ async function loadSkills() {
   renderSkills(allSkills);
 }
 
+async function loadRecursiveMasConfig() {
+  try {
+    const response = await fetch("/api/soloists/recursivemas/config");
+    if (!response.ok) {
+      throw new Error(`RecursiveMAS config API returned ${response.status}`);
+    }
+    const payload = await response.json();
+    renderRecursiveMasConfig(payload.config ?? {});
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function saveRecursiveMasConfig() {
+  const command = recursiveMasCommand.value.trim();
+  if (!command) {
+    recursiveMasCommand.focus();
+    return;
+  }
+  saveRecursiveMasButton.textContent = "Saving…";
+  saveRecursiveMasButton.disabled = true;
+  try {
+    const response = await fetch("/api/soloists/recursivemas/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ command })
+    });
+    if (!response.ok) {
+      throw new Error(`RecursiveMAS config API returned ${response.status}`);
+    }
+    const payload = await response.json();
+    renderRecursiveMasConfig(payload.config ?? {});
+    await checkRecursiveMas();
+    await loadSoloists();
+  } catch (error) {
+    renderSoloistCheck({
+      id: "recursivemas",
+      status: "config_failed",
+      available: false,
+      message: "Unable to save RecursiveMAS command."
+    });
+    console.error(error);
+  } finally {
+    saveRecursiveMasButton.textContent = "Save";
+    saveRecursiveMasButton.disabled = false;
+  }
+}
+
+async function clearRecursiveMasConfig() {
+  clearRecursiveMasButton.textContent = "Clearing…";
+  clearRecursiveMasButton.disabled = true;
+  try {
+    const response = await fetch("/api/soloists/recursivemas/config", {
+      method: "DELETE"
+    });
+    if (!response.ok) {
+      throw new Error(`RecursiveMAS config API returned ${response.status}`);
+    }
+    const payload = await response.json();
+    renderRecursiveMasConfig(payload.config ?? {});
+    await checkRecursiveMas();
+    await loadSoloists();
+  } catch (error) {
+    renderSoloistCheck({
+      id: "recursivemas",
+      status: "clear_failed",
+      available: false,
+      message: "Unable to clear RecursiveMAS command."
+    });
+    console.error(error);
+  } finally {
+    clearRecursiveMasButton.textContent = "Clear";
+    clearRecursiveMasButton.disabled = false;
+  }
+}
+
 async function loadFiles() {
   try {
     const response = await fetch("/api/files");
@@ -1082,6 +1166,8 @@ scorePreviewButton.addEventListener("click", previewComposerScore);
 closeCommandPanel.addEventListener("click", () => toggleCommandPanel(false));
 closeSkillsPanel.addEventListener("click", () => toggleSkillsPanel(false));
 checkRecursiveMasButton.addEventListener("click", checkRecursiveMas);
+saveRecursiveMasButton.addEventListener("click", saveRecursiveMasConfig);
+clearRecursiveMasButton.addEventListener("click", clearRecursiveMasConfig);
 closeScorePanel.addEventListener("click", () => toggleScorePanel(false));
 closeFilesPanel.addEventListener("click", () => toggleFilesPanel(false));
 closeSessionPanel.addEventListener("click", () => toggleSessionPanel(false));

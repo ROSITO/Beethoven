@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
 
+from beethoven.config import BeethovenConfig
 from beethoven.desktop_state import DesktopSessionStore
 from beethoven.runtime import check_soloist, list_skills, list_soloists, run_objective, score_objective
 from beethoven.serialization import context_to_dict, score_to_dict
@@ -52,6 +53,10 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             report = check_soloist(soloist_id)
             self._send_json({"check": report}, HTTPStatus.OK if report.get("available") else HTTPStatus.SERVICE_UNAVAILABLE)
             return
+        if path == "/api/soloists/recursivemas/config":
+            command = BeethovenConfig().get_recursivemas_command()
+            self._send_json({"config": {"id": "recursivemas", "command": command, "configured": bool(command)}})
+            return
         if path == "/api/skills":
             self._send_json({"skills": list_skills()})
             return
@@ -65,6 +70,18 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path
+        if path == "/api/soloists/recursivemas/config":
+            payload = self._read_payload()
+            if payload is None:
+                return
+            command = str(payload.get("command", "")).strip()
+            if not command:
+                self._send_json({"error": "Missing command"}, HTTPStatus.BAD_REQUEST)
+                return
+            config_path = BeethovenConfig().set_recursivemas_command(command)
+            self._send_json({"config": {"id": "recursivemas", "command": command, "configured": True, "path": str(config_path)}})
+            return
+
         if path == "/api/score":
             payload = self._read_payload()
             if payload is None:
@@ -176,6 +193,14 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
                 write_event({"type": "run_failed", "error": str(error)})
             return
 
+        self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
+
+    def do_DELETE(self) -> None:
+        path = urlparse(self.path).path
+        if path == "/api/soloists/recursivemas/config":
+            config_path = BeethovenConfig().clear_recursivemas_command()
+            self._send_json({"config": {"id": "recursivemas", "command": "", "configured": False, "path": str(config_path)}})
+            return
         self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
 
     def log_message(self, format: str, *args: Any) -> None:

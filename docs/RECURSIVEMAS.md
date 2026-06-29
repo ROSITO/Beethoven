@@ -70,6 +70,19 @@ The desktop API exposes the same diagnostic:
 curl http://127.0.0.1:4173/api/soloists/recursivemas/check
 ```
 
+The desktop API can also read, save, and clear the persisted command:
+
+```bash
+curl http://127.0.0.1:4173/api/soloists/recursivemas/config
+curl -X POST http://127.0.0.1:4173/api/soloists/recursivemas/config \
+  -H "Content-Type: application/json" \
+  -d '{"command":"python3 /path/to/recursivemas_beethoven_bridge.py"}'
+curl -X DELETE http://127.0.0.1:4173/api/soloists/recursivemas/config
+```
+
+In the desktop workbench, open `Skills`, paste the bridge command, save it, then
+run `Check RecursiveMAS`.
+
 ## Input Protocol
 
 Beethoven sends this JSON shape to the sidecar:

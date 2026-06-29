@@ -301,6 +301,11 @@ Beethoven starts SoloMLX with `MLXSERVE_DEFAULT_MODEL` set to that model unless
 for compact score generation, local-first routing, and RecursiveMAS delegation
 when `recursivemas` is available.
 
+SoloMLX downloads are isolated from the global Hugging Face cache by default:
+`~/.beethoven/huggingface`. Override with `BEETHOVEN_SOLOMLX_CACHE` when needed.
+Beethoven also derives SoloMLX memory guardrails from machine RAM; override with
+`BEETHOVEN_SOLOMLX_MAX_MEMORY_GB` and `BEETHOVEN_SOLOMLX_HARD_MEMORY_GB`.
+
 Ollama can also back the hidden orchestrator:
 
 ```bash

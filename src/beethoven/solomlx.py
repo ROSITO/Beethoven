@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import signal
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -27,6 +28,21 @@ def default_solomlx_dir() -> Path:
 
 def default_solomlx_pid_path() -> Path:
     return default_state_dir() / "solomlx.pid"
+
+
+def default_solomlx_cache_dir() -> Path:
+    return Path(os.getenv("BEETHOVEN_SOLOMLX_CACHE", default_state_dir() / "huggingface")).expanduser()
+
+
+def solomlx_python() -> str:
+    configured = os.getenv("BEETHOVEN_SOLOMLX_PYTHON", "").strip()
+    if configured:
+        return configured
+    for candidate in ("python3.13", "python3.12"):
+        executable = shutil.which(candidate)
+        if executable:
+            return executable
+    return sys.executable
 
 
 def solomlx_base_url(host: str = DEFAULT_SOLOMLX_HOST, port: int = DEFAULT_SOLOMLX_PORT) -> str:
@@ -58,7 +74,7 @@ def solomlx_install(
 
     venv_dir = checkout_dir / ".venv"
     if not venv_dir.exists():
-        _run([sys.executable, "-m", "venv", str(venv_dir)], cwd=checkout_dir)
+        _run([solomlx_python(), "-m", "venv", str(venv_dir)], cwd=checkout_dir)
     python = _venv_python(venv_dir)
     _run([str(python), "-m", "pip", "install", "--upgrade", "pip"], cwd=checkout_dir)
     package_spec = ".[mlx]" if with_mlx else "."
@@ -85,7 +101,12 @@ def solomlx_prepare_orchestrator(
     executable = checkout_dir / ".venv" / "bin" / "mlxserve"
     if not executable.exists():
         raise RuntimeError("SoloMLX is not installed. Run `beethoven solomlx install` first.")
-    result = _run([str(executable), "models-pull", "--model", model], cwd=checkout_dir)
+    default_solomlx_cache_dir().mkdir(parents=True, exist_ok=True)
+    result = _run(
+        [str(executable), "models-pull", "--model", model],
+        cwd=checkout_dir,
+        env=_solomlx_env(),
+    )
     return {
         "id": "solomlx",
         "prepared": True,
@@ -112,6 +133,7 @@ def solomlx_status(
         "path": str(checkout_dir),
         "installed": (checkout_dir / ".git").exists(),
         "venv": str(checkout_dir / ".venv"),
+        "cache": str(default_solomlx_cache_dir()),
         "pid_path": str(selected_pid_path),
         "pid": pid,
         "process_running": process_running,
@@ -166,7 +188,8 @@ def solomlx_start(
     log_file = log_path.open("ab")
     command = _start_command(checkout_dir=checkout_dir)
     env = {
-        **os.environ,
+        **_solomlx_env(),
+        **_solomlx_memory_env(),
         "MLXSERVE_HOST": host,
         "MLXSERVE_PORT": str(port),
         "MLXSERVE_DEFAULT_MODEL": os.getenv(
@@ -262,13 +285,48 @@ def _start_command(*, checkout_dir: Path) -> list[str]:
     return [str(checkout_dir / ".venv" / "bin" / "mlxserve"), "serve"]
 
 
-def _run(command: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
+def _solomlx_env() -> dict[str, str]:
+    cache_dir = default_solomlx_cache_dir()
+    return {
+        **os.environ,
+        "HF_HOME": str(cache_dir),
+        "HUGGINGFACE_HUB_CACHE": str(cache_dir / "hub"),
+        "TRANSFORMERS_CACHE": str(cache_dir / "transformers"),
+    }
+
+
+def _solomlx_memory_env() -> dict[str, str]:
+    total_gb = _machine_memory_gb()
+    default_soft = max(14.0, round(total_gb * 0.72, 1))
+    default_hard = max(15.0, round(total_gb * 0.86, 1))
+    return {
+        "MLXSERVE_MAX_MEMORY_GB": os.getenv("BEETHOVEN_SOLOMLX_MAX_MEMORY_GB", str(default_soft)),
+        "MLXSERVE_HARD_MEMORY_GB": os.getenv("BEETHOVEN_SOLOMLX_HARD_MEMORY_GB", str(default_hard)),
+    }
+
+
+def _machine_memory_gb() -> float:
+    try:
+        page_size = os.sysconf("SC_PAGE_SIZE")
+        pages = os.sysconf("SC_PHYS_PAGES")
+    except (ValueError, OSError, AttributeError):
+        return 16.0
+    return float(page_size * pages) / 1024**3
+
+
+def _run(
+    command: list[str],
+    *,
+    cwd: Path,
+    env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
     result = subprocess.run(
         command,
         cwd=cwd,
         check=False,
         capture_output=True,
         text=True,
+        env=env,
     )
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or result.stdout.strip() or f"Command failed: {command}")

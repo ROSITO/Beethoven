@@ -51,6 +51,7 @@ def test_score_command_prints_json(capsys) -> None:
 
 
 def test_score_objective_uses_hidden_local_orchestrator(monkeypatch) -> None:
+    monkeypatch.setenv("BEETHOVEN_DYNAMIC_PLANNING", "1")
     monkeypatch.setattr("beethoven.runtime.create_local_orchestrator", lambda: FakeLocalOrchestrator())
 
     score = score_objective("Build a local orchestration brain")

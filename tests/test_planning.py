@@ -63,3 +63,19 @@ def test_dynamic_planner_falls_back_to_baseline_on_invalid_json() -> None:
 
     assert score.metadata["planning_mode"] == "baseline_fallback"
     assert [task.id for task in score.tasks] == ["understand", "plan", "synthesize"]
+
+
+def test_dynamic_planner_falls_back_when_planner_raises() -> None:
+    @dataclass(frozen=True)
+    class RaisingPlanner:
+        name: str = "raising-planner"
+        capabilities: frozenset[Capability] = frozenset({Capability.PLAN})
+
+        def perform(self, task: Task, context: ExecutionContext) -> SoloistResult:
+            raise RuntimeError("model unavailable")
+
+    score = create_dynamic_score("Improve the app", RaisingPlanner())
+
+    assert score.metadata["planning_mode"] == "baseline_fallback"
+    assert score.metadata["planner_error"] == "model unavailable"
+    assert [task.id for task in score.tasks] == ["understand", "plan", "synthesize"]

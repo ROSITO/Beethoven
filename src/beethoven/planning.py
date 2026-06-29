@@ -61,8 +61,8 @@ def create_dynamic_score(objective: str, planner: Soloist, metadata: dict[str, o
         capability=Capability.PLAN,
     )
     context = ExecutionContext(score=replace(baseline, metadata=metadata or {}))
-    result = planner.perform(planning_task, context)
     try:
+        result = planner.perform(planning_task, context)
         proposed = _extract_json_object(str(result.output))
         tasks = _tasks_from_payload(proposed)
     except Exception as error:
@@ -70,7 +70,7 @@ def create_dynamic_score(objective: str, planner: Soloist, metadata: dict[str, o
             baseline,
             metadata={
                 **baseline.metadata,
-                **(metadata or {}),
+                **_public_score_metadata(metadata or {}),
                 "planning_mode": "baseline_fallback",
                 "planner": planner.name,
                 "planner_error": str(error) or "Planner output could not be converted to a valid score.",
@@ -82,7 +82,7 @@ def create_dynamic_score(objective: str, planner: Soloist, metadata: dict[str, o
         tasks=tuple(tasks),
         metadata={
             **baseline.metadata,
-            **(metadata or {}),
+            **_public_score_metadata(metadata or {}),
             "planning_mode": "dynamic",
             "planner": planner.name,
         },
@@ -138,6 +138,14 @@ Attached context:
 Available execution soloists:
 {soloist_summary or "none"}
 """.strip()
+
+
+def _public_score_metadata(metadata: dict[str, object]) -> dict[str, object]:
+    return {
+        key: value
+        for key, value in metadata.items()
+        if key not in {"available_soloists"}
+    }
 
 
 def _extract_json_object(value: str) -> dict[str, Any]:

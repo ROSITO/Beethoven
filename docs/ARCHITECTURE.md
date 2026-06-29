@@ -9,19 +9,23 @@ contracts.
 
 1. **Intent Layer**: understands the user's objective, constraints, risk level,
    privacy needs, and budget.
-2. **Score Layer**: converts intent into a portable execution plan made of
+2. **Orchestrator Layer**: Beethoven's private local planning model converts
+   intent into a routing-aware score proposal. It can use SoloMLX-server through
+   an OpenAI-compatible `/v1` API or Ollama, and it is not a user-selected
+   soloist.
+3. **Score Layer**: converts intent into a portable execution plan made of
    ordered tasks, dependencies, capabilities, and validation gates.
-3. **Routing Layer**: selects the right soloist for each task according to
+4. **Routing Layer**: selects the right soloist for each task according to
    capability, cost, latency, quality, locality, and policy.
-4. **Execution Layer**: runs tasks through provider adapters, agent runtimes,
+5. **Execution Layer**: runs tasks through provider adapters, agent runtimes,
    local tools, or distributed workers.
-5. **Critic Layer**: reviews intermediate and final outputs across correctness,
+6. **Critic Layer**: reviews intermediate and final outputs across correctness,
    coherence, safety, and user fit.
-6. **Validation Layer**: runs tests, lint, type checks, security checks, git
+7. **Validation Layer**: runs tests, lint, type checks, security checks, git
    diffs, or domain-specific verification.
-7. **Memory Layer**: stores project knowledge, execution traces, reusable
+8. **Memory Layer**: stores project knowledge, execution traces, reusable
    decisions, and semantic cache entries outside of stateless agents.
-8. **Governance Layer**: provides human approval gates, audit logs, permissions,
+9. **Governance Layer**: provides human approval gates, audit logs, permissions,
    secrets management, and observability.
 
 ## Core Contracts
@@ -37,6 +41,9 @@ The first implementation exposes deliberately small primitives:
 - `CapabilityRouter`: deterministic baseline router.
 - `Conductor`: score executor that coordinates tasks without owning provider
   details.
+- `LocalOrchestrator`: hidden planning boundary used by Beethoven before
+  execution routing. It may suggest task-level soloists, but the router only
+  accepts suggestions that are registered and capable.
 
 These contracts are the foundation for the future plugin SDK. A plugin should
 be able to add a new model, local tool, remote worker, policy, validator, or

@@ -67,6 +67,22 @@ def test_router_prefers_named_soloist_when_capable() -> None:
     assert chosen.name == "preferred"
 
 
+def test_router_respects_task_level_soloist_when_capable() -> None:
+    registry = SoloistRegistry()
+    registry.register(FakeSoloist("default", frozenset({Capability.CODE})))
+    registry.register(FakeSoloist("task-choice", frozenset({Capability.CODE})))
+    task = Task(
+        id="code",
+        instruction="Code",
+        capability=Capability.CODE,
+        metadata={"preferred_soloist": "task-choice"},
+    )
+
+    chosen = CapabilityRouter(registry, preferred_soloist="default").choose(task)
+
+    assert chosen.name == "task-choice"
+
+
 def test_conductor_rejects_unknown_dependencies() -> None:
     registry = SoloistRegistry()
     registry.register(FakeSoloist("planner", frozenset({Capability.PLAN})))

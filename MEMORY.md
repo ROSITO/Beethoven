@@ -54,11 +54,13 @@ Important modules:
 - `src/beethoven/conductor.py`: `Conductor` executes tasks in dependency order,
   records trace/status/artifacts, and emits run events through `event_sink`.
 - `src/beethoven/routing.py`: `SoloistRegistry` and `CapabilityRouter`, with
-  preferred soloist selection when a requested soloist can satisfy the task.
-- `src/beethoven/planning.py`: deterministic baseline score generator.
-  Claude/Codex-selected runs can now use dynamic planning: the selected CLI
-  soloist proposes a JSON score, and Beethoven validates/normalizes it before
-  execution. `BEETHOVEN_DYNAMIC_PLANNING=0` forces baseline planning.
+  task-level and requested soloist selection when the target can satisfy the
+  task.
+- `src/beethoven/planning.py`: deterministic baseline score generator and
+  normalized JSON score ingestion for the hidden orchestrator.
+- `src/beethoven/orchestrator.py`: Beethoven's hidden local planning model
+  boundary. It auto-detects SoloMLX-server/OpenAI-compatible `/v1` first, then
+  Ollama, and is not exposed as a selectable soloist.
 - `src/beethoven/recursive.py`: RecursiveMAS-inspired score strategies that
   express sequential, deliberation, mixture, and distillation patterns as
   portable Beethoven tasks.
@@ -66,7 +68,8 @@ Important modules:
   plus `OllamaSoloist`, the first local model adapter, and
   `RecursiveMASSoloist`, the optional JSON sidecar adapter.
 - `src/beethoven/runtime.py`: shared runtime helpers for CLI and desktop:
-  `score_objective`, `run_objective`, `list_soloists`, `list_skills`.
+  `score_objective`, `run_objective`, `list_soloists`, `list_skills`,
+  `check_orchestrator`.
 - `src/beethoven/serialization.py`: `score_to_dict` and `context_to_dict`.
 - `src/beethoven/events.py`: event reconstruction for non-streaming clients.
 - `src/beethoven/validation.py`: local validation command hooks.
@@ -81,9 +84,12 @@ Current baseline score tasks:
 2. `plan` with capability `plan`, depends on `understand`.
 3. `synthesize` with capability `synthesize`, depends on `plan`.
 
-When `claude-cli` or `codex-cli` is selected and dynamic planning is enabled,
-the task list may differ. Beethoven still enforces valid capabilities, unique
-task IDs, dependency order, a maximum of six tasks, and a final synthesize task.
+When `BEETHOVEN_DYNAMIC_PLANNING` is enabled, Beethoven first tries its hidden
+local orchestrator. The user can choose execution soloists, but not the
+orchestrator. The task list may differ, and tasks may carry a validated
+`preferred_soloist` routing hint. Beethoven still enforces valid capabilities,
+unique task IDs, dependency order, a maximum of six tasks, and a final synthesize
+task.
 
 Recursive strategy scores are selected explicitly with `strategy=recursive`.
 They do not require the external RecursiveMAS runtime. Instead, Beethoven turns
@@ -363,8 +369,9 @@ Browser QA has been done with the in-app browser for:
 
 ## Known Gaps
 
-- Ollama is the first real local adapter, but there is no OpenAI-compatible
-  adapter, credential/config system, or adapter SDK yet.
+- SoloMLX-server/OpenAI-compatible and Ollama can now back the hidden local
+  orchestrator, but the execution-side OpenAI-compatible soloist and persisted
+  orchestrator config UI are still missing.
 - The terminal CLI is line-oriented, not a full-screen TUI like OpenCode yet.
 - `soloist`, `permission_mode`, and `effort` are recorded but not deeply enforced
   beyond metadata/routing scaffolding.

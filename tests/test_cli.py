@@ -6,8 +6,38 @@ import subprocess
 import sys
 
 from beethoven.cli import main, run_terminal_session
+from beethoven.core import Capability, ExecutionContext, SoloistResult, Task
 from beethoven.desktop_state import DesktopSessionStore
-from beethoven.runtime import list_soloists, run_objective
+from beethoven.runtime import list_soloists, run_objective, score_objective
+
+
+class FakeLocalOrchestrator:
+    name = "beethoven-orchestrator"
+    capabilities = frozenset({Capability.PLAN})
+
+    def perform(self, task: Task, context: ExecutionContext) -> SoloistResult:
+        return SoloistResult(
+            output=json.dumps(
+                {
+                    "tasks": [
+                        {
+                            "id": "inspect",
+                            "capability": "analyze",
+                            "instruction": "Inspect the objective.",
+                            "depends_on": [],
+                            "soloist": "local-reader",
+                        },
+                        {
+                            "id": "answer",
+                            "capability": "synthesize",
+                            "instruction": "Answer from the inspection.",
+                            "depends_on": ["inspect"],
+                            "soloist": "local-echo",
+                        },
+                    ]
+                }
+            )
+        )
 
 
 def test_score_command_prints_json(capsys) -> None:
@@ -18,6 +48,17 @@ def test_score_command_prints_json(capsys) -> None:
     assert exit_code == 0
     assert data["objective"] == "Build a CLI"
     assert [task["id"] for task in data["tasks"]] == ["understand", "plan", "synthesize"]
+
+
+def test_score_objective_uses_hidden_local_orchestrator(monkeypatch) -> None:
+    monkeypatch.setattr("beethoven.runtime.create_local_orchestrator", lambda: FakeLocalOrchestrator())
+
+    score = score_objective("Build a local orchestration brain")
+
+    assert score.metadata["orchestrator"] == "beethoven-local"
+    assert score.metadata["planner"] == "beethoven-orchestrator"
+    assert [task.id for task in score.tasks] == ["inspect", "answer"]
+    assert score.tasks[0].metadata["preferred_soloist"] == "local-reader"
 
 
 def test_score_command_can_print_recursive_json(capsys) -> None:
@@ -163,6 +204,28 @@ def test_soloists_list_command_prints_catalog(capsys) -> None:
     assert "Local Echo [available]" in captured.out
     assert "Ollama [" in captured.out
     assert "RecursiveMAS [planned]" in captured.out
+
+
+def test_orchestrator_status_command_reports_hidden_planner(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(
+        "beethoven.cli.check_orchestrator",
+        lambda: {
+            "id": "beethoven-orchestrator",
+            "available": True,
+            "status": "available",
+            "provider": "solomlx",
+            "model": "ministral-local",
+            "message": "ready",
+        },
+    )
+
+    exit_code = main(["orchestrator", "status", "--json"])
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert exit_code == 0
+    assert data["orchestrator"]["provider"] == "solomlx"
+    assert data["orchestrator"]["model"] == "ministral-local"
 
 
 def test_soloists_check_reports_unconfigured_recursivemas(monkeypatch, capsys) -> None:

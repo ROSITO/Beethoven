@@ -26,7 +26,8 @@ class FakePlanner:
                   "id": "draft_changes",
                   "capability": "code",
                   "instruction": "Draft the implementation approach.",
-                  "depends_on": ["inspect_context"]
+                  "depends_on": ["inspect_context"],
+                  "soloist": "codex-cli"
                 }
               ]
             }
@@ -45,6 +46,7 @@ def test_dynamic_planner_creates_valid_score() -> None:
         "synthesize",
     ]
     assert score.tasks[1].depends_on == ("inspect_context",)
+    assert score.tasks[1].metadata["preferred_soloist"] == "codex-cli"
     assert score.tasks[-1].capability == Capability.SYNTHESIZE
 
 

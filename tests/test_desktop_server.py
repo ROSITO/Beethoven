@@ -29,6 +29,9 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
         soloists = urlopen(f"http://{host}:{port}/api/soloists", timeout=2)
         soloists_data = json.loads(soloists.read().decode("utf-8"))
 
+        orchestrator = urlopen(f"http://{host}:{port}/api/orchestrator", timeout=2)
+        orchestrator_data = json.loads(orchestrator.read().decode("utf-8"))
+
         try:
             urlopen(f"http://{host}:{port}/api/soloists/recursivemas/check", timeout=2)
         except HTTPError as error:
@@ -153,6 +156,8 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
     assert stream_events[-1]["event"]["context"]["score"]["objective"] == "stream desktop api"
     assert soloists_data["soloists"][0]["id"] == "local-echo"
     assert soloists_data["soloists"][0]["status"] == "available"
+    assert orchestrator_data["orchestrator"]["id"] == "beethoven-orchestrator"
+    assert "available" in orchestrator_data["orchestrator"]
     assert soloist_check_status == 503
     assert soloist_check_data["check"]["status"] == "not_configured"
     assert config_payload["config"]["configured"] is True

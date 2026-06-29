@@ -41,10 +41,12 @@ This repository now contains the first executable orchestration kernel:
 - `OllamaSoloist`: first real local model adapter when Ollama is available.
 - `ClaudeCliSoloist` and `CodexCliSoloist`: CLI adapters for logged-in local
   Claude Code and Codex installations.
+- Hidden local orchestrator: Beethoven can use a lightweight local model through
+  SoloMLX-server/OpenAI-compatible `/v1` or Ollama to create and route scores.
 - `@path` attachments: safe workspace file context with size limits.
 - Run events: score/task/validation events for desktop streaming.
-- Dynamic planning: Claude/Codex CLI can propose a task score, then Beethoven
-  validates and executes the normalized plan.
+- Dynamic planning: Beethoven's local orchestrator proposes a task score, then
+  Beethoven validates and executes the normalized plan.
 - Recursive strategies: RecursiveMAS-inspired score patterns for sequential,
   deliberation, mixture, and distillation orchestration.
 
@@ -248,6 +250,7 @@ beethoven sessions show <session-id>
 beethoven soloists list
 beethoven soloists configure recursivemas --command "python3 /path/to/bridge.py"
 beethoven soloists check recursivemas
+beethoven orchestrator status
 beethoven skills list
 beethoven workspace
 beethoven workspace files
@@ -257,8 +260,38 @@ beethoven package recursivemas-bridge
 
 Inside `beethoven chat`, type an objective to run it directly, or use slash
 commands such as `/score`, `/run`, `/files`, `/workspace`, `/permission`,
-`/effort`, `/soloist`, `/strategy`, `/recursive-style`, `/recursive-rounds`,
-and `/exit`.
+`/effort`, `/soloist`, `/orchestrator`, `/strategy`, `/recursive-style`,
+`/recursive-rounds`, and `/exit`.
+
+## Local Orchestrator
+
+The orchestrator is not chosen in the UI. Beethoven owns it and uses it before
+execution to decompose the objective and optionally suggest the best execution
+soloist for each task. If no local orchestration model is reachable, Beethoven
+falls back to the deterministic baseline score.
+
+SoloMLX-server is the preferred local boundary because it exposes an
+OpenAI-compatible API:
+
+```bash
+BEETHOVEN_ORCHESTRATOR_PROVIDER=solomlx \
+BEETHOVEN_ORCHESTRATOR_BASE_URL=http://127.0.0.1:8080/v1 \
+beethoven orchestrator status
+```
+
+Ollama can also back the hidden orchestrator:
+
+```bash
+BEETHOVEN_ORCHESTRATOR_PROVIDER=ollama \
+BEETHOVEN_ORCHESTRATOR_MODEL=ministral \
+beethoven orchestrator status
+```
+
+`BEETHOVEN_ORCHESTRATOR_PROVIDER=auto` is the default. In auto mode Beethoven
+checks SoloMLX-server only; Ollama is used for orchestration only when
+`BEETHOVEN_ORCHESTRATOR_PROVIDER=ollama` or `BEETHOVEN_ENABLE_OLLAMA=1` is set,
+to avoid surprise memory pressure. Set `BEETHOVEN_DYNAMIC_PLANNING=0` to force
+deterministic baseline planning.
 
 Ollama is detected but disabled by default in the app because large local models
 can create heavy memory pressure. Enable it explicitly only when you are ready
@@ -271,9 +304,7 @@ BEETHOVEN_ENABLE_OLLAMA=1 beethoven run "Review @README.md" --soloist ollama
 Claude CLI and Codex CLI are detected when installed locally. They are only
 invoked when explicitly selected with `--soloist claude-cli` or
 `--soloist codex-cli`; Codex runs in read-only sandbox mode from Beethoven.
-When either is selected, Beethoven can ask it to propose the score before
-execution. Set `BEETHOVEN_DYNAMIC_PLANNING=0` to force the deterministic
-baseline planner.
+They are execution soloists, not the default orchestrator.
 
 Without installing dev dependencies, the current tests can also run with:
 

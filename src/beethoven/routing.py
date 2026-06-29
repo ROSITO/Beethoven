@@ -46,6 +46,11 @@ class CapabilityRouter:
             raise SoloistNotFoundError(
                 f"No soloist registered for capability '{task.capability.value}'"
             )
+        task_preference = task.metadata.get("preferred_soloist") or task.metadata.get("soloist")
+        if isinstance(task_preference, str) and task_preference:
+            for candidate in candidates:
+                if candidate.name == task_preference:
+                    return candidate
         if self.preferred_soloist:
             for candidate in candidates:
                 if candidate.name == self.preferred_soloist:

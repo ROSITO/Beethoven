@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 from dataclasses import replace
 from hashlib import sha1
@@ -13,7 +12,6 @@ from beethoven.core import Capability, ExecutionContext, Score, Soloist, Task
 
 
 MAX_DYNAMIC_TASKS = 6
-PLANNER_SOLOISTS = {"claude-cli", "codex-cli"}
 
 
 def create_baseline_score(objective: str) -> Score:
@@ -50,12 +48,6 @@ def create_baseline_score(objective: str) -> Score:
     )
 
 
-def should_use_dynamic_planning(soloist: str) -> bool:
-    """Return whether a selected soloist can propose the score itself."""
-    enabled = os.getenv("BEETHOVEN_DYNAMIC_PLANNING", "1").lower() not in {"0", "false", "no"}
-    return enabled and soloist in PLANNER_SOLOISTS
-
-
 def create_dynamic_score(objective: str, planner: Soloist, metadata: dict[str, object] | None = None) -> Score:
     """Ask a planner soloist for a score, then validate and normalize it.
 
@@ -73,7 +65,7 @@ def create_dynamic_score(objective: str, planner: Soloist, metadata: dict[str, o
     try:
         proposed = _extract_json_object(str(result.output))
         tasks = _tasks_from_payload(proposed)
-    except (ValueError, TypeError, KeyError):
+    except Exception as error:
         return replace(
             baseline,
             metadata={
@@ -81,7 +73,7 @@ def create_dynamic_score(objective: str, planner: Soloist, metadata: dict[str, o
                 **(metadata or {}),
                 "planning_mode": "baseline_fallback",
                 "planner": planner.name,
-                "planner_error": "Planner output could not be converted to a valid score.",
+                "planner_error": str(error) or "Planner output could not be converted to a valid score.",
             },
         )
 
@@ -104,6 +96,15 @@ def _planner_instruction(objective: str, metadata: dict[str, object]) -> str:
         for item in attachments
         if isinstance(item, dict)
     )
+    available_soloists = metadata.get("available_soloists", [])
+    soloist_summary = "\n".join(
+        (
+            f"- {item.get('id')}: capabilities="
+            f"{', '.join(str(capability) for capability in item.get('capabilities', []))}"
+        )
+        for item in available_soloists
+        if isinstance(item, dict) and item.get("status") == "available"
+    )
     return f"""
 Create a Beethoven orchestration score for this objective:
 {objective}
@@ -115,7 +116,8 @@ Return only a JSON object with this shape:
       "id": "short_snake_case",
       "capability": "analyze|plan|code|review|validate|synthesize|tool_use",
       "instruction": "clear task instruction",
-      "depends_on": ["previous_task_id"]
+      "depends_on": ["previous_task_id"],
+      "soloist": "optional_available_soloist_id"
     }}
   ]
 }}
@@ -126,10 +128,15 @@ Rules:
 - Start with analysis/planning when useful.
 - End with a synthesize task.
 - Only depend on earlier tasks.
+- Include "soloist" only when one available soloist is clearly best for that task.
+- Prefer local/private soloists for file reading, analysis, and planning when they are capable.
 - Do not include markdown outside the JSON.
 
 Attached context:
 {attachment_summary or "none"}
+
+Available execution soloists:
+{soloist_summary or "none"}
 """.strip()
 
 
@@ -168,12 +175,17 @@ def _tasks_from_payload(payload: dict[str, Any]) -> list[Task]:
             for dependency in item.get("depends_on", [])
             if isinstance(dependency, str) and dependency in known_ids
         )
+        metadata: dict[str, Any] = {}
+        preferred_soloist = item.get("soloist") or item.get("preferred_soloist")
+        if isinstance(preferred_soloist, str) and preferred_soloist.strip():
+            metadata["preferred_soloist"] = preferred_soloist.strip()
         tasks.append(
             Task(
                 id=task_id,
                 instruction=instruction,
                 capability=capability,
                 depends_on=depends_on,
+                metadata=metadata,
             )
         )
         known_ids.add(task_id)

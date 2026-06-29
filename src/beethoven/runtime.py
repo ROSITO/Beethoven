@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 
 from beethoven.conductor import Conductor
 from beethoven.core import ExecutionContext, Score, SoloistResult
-from beethoven.planning import create_baseline_score, create_dynamic_score, should_use_dynamic_planning
+from beethoven.orchestrator import check_local_orchestrator, create_local_orchestrator
+from beethoven.planning import create_baseline_score, create_dynamic_score
 from beethoven.recursive import DEFAULT_RECURSIVE_STYLE, create_recursive_score
 from beethoven.routing import CapabilityRouter, SoloistRegistry
 from beethoven.soloists import (
@@ -200,6 +202,11 @@ def check_soloist(soloist_id: str) -> dict[str, object]:
     }
 
 
+def check_orchestrator() -> dict[str, object]:
+    """Return the hidden local planner status used before execution routing."""
+    return check_local_orchestrator()
+
+
 def score_objective(
     objective: str,
     metadata: dict[str, object] | None = None,
@@ -223,15 +230,37 @@ def score_objective(
             rounds=recursive_rounds,
             metadata=combined_metadata,
         )
-    if planner_soloist and should_use_dynamic_planning(planner_soloist):
-        registry = create_default_registry()
-        planner = CapabilityRouter(registry, preferred_soloist=planner_soloist).choose(
-            next(task for task in score.tasks if task.capability.value == "plan")
+    if _local_orchestrator_planning_enabled():
+        orchestrator = create_local_orchestrator()
+        if orchestrator is not None:
+            planned_score = create_dynamic_score(
+                objective,
+                orchestrator,
+                {
+                    **combined_metadata,
+                    "available_soloists": list_soloists(),
+                    "orchestrator": "beethoven-local",
+                    "orchestrator_policy": "local-first",
+                },
+            )
+            if planned_score.metadata.get("planning_mode") != "baseline_fallback":
+                return planned_score
+            combined_metadata = {
+                **planned_score.metadata,
+                "orchestrator_fallback": True,
+            }
+    elif planner_soloist:
+        combined_metadata["legacy_planner_soloist"] = planner_soloist
+    if combined_metadata:
+        return replace(
+            score,
+            metadata={
+                **combined_metadata,
+                "planning_mode": combined_metadata.get("planning_mode", "baseline"),
+                "orchestrator": combined_metadata.get("orchestrator", "baseline"),
+            },
         )
-        return create_dynamic_score(objective, planner, combined_metadata)
-    if not combined_metadata:
-        return score
-    return replace(score, metadata=combined_metadata)
+    return score
 
 
 def run_objective(
@@ -283,3 +312,7 @@ def run_objective(
         if event_sink is not None:
             event_sink({"type": "validation_completed", "commands": validation_commands})
     return context
+
+
+def _local_orchestrator_planning_enabled() -> bool:
+    return os.getenv("BEETHOVEN_DYNAMIC_PLANNING", "1").lower() not in {"0", "false", "no"}

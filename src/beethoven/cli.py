@@ -14,7 +14,14 @@ from beethoven.config import BeethovenConfig
 from beethoven.desktop_state import DesktopSessionStore
 from beethoven.packaging import write_recursivemas_bridge, write_sidecar_script
 from beethoven.recursive import DEFAULT_RECURSIVE_STYLE, RECURSIVE_STYLES
-from beethoven.runtime import check_soloist, list_skills, list_soloists, run_objective, score_objective
+from beethoven.runtime import (
+    check_orchestrator,
+    check_soloist,
+    list_skills,
+    list_soloists,
+    run_objective,
+    score_objective,
+)
 from beethoven.serialization import context_to_dict, score_to_dict
 from beethoven.workspace import inspect_workspace, list_workspace_files
 
@@ -112,6 +119,17 @@ def build_parser() -> argparse.ArgumentParser:
     soloists_show.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
     soloists_clear = soloist_subparsers.add_parser("clear", help="Clear persisted soloist config.")
     soloists_clear.add_argument("soloist_id", choices=["recursivemas"], help="Soloist id to clear.")
+
+    orchestrator = subparsers.add_parser(
+        "orchestrator",
+        help="Inspect Beethoven's hidden local orchestration model.",
+    )
+    orchestrator_subparsers = orchestrator.add_subparsers(dest="orchestrator_command", required=True)
+    orchestrator_status = orchestrator_subparsers.add_parser(
+        "status",
+        help="Show the local orchestrator provider selected by Beethoven.",
+    )
+    orchestrator_status.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
 
     skills = subparsers.add_parser("skills", help="Inspect orchestration skills.")
     skills_subparsers = skills.add_subparsers(dest="skills_command", required=True)
@@ -276,6 +294,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"Cleared {args.soloist_id} config in {config_path}")
             return 0
 
+    if args.command == "orchestrator":
+        if args.orchestrator_command == "status":
+            report = check_orchestrator()
+            if args.json:
+                print(json.dumps({"orchestrator": report}, indent=2, ensure_ascii=False))
+            else:
+                print_orchestrator_status(report)
+            return 0 if report.get("available") else 1
+
     if args.command == "skills":
         skills = list_skills()
         if args.skills_command == "list":
@@ -399,6 +426,9 @@ def handle_terminal_command(
     if command == "/soloists":
         print_soloists(list_soloists())
         return
+    if command == "/orchestrator":
+        print_orchestrator_status(check_orchestrator())
+        return
     if command == "/skills":
         print_skills(list_skills())
         return
@@ -508,6 +538,7 @@ def print_terminal_help(output_fn: Callable[[str], None]) -> None:
     output_fn("- /score <objective>     Preview a score")
     output_fn("- /sessions              List local sessions")
     output_fn("- /soloists              List soloists")
+    output_fn("- /orchestrator          Show hidden local orchestrator status")
     output_fn("- /skills                List orchestration skills")
     output_fn("- /workspace             Show workspace/Git context")
     output_fn("- /files [query]         List attachable files")
@@ -623,6 +654,20 @@ def print_soloist_check(report: dict[str, object]) -> None:
     output_preview = report.get("output_preview")
     if output_preview:
         print(f"Output: {output_preview}")
+
+
+def print_orchestrator_status(report: dict[str, object]) -> None:
+    print(f"Orchestrator: {report.get('id')}")
+    print(f"Status: {report.get('status')}")
+    print(f"Available: {report.get('available')}")
+    print(f"Provider: {report.get('provider', report.get('configured_provider'))}")
+    model = report.get("model")
+    if model:
+        print(f"Model: {model}")
+    base_url = report.get("base_url")
+    if base_url:
+        print(f"Base URL: {base_url}")
+    print(f"Message: {report.get('message')}")
 
 
 def print_skills(skills: list[dict[str, object]]) -> None:

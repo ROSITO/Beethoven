@@ -174,3 +174,43 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
     assert "changes" in workspace_data["workspace"]
     assert files_data["workspace"]["name"] == "Beethoven"
     assert any(item["path"] == "README.md" for item in files_data["files"])
+
+
+def test_desktop_api_can_trigger_solomlx_install(tmp_path, monkeypatch) -> None:
+    class TestHandler(BeethovenDesktopHandler):
+        store = DesktopSessionStore(tmp_path / "sessions.json")
+
+    install_calls: list[dict[str, object]] = []
+
+    def fake_install(*, upgrade: bool = False, with_mlx: bool = True) -> dict[str, object]:
+        install_calls.append({"upgrade": upgrade, "with_mlx": with_mlx})
+        return {
+            "id": "solomlx",
+            "installed": True,
+            "path": "/tmp/SoloMLX-server",
+            "with_mlx": with_mlx,
+        }
+
+    monkeypatch.setattr("beethoven.desktop_server.solomlx_install", fake_install)
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), TestHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    try:
+        host, port = server.server_address
+        request = Request(
+            f"http://{host}:{port}/api/solomlx/install",
+            data=json.dumps({"upgrade": True, "with_mlx": False}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        payload = json.loads(urlopen(request, timeout=2).read().decode("utf-8"))
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+    assert install_calls == [{"upgrade": True, "with_mlx": False}]
+    assert payload["solomlx"]["installed"] is True
+    assert payload["solomlx"]["with_mlx"] is False

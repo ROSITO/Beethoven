@@ -156,6 +156,63 @@ Required:
 - Validation hooks.
 - Human approval gates for risky tasks.
 
+### Current MVP Status
+
+As of 2026-07-01, Beethoven has crossed from concept into a working pre-alpha:
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| Core score/conductor/runtime contracts | Done | `Task`, `Score`, `Soloist`, router, conductor, trace, serialization. |
+| Terminal CLI | Done | `beethoven chat`, `score`, `run`, sessions, workspace, soloists, skills, orchestrator, SoloMLX. |
+| Desktop workbench | In progress | Working local API, score preview, streaming run endpoint, session restore, file attachments, runtime board. |
+| Hidden Beethoven orchestrator | Done | Local conductor uses SoloMLX/OpenAI-compatible `/v1` first, then Ollama. It is not user-selectable. |
+| SoloMLX runtime brick | Done | Install, prepare Ministral, start, stop, status, memory guardrails, desktop API. |
+| Ollama adapter | Done | Available when explicitly enabled and model exists. |
+| OpenAI-compatible adapter | Partial | Used for the hidden orchestrator; execution-side soloist still needed. |
+| Codex/Claude adapters | Done | Local CLI adapters are available when installed and logged in. |
+| RecursiveMAS integration | Partial | Native recursive scores and optional sidecar bridge are present; deeper runtime collaboration remains experimental. |
+| `@path` attachments | Partial | Safe workspace file reads exist; richer packing/token UI is still needed. |
+| Validation hooks | Partial | Local commands run after a score; policy profiles and approval gates remain. |
+| Production packaging | Partial | Tauri scaffold and sidecar generation exist; installer-grade bundled Python strategy remains. |
+
+### MVP Acceptance Criteria
+
+The MVP is acceptable when:
+
+- A user opens the desktop to an empty task state and can run a first objective
+  without prefilled demo content.
+- Beethoven's hidden local orchestrator drafts the score by default through the
+  managed SoloMLX/Ministral runtime when available.
+- The user can see whether the conductor, SoloMLX, RecursiveMAS, Codex, Claude,
+  Ollama, and deterministic fallback are available.
+- The desktop conversation shows normal user and assistant message flow, while
+  the score inspector shows task planning/execution separately.
+- Attached `@path` files are visible, bounded, and included in model context.
+- Runs stream task state, selected soloist, output, validation, and final
+  synthesis without waiting for the final context only.
+- Risky actions are gated by permission policy before execution.
+- The terminal CLI can perform every important desktop action.
+- Tauri dev mode can launch a working app backed by a predictable Python
+  sidecar strategy.
+
+### Immediate Product Tranches
+
+P0:
+
+- finish the desktop first-run state, runtime board, and conversation/run split;
+- make SoloMLX/Ministral the default hidden conductor path in product copy and
+  runtime diagnostics;
+- add execution-side OpenAI-compatible soloist config;
+- turn validation hooks into named test profiles with visible results;
+- harden attachment packing and desktop attachment inspection.
+
+P1:
+
+- add approval/diff workflow for code changes;
+- deepen RecursiveMAS collaboration beyond the bridge protocol;
+- add semantic memory/cache;
+- package Tauri with the Python sidecar and managed local runtime checks.
+
 Deferred:
 
 - marketplace;

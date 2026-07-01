@@ -21,7 +21,13 @@ from beethoven.runtime import (
     score_objective,
 )
 from beethoven.serialization import context_to_dict, score_to_dict
-from beethoven.solomlx import solomlx_prepare_orchestrator, solomlx_start, solomlx_status, solomlx_stop
+from beethoven.solomlx import (
+    solomlx_install,
+    solomlx_prepare_orchestrator,
+    solomlx_start,
+    solomlx_status,
+    solomlx_stop,
+)
 from beethoven.workspace import inspect_workspace, list_workspace_files
 
 
@@ -133,6 +139,20 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
                 return
             try:
                 self._send_json({"solomlx": solomlx_start(host=host, port=port)})
+            except RuntimeError as error:
+                self._send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+            return
+
+        if path == "/api/solomlx/install":
+            payload = self._read_payload()
+            if payload is None:
+                return
+            try:
+                report = solomlx_install(
+                    upgrade=bool(payload.get("upgrade", False)),
+                    with_mlx=bool(payload.get("with_mlx", True)),
+                )
+                self._send_json({"solomlx": report})
             except RuntimeError as error:
                 self._send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
             return

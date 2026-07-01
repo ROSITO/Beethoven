@@ -40,6 +40,12 @@ const workspaceStatusList = document.querySelector("#workspaceStatusList");
 const skillsPanel = document.querySelector("#skillsPanel");
 const closeSkillsPanel = document.querySelector("#closeSkillsPanel");
 const skillsGrid = document.querySelector("#skillsGrid");
+const runtimeGrid = document.querySelector("#runtimeGrid");
+const refreshRuntimeButton = document.querySelector("#refreshRuntimeButton");
+const installSoloMlxButton = document.querySelector("#installSoloMlxButton");
+const prepareSoloMlxButton = document.querySelector("#prepareSoloMlxButton");
+const startSoloMlxButton = document.querySelector("#startSoloMlxButton");
+const stopSoloMlxButton = document.querySelector("#stopSoloMlxButton");
 const checkRecursiveMasButton = document.querySelector("#checkRecursiveMasButton");
 const saveRecursiveMasButton = document.querySelector("#saveRecursiveMasButton");
 const clearRecursiveMasButton = document.querySelector("#clearRecursiveMasButton");
@@ -70,6 +76,11 @@ let allFiles = [];
 let currentScore = null;
 let currentRunContext = null;
 let chatMessages = [];
+let runtimeStatus = {
+  orchestrator: null,
+  solomlx: null,
+  recursivemas: null
+};
 
 const modeCopy = {
   chat: {
@@ -392,6 +403,68 @@ function renderSkills(skills) {
       `;
     })
     .join("");
+}
+
+function runtimeTone(status) {
+  if (status === "available" || status === "running") {
+    return "success";
+  }
+  if (status === "not_installed" || status === "stopped" || status === "planned") {
+    return "neutral";
+  }
+  return "warning";
+}
+
+function runtimeCard({ title, status, badge, body, detail }) {
+  return `
+    <article class="runtime-card">
+      <header>
+        <h3>${escapeHtml(title)}</h3>
+        <span class="pill ${runtimeTone(status)}">${escapeHtml(badge ?? status ?? "unknown")}</span>
+      </header>
+      <p>${escapeHtml(body ?? "No runtime status loaded yet.")}</p>
+      ${detail ? `<div class="route-reason">${escapeHtml(detail)}</div>` : ""}
+    </article>
+  `;
+}
+
+function renderRuntimeStatus() {
+  const orchestrator = runtimeStatus.orchestrator;
+  const solomlx = runtimeStatus.solomlx;
+  const recursivemas = runtimeStatus.recursivemas;
+  const solomlxModels = solomlx?.models?.length
+    ? `Models: ${solomlx.models.slice(0, 2).join(", ")}`
+    : solomlx?.preferred_orchestrator_model
+      ? `Preferred: ${solomlx.preferred_orchestrator_model}`
+      : "";
+
+  runtimeGrid.innerHTML = [
+    runtimeCard({
+      title: "Beethoven Orchestrator",
+      status: orchestrator?.status,
+      badge: orchestrator?.provider ?? orchestrator?.status,
+      body: orchestrator?.available
+        ? "Hidden local conductor is ready to draft and route scores."
+        : orchestrator?.message ?? "Local conductor status is unavailable.",
+      detail: orchestrator?.model
+        ? `${orchestrator.profile ?? "profile"} · ${orchestrator.model}`
+        : orchestrator?.base_url
+    }),
+    runtimeCard({
+      title: "SoloMLX Runtime",
+      status: solomlx?.status,
+      badge: solomlx?.status,
+      body: solomlx?.message ?? "SoloMLX status is unavailable.",
+      detail: solomlxModels
+    }),
+    runtimeCard({
+      title: "RecursiveMAS",
+      status: recursivemas?.status,
+      badge: recursivemas?.status,
+      body: recursivemas?.message ?? "Optional recursive sidecar is not checked yet.",
+      detail: recursivemas?.command
+    })
+  ].join("");
 }
 
 function renderSoloistCheck(report) {
@@ -957,6 +1030,83 @@ async function loadSkills() {
   renderSkills(allSkills);
 }
 
+async function loadRuntimeStatus() {
+  refreshRuntimeButton.textContent = "Refreshing…";
+  refreshRuntimeButton.disabled = true;
+  try {
+    const [orchestratorResponse, soloMlxResponse] = await Promise.all([
+      fetch("/api/orchestrator"),
+      fetch("/api/solomlx")
+    ]);
+    if (!orchestratorResponse.ok || !soloMlxResponse.ok) {
+      throw new Error("Runtime status API returned an error.");
+    }
+    const orchestratorPayload = await orchestratorResponse.json();
+    const soloMlxPayload = await soloMlxResponse.json();
+    runtimeStatus = {
+      ...runtimeStatus,
+      orchestrator: orchestratorPayload.orchestrator ?? null,
+      solomlx: soloMlxPayload.solomlx ?? null
+    };
+  } catch (error) {
+    runtimeStatus = {
+      ...runtimeStatus,
+      orchestrator: {
+        status: "unavailable",
+        available: false,
+        message: "Unable to reach Beethoven's runtime status endpoints."
+      },
+      solomlx: {
+        status: "unavailable",
+        available: false,
+        message: "Unable to reach SoloMLX status endpoint."
+      }
+    };
+    console.error(error);
+  } finally {
+    renderRuntimeStatus();
+    refreshRuntimeButton.textContent = "Refresh runtime";
+    refreshRuntimeButton.disabled = false;
+  }
+}
+
+async function runSoloMlxAction(button, label, endpoint, method = "POST") {
+  button.textContent = `${label}…`;
+  button.disabled = true;
+  try {
+    const response = await fetch(endpoint, {
+      method,
+      headers: method === "POST" ? { "Content-Type": "application/json" } : undefined,
+      body: method === "POST" ? JSON.stringify({}) : undefined
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error ?? `SoloMLX API returned ${response.status}`);
+    }
+    runtimeStatus = {
+      ...runtimeStatus,
+      solomlx: payload.solomlx ?? runtimeStatus.solomlx
+    };
+    renderRuntimeStatus();
+    await loadRuntimeStatus();
+    await loadSoloists();
+  } catch (error) {
+    runtimeStatus = {
+      ...runtimeStatus,
+      solomlx: {
+        status: "action_failed",
+        available: false,
+        message: error.message ?? "SoloMLX action failed."
+      }
+    };
+    renderRuntimeStatus();
+    console.error(error);
+  } finally {
+    button.textContent = label;
+    button.disabled = false;
+  }
+}
+
 async function loadRecursiveMasConfig() {
   try {
     const response = await fetch("/api/soloists/recursivemas/config");
@@ -1079,14 +1229,26 @@ async function checkRecursiveMas() {
   try {
     const response = await fetch("/api/soloists/recursivemas/check");
     const payload = await response.json();
-    renderSoloistCheck(payload.check ?? {});
+    const report = payload.check ?? {};
+    runtimeStatus = {
+      ...runtimeStatus,
+      recursivemas: report
+    };
+    renderRuntimeStatus();
+    renderSoloistCheck(report);
   } catch (error) {
-    renderSoloistCheck({
+    const report = {
       id: "recursivemas",
       status: "unavailable",
       available: false,
       message: "Unable to reach the desktop RecursiveMAS check endpoint."
-    });
+    };
+    runtimeStatus = {
+      ...runtimeStatus,
+      recursivemas: report
+    };
+    renderRuntimeStatus();
+    renderSoloistCheck(report);
     console.error(error);
   } finally {
     checkRecursiveMasButton.textContent = "Check RecursiveMAS";
@@ -1165,6 +1327,19 @@ slashCommandsButton.addEventListener("click", () => toggleCommandPanel(true));
 scorePreviewButton.addEventListener("click", previewComposerScore);
 closeCommandPanel.addEventListener("click", () => toggleCommandPanel(false));
 closeSkillsPanel.addEventListener("click", () => toggleSkillsPanel(false));
+refreshRuntimeButton.addEventListener("click", loadRuntimeStatus);
+installSoloMlxButton.addEventListener("click", () =>
+  runSoloMlxAction(installSoloMlxButton, "Install SoloMLX", "/api/solomlx/install")
+);
+prepareSoloMlxButton.addEventListener("click", () =>
+  runSoloMlxAction(prepareSoloMlxButton, "Prepare Ministral", "/api/solomlx/prepare-orchestrator")
+);
+startSoloMlxButton.addEventListener("click", () =>
+  runSoloMlxAction(startSoloMlxButton, "Start SoloMLX", "/api/solomlx/start")
+);
+stopSoloMlxButton.addEventListener("click", () =>
+  runSoloMlxAction(stopSoloMlxButton, "Stop SoloMLX", "/api/solomlx", "DELETE")
+);
 checkRecursiveMasButton.addEventListener("click", checkRecursiveMas);
 saveRecursiveMasButton.addEventListener("click", saveRecursiveMasConfig);
 clearRecursiveMasButton.addEventListener("click", clearRecursiveMasConfig);
@@ -1233,5 +1408,7 @@ renderScore();
 loadWorkspace();
 loadSoloists();
 loadSkills();
+loadRuntimeStatus();
+checkRecursiveMas();
 loadFiles();
 loadSessions();

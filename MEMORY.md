@@ -1,6 +1,6 @@
 # Beethoven Memory
 
-Last updated: 2026-06-29
+Last updated: 2026-07-01
 
 ## Vision
 
@@ -206,6 +206,12 @@ Implemented endpoints:
 - `GET /api/sessions`;
 - `GET /api/sessions/<id>`;
 - `GET /api/soloists`;
+- `GET /api/orchestrator`;
+- `GET /api/solomlx`;
+- `POST /api/solomlx/install`;
+- `POST /api/solomlx/start`;
+- `POST /api/solomlx/prepare-orchestrator`;
+- `DELETE /api/solomlx`;
 - `GET /api/skills`;
 - `GET /api/workspace`;
 - `GET /api/files`;
@@ -247,6 +253,10 @@ Implemented UI:
 - run through `/api/run/stream`, with live composer status updates while events
   arrive;
 - score inspector and progress timeline;
+- runtime board for Beethoven's hidden local orchestrator, the managed SoloMLX
+  brick, and RecursiveMAS availability;
+- SoloMLX controls for install, prepare Ministral, start, stop, and refresh
+  status from the desktop;
 - workspace/Git context through `/api/workspace`;
 - attachable context files through `/api/files`, inserted as `@path`;
 - filterable `/ commands` palette that inserts CLI commands into composer;
@@ -326,8 +336,9 @@ Current test suite:
 
 Latest known status after the current implementation:
 
-- `12 passed`;
-- Ruff passes.
+- `44 passed`;
+- Ruff passes;
+- `node --check desktop/app.js` passes.
 
 Test coverage currently includes:
 
@@ -344,6 +355,7 @@ Test coverage currently includes:
 - sidecar launcher generation;
 - RecursiveMAS bridge generation;
 - desktop API health, soloists, skills, workspace, files, run, sessions, detail;
+- desktop API orchestrator/SoloMLX status and mocked SoloMLX install trigger;
 - conductor dependency execution;
 - invalid dependency rejection.
 
@@ -376,8 +388,9 @@ Browser QA has been done with the in-app browser for:
 ## Known Gaps
 
 - SoloMLX-server/OpenAI-compatible and Ollama can now back the hidden local
-  orchestrator, but the execution-side OpenAI-compatible soloist and persisted
-  orchestrator config UI are still missing.
+  orchestrator, and the desktop can inspect/control the managed SoloMLX brick.
+  The execution-side OpenAI-compatible soloist and persisted orchestrator config
+  UI are still missing.
 - The terminal CLI is line-oriented, not a full-screen TUI like OpenCode yet.
 - `soloist`, `permission_mode`, and `effort` are recorded but not deeply enforced
   beyond metadata/routing scaffolding.

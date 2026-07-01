@@ -50,6 +50,12 @@ const checkRecursiveMasButton = document.querySelector("#checkRecursiveMasButton
 const saveRecursiveMasButton = document.querySelector("#saveRecursiveMasButton");
 const clearRecursiveMasButton = document.querySelector("#clearRecursiveMasButton");
 const recursiveMasCommand = document.querySelector("#recursiveMasCommand");
+const openAiBaseUrl = document.querySelector("#openAiBaseUrl");
+const openAiModel = document.querySelector("#openAiModel");
+const openAiApiKey = document.querySelector("#openAiApiKey");
+const checkOpenAiButton = document.querySelector("#checkOpenAiButton");
+const saveOpenAiButton = document.querySelector("#saveOpenAiButton");
+const clearOpenAiButton = document.querySelector("#clearOpenAiButton");
 const soloistCheckResult = document.querySelector("#soloistCheckResult");
 const scorePanel = document.querySelector("#scorePanel");
 const closeScorePanel = document.querySelector("#closeScorePanel");
@@ -482,6 +488,15 @@ function renderSoloistCheck(report) {
 
 function renderRecursiveMasConfig(config) {
   recursiveMasCommand.value = config.command ?? "";
+}
+
+function renderOpenAiConfig(config) {
+  openAiBaseUrl.value = config.base_url ?? "";
+  openAiModel.value = config.model ?? "";
+  openAiApiKey.value = "";
+  openAiApiKey.placeholder = config.api_key_configured
+    ? "API key configured"
+    : "leave blank to keep local/no-key";
 }
 
 function renderScorePreview(score) {
@@ -1120,6 +1135,19 @@ async function loadRecursiveMasConfig() {
   }
 }
 
+async function loadOpenAiConfig() {
+  try {
+    const response = await fetch("/api/soloists/openai-compatible/config");
+    if (!response.ok) {
+      throw new Error(`OpenAI-compatible config API returned ${response.status}`);
+    }
+    const payload = await response.json();
+    renderOpenAiConfig(payload.config ?? {});
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 async function saveRecursiveMasConfig() {
   const command = recursiveMasCommand.value.trim();
   if (!command) {
@@ -1180,6 +1208,96 @@ async function clearRecursiveMasConfig() {
   } finally {
     clearRecursiveMasButton.textContent = "Clear";
     clearRecursiveMasButton.disabled = false;
+  }
+}
+
+async function checkOpenAiCompatible() {
+  checkOpenAiButton.textContent = "Checking…";
+  checkOpenAiButton.disabled = true;
+  try {
+    const response = await fetch("/api/soloists/openai-compatible/check");
+    const payload = await response.json();
+    renderSoloistCheck(payload.check ?? {});
+  } catch (error) {
+    renderSoloistCheck({
+      id: "openai-compatible",
+      status: "unavailable",
+      available: false,
+      message: "Unable to reach the OpenAI-compatible check endpoint."
+    });
+    console.error(error);
+  } finally {
+    checkOpenAiButton.textContent = "Check OpenAI API";
+    checkOpenAiButton.disabled = false;
+  }
+}
+
+async function saveOpenAiConfig() {
+  const baseUrl = openAiBaseUrl.value.trim();
+  if (!baseUrl) {
+    openAiBaseUrl.focus();
+    return;
+  }
+  saveOpenAiButton.textContent = "Saving…";
+  saveOpenAiButton.disabled = true;
+  try {
+    const response = await fetch("/api/soloists/openai-compatible/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        base_url: baseUrl,
+        model: openAiModel.value.trim(),
+        api_key: openAiApiKey.value.trim()
+      })
+    });
+    if (!response.ok) {
+      throw new Error(`OpenAI-compatible config API returned ${response.status}`);
+    }
+    const payload = await response.json();
+    renderOpenAiConfig(payload.config ?? {});
+    await checkOpenAiCompatible();
+    await loadSoloists();
+    await loadSkills();
+  } catch (error) {
+    renderSoloistCheck({
+      id: "openai-compatible",
+      status: "config_failed",
+      available: false,
+      message: "Unable to save OpenAI-compatible config."
+    });
+    console.error(error);
+  } finally {
+    saveOpenAiButton.textContent = "Save API";
+    saveOpenAiButton.disabled = false;
+  }
+}
+
+async function clearOpenAiConfig() {
+  clearOpenAiButton.textContent = "Clearing…";
+  clearOpenAiButton.disabled = true;
+  try {
+    const response = await fetch("/api/soloists/openai-compatible/config", {
+      method: "DELETE"
+    });
+    if (!response.ok) {
+      throw new Error(`OpenAI-compatible config API returned ${response.status}`);
+    }
+    const payload = await response.json();
+    renderOpenAiConfig(payload.config ?? {});
+    await checkOpenAiCompatible();
+    await loadSoloists();
+    await loadSkills();
+  } catch (error) {
+    renderSoloistCheck({
+      id: "openai-compatible",
+      status: "clear_failed",
+      available: false,
+      message: "Unable to clear OpenAI-compatible config."
+    });
+    console.error(error);
+  } finally {
+    clearOpenAiButton.textContent = "Clear API";
+    clearOpenAiButton.disabled = false;
   }
 }
 
@@ -1343,6 +1461,9 @@ stopSoloMlxButton.addEventListener("click", () =>
 checkRecursiveMasButton.addEventListener("click", checkRecursiveMas);
 saveRecursiveMasButton.addEventListener("click", saveRecursiveMasConfig);
 clearRecursiveMasButton.addEventListener("click", clearRecursiveMasConfig);
+checkOpenAiButton.addEventListener("click", checkOpenAiCompatible);
+saveOpenAiButton.addEventListener("click", saveOpenAiConfig);
+clearOpenAiButton.addEventListener("click", clearOpenAiConfig);
 closeScorePanel.addEventListener("click", () => toggleScorePanel(false));
 closeFilesPanel.addEventListener("click", () => toggleFilesPanel(false));
 closeSessionPanel.addEventListener("click", () => toggleSessionPanel(false));
@@ -1410,5 +1531,7 @@ loadSoloists();
 loadSkills();
 loadRuntimeStatus();
 checkRecursiveMas();
+loadRecursiveMasConfig();
+loadOpenAiConfig();
 loadFiles();
 loadSessions();

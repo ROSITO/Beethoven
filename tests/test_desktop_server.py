@@ -58,6 +58,30 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
         )
         clear_payload = json.loads(urlopen(delete_request, timeout=2).read().decode("utf-8"))
 
+        openai_config_request = Request(
+            f"http://{host}:{port}/api/soloists/openai-compatible/config",
+            data=json.dumps(
+                {
+                    "base_url": "http://127.0.0.1:8080/v1",
+                    "model": "local-model",
+                    "api_key": "secret",
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        openai_config_payload = json.loads(urlopen(openai_config_request, timeout=2).read().decode("utf-8"))
+        openai_show_payload = json.loads(
+            urlopen(f"http://{host}:{port}/api/soloists/openai-compatible/config", timeout=2)
+            .read()
+            .decode("utf-8")
+        )
+        openai_delete_request = Request(
+            f"http://{host}:{port}/api/soloists/openai-compatible/config",
+            method="DELETE",
+        )
+        openai_clear_payload = json.loads(urlopen(openai_delete_request, timeout=2).read().decode("utf-8"))
+
         skills = urlopen(f"http://{host}:{port}/api/skills", timeout=2)
         skills_data = json.loads(skills.read().decode("utf-8"))
 
@@ -168,6 +192,12 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
     assert config_payload["config"]["configured"] is True
     assert configured_check_data["check"]["status"] == "available"
     assert clear_payload["config"]["configured"] is False
+    assert openai_config_payload["config"]["configured"] is True
+    assert openai_config_payload["config"]["api_key_configured"] is True
+    assert "secret" not in json.dumps(openai_config_payload)
+    assert openai_show_payload["config"]["base_url"] == "http://127.0.0.1:8080/v1"
+    assert openai_show_payload["config"]["model"] == "local-model"
+    assert openai_clear_payload["config"]["configured"] is False
     assert skills_data["skills"][0]["id"] == "analyze"
     assert skills_data["skills"][0]["status"] == "available"
     assert workspace_data["workspace"]["name"] == "Beethoven"

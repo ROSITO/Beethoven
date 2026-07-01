@@ -30,6 +30,8 @@ The foundation is pre-alpha but executable. It includes:
 - a Python orchestration kernel;
 - a local echo soloist;
 - a first Ollama soloist adapter when the configured local model is available;
+- an execution-side OpenAI-compatible soloist adapter for SoloMLX, LiteLLM,
+  OpenRouter, OpenAI-compatible local servers, and cloud `/v1` APIs;
 - deterministic score planning;
 - dependency-aware execution;
 - run event emission from the conductor;
@@ -71,7 +73,7 @@ Important modules:
   express sequential, deliberation, mixture, and distillation patterns as
   portable Beethoven tasks.
 - `src/beethoven/soloists.py`: `EchoSoloist`, the offline deterministic worker,
-  plus `OllamaSoloist`, the first local model adapter, and
+  `OpenAICompatibleSoloist`, `OllamaSoloist`, local CLI adapters, and
   `RecursiveMASSoloist`, the optional JSON sidecar adapter.
 - `src/beethoven/runtime.py`: shared runtime helpers for CLI and desktop:
   `score_objective`, `run_objective`, `list_soloists`, `list_skills`,
@@ -123,13 +125,16 @@ Current available soloists:
   (`BEETHOVEN_OLLAMA_MODEL`, default `qwen3-coder:latest`), but disabled by
   default unless `BEETHOVEN_ENABLE_OLLAMA=1` is set. This is deliberate because
   large local models can create heavy memory pressure.
+- `openai-compatible`: execution soloist for `/v1/chat/completions` APIs. It is
+  available when `BEETHOVEN_OPENAI_COMPAT_BASE_URL`/`OPENAI_BASE_URL` or the
+  persisted config points to a reachable endpoint. It can reuse SoloMLX,
+  LiteLLM, OpenRouter, OpenAI-compatible local servers, or cloud APIs.
 - `recursivemas`: optional RecursiveMAS backend sidecar. It becomes available
   when `BEETHOVEN_RECURSIVEMAS_COMMAND` points to an executable command that
   speaks the `beethoven.recursivemas.v1` JSON stdin/stdout protocol.
 
 Planned soloist catalog:
 
-- `openai-compatible`;
 - `codex`.
 
 ## CLI Surface
@@ -164,6 +169,9 @@ beethoven soloists show recursivemas
 beethoven soloists clear recursivemas
 beethoven soloists check recursivemas
 beethoven soloists check recursivemas --json
+beethoven soloists configure openai-compatible --base-url "http://127.0.0.1:8080/v1" --model "mlx-community/Ministral-3-3B-Instruct-2512-4bit"
+beethoven soloists check openai-compatible
+beethoven run "Summarize @README.md" --soloist openai-compatible
 beethoven skills list
 beethoven skills list --json
 beethoven workspace
@@ -222,6 +230,8 @@ Implemented endpoints:
 - `GET /api/soloists/<id>/check`, currently used for RecursiveMAS diagnostics.
 - `GET`, `POST`, `DELETE /api/soloists/recursivemas/config` for persisted
   RecursiveMAS bridge command management.
+- `GET`, `POST`, `DELETE /api/soloists/openai-compatible/config` for persisted
+  OpenAI-compatible execution soloist config.
 
 Development notes:
 
@@ -264,6 +274,7 @@ Implemented UI:
 - RecursiveMAS healthcheck from the skills panel through
   `/api/soloists/recursivemas/check`;
 - RecursiveMAS command save/clear controls in the skills panel;
+- OpenAI-compatible base URL/model/API key controls in the skills panel;
 - command center showing CLI commands and Git status;
 - top-bar session actions for copying score IDs, inserting session commands,
   exporting score JSON, and opening command center;
@@ -336,7 +347,7 @@ Current test suite:
 
 Latest known status after the current implementation:
 
-- `44 passed`;
+- `48 passed`;
 - Ruff passes;
 - `node --check desktop/app.js` passes.
 
@@ -356,6 +367,8 @@ Test coverage currently includes:
 - RecursiveMAS bridge generation;
 - desktop API health, soloists, skills, workspace, files, run, sessions, detail;
 - desktop API orchestrator/SoloMLX status and mocked SoloMLX install trigger;
+- OpenAI-compatible execution soloist config, healthcheck, registry routing,
+  and mocked chat completion execution;
 - conductor dependency execution;
 - invalid dependency rejection.
 
@@ -369,6 +382,18 @@ Browser QA has been done with the in-app browser for:
 - slash command palette;
 - session action menu;
 - mobile 390px no horizontal overflow.
+
+Runtime proof after adding the execution-side OpenAI-compatible soloist:
+
+```bash
+BEETHOVEN_DYNAMIC_PLANNING=0 \
+BEETHOVEN_OPENAI_COMPAT_BASE_URL=http://127.0.0.1:8080/v1 \
+BEETHOVEN_OPENAI_COMPAT_MODEL=mlx-community/Ministral-3-3B-Instruct-2512-4bit \
+beethoven run "réponds simplement OK" --soloist openai-compatible --json
+```
+
+This completed with trace `understand:openai-compatible`,
+`plan:openai-compatible`, `synthesize:openai-compatible`.
 
 ## Decisions Already Made
 
@@ -388,9 +413,9 @@ Browser QA has been done with the in-app browser for:
 ## Known Gaps
 
 - SoloMLX-server/OpenAI-compatible and Ollama can now back the hidden local
-  orchestrator, and the desktop can inspect/control the managed SoloMLX brick.
-  The execution-side OpenAI-compatible soloist and persisted orchestrator config
-  UI are still missing.
+  orchestrator, the desktop can inspect/control the managed SoloMLX brick, and
+  OpenAI-compatible `/v1` APIs can be configured as execution soloists.
+  Persisted hidden orchestrator config UI is still missing.
 - The terminal CLI is line-oriented, not a full-screen TUI like OpenCode yet.
 - `soloist`, `permission_mode`, and `effort` are recorded but not deeply enforced
   beyond metadata/routing scaffolding.
@@ -419,8 +444,8 @@ Suggested steps:
 
 - Add adapter metadata/config objects instead of hard-coded env reads in
   `soloists.py`.
-- Add an `OpenAICompatibleSoloist` behind `OPENAI_BASE_URL` /
-  `OPENAI_API_KEY`-style config.
+- Keep hardening adapter metadata/config objects instead of hard-coded env reads
+  in `soloists.py`.
 - Add tests that mock subprocess/API calls and never require network/API keys.
 - Decide how routing handles requested-but-unavailable soloists in desktop UI.
 - Keep `local-echo` as deterministic fallback for tests and demos.

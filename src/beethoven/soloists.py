@@ -10,6 +10,9 @@ import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 from beethoven.config import BeethovenConfig
 from beethoven.core import Capability, ExecutionContext, Score, SoloistResult, Task
@@ -17,6 +20,8 @@ from beethoven.core import Capability, ExecutionContext, Score, SoloistResult, T
 MAX_OLLAMA_ATTACHMENT_CHARS = int(os.getenv("BEETHOVEN_OLLAMA_ATTACHMENT_CHARS", "12000"))
 CLI_ADAPTER_TIMEOUT_SECONDS = int(os.getenv("BEETHOVEN_CLI_ADAPTER_TIMEOUT", "240"))
 RECURSIVEMAS_TIMEOUT_SECONDS = int(os.getenv("BEETHOVEN_RECURSIVEMAS_TIMEOUT", "240"))
+OPENAI_COMPATIBLE_TIMEOUT_SECONDS = float(os.getenv("BEETHOVEN_OPENAI_COMPAT_TIMEOUT", "120"))
+OPENAI_COMPATIBLE_CHECK_TIMEOUT_SECONDS = float(os.getenv("BEETHOVEN_OPENAI_COMPAT_CHECK_TIMEOUT", "1.5"))
 MODEL_ADAPTER_CAPABILITIES = frozenset(
     {
         Capability.ANALYZE,
@@ -233,6 +238,64 @@ class OllamaSoloist:
 
 
 @dataclass(frozen=True)
+class OpenAICompatibleSoloist:
+    """Execution soloist backed by any OpenAI-compatible chat completions API."""
+
+    name: str = "openai-compatible"
+    base_url: str = ""
+    model: str = ""
+    api_key: str = ""
+    timeout_seconds: float = OPENAI_COMPATIBLE_TIMEOUT_SECONDS
+    capabilities: frozenset[Capability] = MODEL_ADAPTER_CAPABILITIES
+
+    def __post_init__(self) -> None:
+        config = openai_compatible_config()
+        object.__setattr__(self, "base_url", (self.base_url or config.get("base_url", "")).rstrip("/"))
+        object.__setattr__(self, "model", self.model or config.get("model", ""))
+        object.__setattr__(self, "api_key", self.api_key or config.get("api_key", ""))
+
+    def perform(self, task: Task, context: ExecutionContext) -> SoloistResult:
+        if not self.base_url:
+            raise RuntimeError("OpenAI-compatible soloist is not configured.")
+        model = self.model or _first_openai_compatible_model(self.base_url, self.api_key)
+        if not model:
+            raise RuntimeError("OpenAI-compatible soloist did not expose a model.")
+        payload = {
+            "model": model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a Beethoven soloist executing one score task. Return a concise useful result.",
+                },
+                {"role": "user", "content": _build_model_prompt(task, context)},
+            ],
+            "temperature": 0.2,
+            "stream": False,
+        }
+        request = Request(
+            _join_url(self.base_url, "chat/completions"),
+            data=json.dumps(payload).encode("utf-8"),
+            headers=_openai_compatible_headers(self.api_key),
+            method="POST",
+        )
+        with urlopen(request, timeout=self.timeout_seconds) as response:
+            raw = response.read().decode("utf-8")
+        response_payload = json.loads(raw)
+        usage = response_payload.get("usage", {})
+        if not isinstance(usage, dict):
+            usage = {}
+        return SoloistResult(
+            output=_chat_completion_content(response_payload),
+            tokens=int(usage.get("total_tokens", 0) or 0),
+            metadata={
+                "mode": "openai-compatible",
+                "base_url": self.base_url,
+                "model": model,
+            },
+        )
+
+
+@dataclass(frozen=True)
 class RecursiveMASSoloist:
     """Optional RecursiveMAS sidecar adapter using a JSON stdin/stdout protocol."""
 
@@ -290,6 +353,88 @@ def claude_cli_is_available() -> bool:
 
 def codex_cli_is_available() -> bool:
     return shutil.which("codex") is not None
+
+
+def openai_compatible_config() -> dict[str, str]:
+    stored = BeethovenConfig().get_openai_compatible()
+    base_url = (
+        os.getenv("BEETHOVEN_OPENAI_COMPAT_BASE_URL", "").strip()
+        or os.getenv("OPENAI_BASE_URL", "").strip()
+        or stored.get("base_url", "")
+    ).rstrip("/")
+    model = (
+        os.getenv("BEETHOVEN_OPENAI_COMPAT_MODEL", "").strip()
+        or os.getenv("OPENAI_MODEL", "").strip()
+        or stored.get("model", "")
+    )
+    api_key = (
+        os.getenv("BEETHOVEN_OPENAI_COMPAT_API_KEY", "").strip()
+        or os.getenv("OPENAI_API_KEY", "").strip()
+        or stored.get("api_key", "")
+    )
+    return {"base_url": base_url, "model": model, "api_key": api_key}
+
+
+def openai_compatible_is_configured() -> bool:
+    return bool(openai_compatible_config().get("base_url"))
+
+
+def openai_compatible_is_available() -> bool:
+    return bool(check_openai_compatible().get("available"))
+
+
+def check_openai_compatible() -> dict[str, object]:
+    config = openai_compatible_config()
+    base_url = config.get("base_url", "")
+    model = config.get("model", "")
+    report: dict[str, object] = {
+        "id": "openai-compatible",
+        "configured": bool(base_url),
+        "available": False,
+        "base_url": base_url,
+        "model": model,
+    }
+    if not base_url:
+        return {
+            **report,
+            "status": "not_configured",
+            "message": (
+                "Configure BEETHOVEN_OPENAI_COMPAT_BASE_URL or run "
+                "`beethoven soloists configure openai-compatible --base-url ...`."
+            ),
+        }
+    try:
+        models = _openai_compatible_models(base_url, config.get("api_key", ""))
+    except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError) as error:
+        return {
+            **report,
+            "status": "unreachable",
+            "models": [],
+            "message": f"OpenAI-compatible endpoint is unreachable at {base_url}: {error}",
+        }
+    selected_model = model or (models[0] if models else "")
+    if not selected_model:
+        return {
+            **report,
+            "status": "no_model",
+            "models": models,
+            "message": "OpenAI-compatible endpoint responded but did not expose a model.",
+        }
+    if model and models and model not in models:
+        return {
+            **report,
+            "status": "missing_model",
+            "models": models,
+            "message": f"Configured model is not exposed by the endpoint: {model}",
+        }
+    return {
+        **report,
+        "available": True,
+        "status": "available",
+        "model": selected_model,
+        "models": models,
+        "message": "OpenAI-compatible soloist is ready for execution routing.",
+    }
 
 
 def recursivemas_is_available(command: str | None = None) -> bool:
@@ -378,6 +523,56 @@ def check_recursivemas(command: str | None = None) -> dict[str, object]:
 
 def recursivemas_command() -> str:
     return os.getenv("BEETHOVEN_RECURSIVEMAS_COMMAND", "").strip() or BeethovenConfig().get_recursivemas_command()
+
+
+def _first_openai_compatible_model(base_url: str, api_key: str) -> str:
+    models = _openai_compatible_models(base_url, api_key)
+    return models[0] if models else ""
+
+
+def _openai_compatible_models(base_url: str, api_key: str) -> list[str]:
+    request = Request(
+        _join_url(base_url, "models"),
+        headers=_openai_compatible_headers(api_key),
+        method="GET",
+    )
+    with urlopen(request, timeout=OPENAI_COMPATIBLE_CHECK_TIMEOUT_SECONDS) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    return _models_from_openai_payload(payload)
+
+
+def _openai_compatible_headers(api_key: str) -> dict[str, str]:
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    return headers
+
+
+def _join_url(base_url: str, suffix: str) -> str:
+    return f"{base_url.rstrip('/')}/{suffix.lstrip('/')}"
+
+
+def _chat_completion_content(payload: dict[str, Any]) -> str:
+    choices = payload.get("choices", [])
+    if not isinstance(choices, list) or not choices:
+        raise RuntimeError("OpenAI-compatible response did not include choices.")
+    first = choices[0]
+    if not isinstance(first, dict):
+        raise RuntimeError("OpenAI-compatible choice is invalid.")
+    message = first.get("message", {})
+    if isinstance(message, dict) and "content" in message:
+        return str(message["content"]).strip()
+    text = first.get("text")
+    if text is not None:
+        return str(text).strip()
+    raise RuntimeError("OpenAI-compatible response did not include message content.")
+
+
+def _models_from_openai_payload(payload: dict[str, Any]) -> list[str]:
+    data = payload.get("data", [])
+    if not isinstance(data, list):
+        return []
+    return [str(item["id"]) for item in data if isinstance(item, dict) and item.get("id")]
 
 
 def _build_model_prompt(task: Task, context: ExecutionContext) -> str:

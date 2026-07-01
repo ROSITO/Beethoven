@@ -39,6 +39,8 @@ This repository now contains the first executable orchestration kernel:
 - `Conductor`: dependency-aware score execution.
 - `beethoven` CLI: terminal surface for creating and running scores.
 - `OllamaSoloist`: first real local model adapter when Ollama is available.
+- `OpenAICompatibleSoloist`: execution adapter for SoloMLX, LiteLLM,
+  OpenRouter, local servers, and cloud APIs exposing `/v1/chat/completions`.
 - `ClaudeCliSoloist` and `CodexCliSoloist`: CLI adapters for logged-in local
   Claude Code and Codex installations.
 - Hidden local orchestrator: Beethoven can use a lightweight local model through
@@ -252,6 +254,9 @@ beethoven sessions show <session-id>
 beethoven soloists list
 beethoven soloists configure recursivemas --command "python3 /path/to/bridge.py"
 beethoven soloists check recursivemas
+beethoven soloists configure openai-compatible --base-url "http://127.0.0.1:8080/v1" --model "mlx-community/Ministral-3-3B-Instruct-2512-4bit"
+beethoven soloists check openai-compatible
+beethoven run "Review @README.md" --soloist openai-compatible
 beethoven orchestrator status
 beethoven solomlx status
 beethoven solomlx install
@@ -332,6 +337,21 @@ Claude CLI and Codex CLI are detected when installed locally. They are only
 invoked when explicitly selected with `--soloist claude-cli` or
 `--soloist codex-cli`; Codex runs in read-only sandbox mode from Beethoven.
 They are execution soloists, not the default orchestrator.
+
+Any OpenAI-compatible `/v1` API can also be used as an execution soloist:
+
+```bash
+beethoven soloists configure openai-compatible \
+  --base-url "http://127.0.0.1:8080/v1" \
+  --model "mlx-community/Ministral-3-3B-Instruct-2512-4bit"
+
+beethoven soloists check openai-compatible
+beethoven run "Summarize @README.md" --soloist openai-compatible
+```
+
+`BEETHOVEN_OPENAI_COMPAT_BASE_URL`, `BEETHOVEN_OPENAI_COMPAT_MODEL`, and
+`BEETHOVEN_OPENAI_COMPAT_API_KEY` can override the persisted config. Plain
+`OPENAI_BASE_URL`, `OPENAI_MODEL`, and `OPENAI_API_KEY` are also recognized.
 
 Without installing dev dependencies, the current tests can also run with:
 

@@ -18,9 +18,13 @@ from beethoven.soloists import (
     EchoSoloist,
     LocalReaderSoloist,
     OllamaSoloist,
+    OpenAICompatibleSoloist,
     RecursiveMASSoloist,
     claude_cli_is_available,
+    check_openai_compatible,
     codex_cli_is_available,
+    openai_compatible_is_available,
+    openai_compatible_is_configured,
     check_recursivemas,
     ollama_is_available,
     ollama_is_enabled,
@@ -51,6 +55,8 @@ def create_default_registry() -> SoloistRegistry:
         registry.register(CodexCliSoloist())
     if ollama_is_enabled() and ollama_is_available():
         registry.register(OllamaSoloist())
+    if openai_compatible_is_available():
+        registry.register(OpenAICompatibleSoloist())
     if recursivemas_is_available():
         registry.register(RecursiveMASSoloist())
     return registry
@@ -61,6 +67,8 @@ def list_soloists() -> list[dict[str, object]]:
     ollama_status = "available" if ollama_is_enabled() and ollama_available else "disabled"
     if not ollama_available:
         ollama_status = "planned"
+    openai_check = check_openai_compatible() if openai_compatible_is_configured() else {"status": "planned"}
+    openai_status = "available" if openai_check.get("available") else str(openai_check.get("status", "planned"))
     recursivemas_status = "available" if recursivemas_is_available() else "planned"
     return [
         {
@@ -134,11 +142,14 @@ def list_soloists() -> list[dict[str, object]]:
         {
             "id": "openai-compatible",
             "name": "OpenAI-compatible",
-            "provider": "Cloud API",
-            "status": "planned",
-            "locality": "cloud",
+            "provider": "OpenAI-compatible API",
+            "status": openai_status,
+            "locality": "hybrid",
             "capabilities": ["analyze", "plan", "code", "review", "synthesize"],
-            "description": "Adapter target for OpenAI, OpenRouter, and compatible APIs.",
+            "description": (
+                "Execution soloist for OpenAI, OpenRouter, LiteLLM, SoloMLX, "
+                "and compatible /v1 chat completions APIs."
+            ),
         },
         {
             "id": "codex",
@@ -184,6 +195,8 @@ def list_skills() -> list[dict[str, object]]:
 
 
 def check_soloist(soloist_id: str) -> dict[str, object]:
+    if soloist_id == "openai-compatible":
+        return check_openai_compatible()
     if soloist_id == "recursivemas":
         return check_recursivemas()
     soloist = next((item for item in list_soloists() if item["id"] == soloist_id), None)

@@ -65,3 +65,47 @@ class BeethovenConfig:
                 recursivemas.pop("command", None)
         self.write(payload)
         return self.path
+
+    def get_openai_compatible(self) -> dict[str, str]:
+        soloists = self.read().get("soloists", {})
+        if not isinstance(soloists, dict):
+            return {}
+        adapter = soloists.get("openai-compatible", {})
+        if not isinstance(adapter, dict):
+            return {}
+        return {
+            "base_url": str(adapter.get("base_url", "")).strip(),
+            "model": str(adapter.get("model", "")).strip(),
+            "api_key": str(adapter.get("api_key", "")).strip(),
+        }
+
+    def set_openai_compatible(
+        self,
+        *,
+        base_url: str,
+        model: str = "",
+        api_key: str = "",
+    ) -> Path:
+        payload = self.read()
+        soloists = payload.setdefault("soloists", {})
+        if not isinstance(soloists, dict):
+            soloists = {}
+            payload["soloists"] = soloists
+        adapter = soloists.setdefault("openai-compatible", {})
+        if not isinstance(adapter, dict):
+            adapter = {}
+            soloists["openai-compatible"] = adapter
+        adapter["base_url"] = base_url.strip().rstrip("/")
+        adapter["model"] = model.strip()
+        if api_key.strip():
+            adapter["api_key"] = api_key.strip()
+        self.write(payload)
+        return self.path
+
+    def clear_openai_compatible(self) -> Path:
+        payload = self.read()
+        soloists = payload.get("soloists", {})
+        if isinstance(soloists, dict):
+            soloists.pop("openai-compatible", None)
+        self.write(payload)
+        return self.path

@@ -114,18 +114,20 @@ def build_parser() -> argparse.ArgumentParser:
     soloists_check.add_argument("soloist_id", help="Soloist id to check.")
     soloists_check.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
     soloists_configure = soloist_subparsers.add_parser("configure", help="Persist soloist adapter config.")
-    soloists_configure.add_argument("soloist_id", choices=["recursivemas"], help="Soloist id to configure.")
+    soloists_configure.add_argument("soloist_id", choices=["recursivemas", "openai-compatible"], help="Soloist id to configure.")
     soloists_configure.add_argument(
         "--command",
         dest="adapter_command",
-        required=True,
         help="Command used to launch the adapter.",
     )
+    soloists_configure.add_argument("--base-url", help="OpenAI-compatible /v1 base URL.")
+    soloists_configure.add_argument("--model", help="OpenAI-compatible model id.")
+    soloists_configure.add_argument("--api-key", help="OpenAI-compatible API key.")
     soloists_show = soloist_subparsers.add_parser("show", help="Show persisted soloist config.")
-    soloists_show.add_argument("soloist_id", choices=["recursivemas"], help="Soloist id to show.")
+    soloists_show.add_argument("soloist_id", choices=["recursivemas", "openai-compatible"], help="Soloist id to show.")
     soloists_show.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
     soloists_clear = soloist_subparsers.add_parser("clear", help="Clear persisted soloist config.")
-    soloists_clear.add_argument("soloist_id", choices=["recursivemas"], help="Soloist id to clear.")
+    soloists_clear.add_argument("soloist_id", choices=["recursivemas", "openai-compatible"], help="Soloist id to clear.")
 
     orchestrator = subparsers.add_parser(
         "orchestrator",
@@ -308,26 +310,43 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print_soloist_check(report)
             return 0 if report.get("available") else 1
         if args.soloists_command == "configure":
-            config_path = BeethovenConfig().set_recursivemas_command(args.adapter_command)
+            if args.soloist_id == "recursivemas":
+                if not args.adapter_command:
+                    print("--command is required for recursivemas", file=sys.stderr)
+                    return 2
+                config_path = BeethovenConfig().set_recursivemas_command(args.adapter_command)
+            else:
+                if not args.base_url:
+                    print("--base-url is required for openai-compatible", file=sys.stderr)
+                    return 2
+                config_path = BeethovenConfig().set_openai_compatible(
+                    base_url=args.base_url,
+                    model=args.model or "",
+                    api_key=args.api_key or "",
+                )
             print(f"Configured {args.soloist_id} in {config_path}")
             return 0
         if args.soloists_command == "show":
-            command = BeethovenConfig().get_recursivemas_command()
-            payload = {
-                "id": args.soloist_id,
-                "command": command,
-                "configured": bool(command),
-            }
+            payload = soloist_config_payload(args.soloist_id)
             if args.json:
                 print(json.dumps({"soloist": payload}, indent=2, ensure_ascii=False))
             else:
                 print(f"Soloist config: {args.soloist_id}")
                 print(f"Configured: {payload['configured']}")
-                if command:
-                    print(f"Command: {command}")
+                if payload.get("command"):
+                    print(f"Command: {payload['command']}")
+                if payload.get("base_url"):
+                    print(f"Base URL: {payload['base_url']}")
+                if payload.get("model"):
+                    print(f"Model: {payload['model']}")
+                if payload.get("api_key_configured"):
+                    print("API key: configured")
             return 0
         if args.soloists_command == "clear":
-            config_path = BeethovenConfig().clear_recursivemas_command()
+            if args.soloist_id == "recursivemas":
+                config_path = BeethovenConfig().clear_recursivemas_command()
+            else:
+                config_path = BeethovenConfig().clear_openai_compatible()
             print(f"Cleared {args.soloist_id} config in {config_path}")
             return 0
 
@@ -700,6 +719,25 @@ def print_sessions(sessions: list[dict[str, object]]) -> None:
         status = session.get("status", "unknown")
         print(f"- {title} [{status}]")
         print(f"  score: {score_id} · project: {project} · branch: {branch}")
+
+
+def soloist_config_payload(soloist_id: str) -> dict[str, object]:
+    config = BeethovenConfig()
+    if soloist_id == "recursivemas":
+        command = config.get_recursivemas_command()
+        return {
+            "id": soloist_id,
+            "command": command,
+            "configured": bool(command),
+        }
+    openai_config = config.get_openai_compatible()
+    return {
+        "id": soloist_id,
+        "base_url": openai_config.get("base_url", ""),
+        "model": openai_config.get("model", ""),
+        "api_key_configured": bool(openai_config.get("api_key", "")),
+        "configured": bool(openai_config.get("base_url", "")),
+    }
 
 
 def print_session(session: dict[str, object]) -> None:

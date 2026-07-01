@@ -78,6 +78,20 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             command = BeethovenConfig().get_recursivemas_command()
             self._send_json({"config": {"id": "recursivemas", "command": command, "configured": bool(command)}})
             return
+        if path == "/api/soloists/openai-compatible/config":
+            config = BeethovenConfig().get_openai_compatible()
+            self._send_json(
+                {
+                    "config": {
+                        "id": "openai-compatible",
+                        "base_url": config.get("base_url", ""),
+                        "model": config.get("model", ""),
+                        "api_key_configured": bool(config.get("api_key", "")),
+                        "configured": bool(config.get("base_url", "")),
+                    }
+                }
+            )
+            return
         if path == "/api/skills":
             self._send_json({"skills": list_skills()})
             return
@@ -101,6 +115,36 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
                 return
             config_path = BeethovenConfig().set_recursivemas_command(command)
             self._send_json({"config": {"id": "recursivemas", "command": command, "configured": True, "path": str(config_path)}})
+            return
+
+        if path == "/api/soloists/openai-compatible/config":
+            payload = self._read_payload()
+            if payload is None:
+                return
+            base_url = str(payload.get("base_url", "")).strip().rstrip("/")
+            if not base_url:
+                self._send_json({"error": "Missing base_url"}, HTTPStatus.BAD_REQUEST)
+                return
+            model = str(payload.get("model", "")).strip()
+            api_key = str(payload.get("api_key", "")).strip()
+            config_path = BeethovenConfig().set_openai_compatible(
+                base_url=base_url,
+                model=model,
+                api_key=api_key,
+            )
+            config = BeethovenConfig().get_openai_compatible()
+            self._send_json(
+                {
+                    "config": {
+                        "id": "openai-compatible",
+                        "base_url": config.get("base_url", ""),
+                        "model": config.get("model", ""),
+                        "api_key_configured": bool(config.get("api_key", "")),
+                        "configured": True,
+                        "path": str(config_path),
+                    }
+                }
+            )
             return
 
         if path == "/api/score":
@@ -265,6 +309,21 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
         if path == "/api/soloists/recursivemas/config":
             config_path = BeethovenConfig().clear_recursivemas_command()
             self._send_json({"config": {"id": "recursivemas", "command": "", "configured": False, "path": str(config_path)}})
+            return
+        if path == "/api/soloists/openai-compatible/config":
+            config_path = BeethovenConfig().clear_openai_compatible()
+            self._send_json(
+                {
+                    "config": {
+                        "id": "openai-compatible",
+                        "base_url": "",
+                        "model": "",
+                        "api_key_configured": False,
+                        "configured": False,
+                        "path": str(config_path),
+                    }
+                }
+            )
             return
         if path == "/api/solomlx":
             self._send_json({"solomlx": solomlx_stop()})

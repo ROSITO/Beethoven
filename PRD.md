@@ -168,7 +168,7 @@ As of 2026-07-01, Beethoven has crossed from concept into a working pre-alpha:
 | Hidden Beethoven orchestrator | Done | Local conductor uses SoloMLX/OpenAI-compatible `/v1` first, then Ollama. It is not user-selectable. |
 | SoloMLX runtime brick | Done | Install, prepare Ministral, start, stop, status, memory guardrails, desktop API. |
 | Ollama adapter | Done | Available when explicitly enabled and model exists. |
-| OpenAI-compatible adapter | Partial | Used for the hidden orchestrator; execution-side soloist still needed. |
+| OpenAI-compatible adapter | Done | Hidden orchestrator and execution-side `openai-compatible` soloist with CLI/API/desktop config. |
 | Codex/Claude adapters | Done | Local CLI adapters are available when installed and logged in. |
 | RecursiveMAS integration | Partial | Native recursive scores and optional sidecar bridge are present; deeper runtime collaboration remains experimental. |
 | `@path` attachments | Partial | Safe workspace file reads exist; richer packing/token UI is still needed. |
@@ -202,7 +202,6 @@ P0:
 - finish the desktop first-run state, runtime board, and conversation/run split;
 - make SoloMLX/Ministral the default hidden conductor path in product copy and
   runtime diagnostics;
-- add execution-side OpenAI-compatible soloist config;
 - turn validation hooks into named test profiles with visible results;
 - harden attachment packing and desktop attachment inspection.
 

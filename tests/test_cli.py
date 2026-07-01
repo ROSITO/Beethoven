@@ -314,6 +314,36 @@ def test_soloists_check_reports_unconfigured_recursivemas(monkeypatch, capsys) -
     assert data["check"]["available"] is False
 
 
+def test_openai_compatible_config_can_be_persisted_and_cleared(capsys) -> None:
+    configure_exit = main(
+        [
+            "soloists",
+            "configure",
+            "openai-compatible",
+            "--base-url",
+            "http://127.0.0.1:8080/v1",
+            "--model",
+            "local-model",
+            "--api-key",
+            "secret",
+        ]
+    )
+    capsys.readouterr()
+    show_exit = main(["soloists", "show", "openai-compatible", "--json"])
+    show_output = capsys.readouterr().out
+    clear_exit = main(["soloists", "clear", "openai-compatible"])
+
+    data = json.loads(show_output)
+    assert configure_exit == 0
+    assert show_exit == 0
+    assert clear_exit == 0
+    assert data["soloist"]["configured"] is True
+    assert data["soloist"]["base_url"] == "http://127.0.0.1:8080/v1"
+    assert data["soloist"]["model"] == "local-model"
+    assert data["soloist"]["api_key_configured"] is True
+    assert "secret" not in show_output
+
+
 def test_ollama_requires_explicit_opt_in(monkeypatch) -> None:
     monkeypatch.delenv("BEETHOVEN_ENABLE_OLLAMA", raising=False)
     monkeypatch.setattr("beethoven.runtime.ollama_is_available", lambda: True)

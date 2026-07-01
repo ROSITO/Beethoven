@@ -165,6 +165,17 @@
             <button class="text-button" id="saveRecursiveMasButton" type="button">Save</button>
             <button class="text-button" id="clearRecursiveMasButton" type="button">Clear</button>
           </div>
+          <div class="openai-config-grid">
+            <label class="select-label" for="openAiBaseUrl">OpenAI-compatible base URL</label>
+            <input id="openAiBaseUrl" type="url" placeholder="http://127.0.0.1:8080/v1" autocomplete="off" />
+            <label class="select-label" for="openAiModel">Model</label>
+            <input id="openAiModel" type="text" placeholder="model id" autocomplete="off" />
+            <label class="select-label" for="openAiApiKey">API key</label>
+            <input id="openAiApiKey" type="password" placeholder="leave blank to keep local/no-key" autocomplete="off" />
+            <button class="text-button" id="checkOpenAiButton" type="button">Check OpenAI API</button>
+            <button class="text-button" id="saveOpenAiButton" type="button">Save API</button>
+            <button class="text-button" id="clearOpenAiButton" type="button">Clear API</button>
+          </div>
           <div class="skills-grid" id="skillsGrid"></div>
         </section>
 

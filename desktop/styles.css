@@ -609,7 +609,24 @@ button {
   align-items: center;
 }
 
+.openai-config-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(140px, 0.55fr) minmax(160px, 0.65fr) auto auto auto;
+  gap: 8px;
+  align-items: end;
+}
+
 .soloist-config-row input {
+  min-width: 0;
+  min-height: 34px;
+  padding: 7px 10px;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.openai-config-grid input {
   min-width: 0;
   min-height: 34px;
   padding: 7px 10px;
@@ -1077,6 +1094,10 @@ textarea:focus {
   .command-grid {
     grid-template-columns: 1fr;
   }
+
+  .openai-config-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -1138,5 +1159,11 @@ textarea:focus {
   .soloist-select {
     flex: 1 1 130px;
     min-width: 0;
+  }
+
+  .soloist-config-row,
+  .openai-config-grid {
+    grid-template-columns: 1fr;
+    align-items: stretch;
   }
 }

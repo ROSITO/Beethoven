@@ -11,6 +11,10 @@ npm install
 npm run tauri:dev
 ```
 
+`npm install` installs `@tauri-apps/cli`. The native shell also requires the
+Rust toolchain because Tauri calls `cargo metadata` before launching dev mode.
+If `cargo` is missing, `npm run tauri:dev` fails before the Python sidecar starts.
+
 The Tauri window loads `http://127.0.0.1:4173`, and `beforeDevCommand` starts:
 
 ```bash
@@ -89,6 +93,7 @@ This is intentionally the first native-app bridge, not the final installer:
 
 1. Replace the shell launcher with a fully bundled Python runtime sidecar.
 2. Add app icons and platform bundle metadata.
-3. Add CI checks for `npm run tauri:dev` smoke tests where Tauri is available.
+3. Add CI checks for `npm run tauri:dev` smoke tests where Rust/Cargo and Tauri
+   are available.
 4. Add a startup supervisor that launches the sidecar, waits for health, and
    reports failures inside the desktop UI.

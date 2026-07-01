@@ -365,6 +365,15 @@ listed in `src-tauri/tauri.conf.json` as `bundle.externalBin`.
 Packaging is not production-complete. A bundled hermetic Python runtime is still
 needed before real installers.
 
+Runtime audit on 2026-07-01:
+
+- `npm install` succeeds and installs `@tauri-apps/cli@2.11.4`.
+- `npm run tauri -- --version` reports `tauri-cli 2.11.4`.
+- `npm run tauri:dev` is currently blocked on this machine because `cargo` is
+  not installed (`cargo metadata` cannot run).
+- SoloMLX status reports the managed Ministral endpoint available at
+  `http://127.0.0.1:8080/v1`.
+
 ## Tests And Validation
 
 Current test suite:

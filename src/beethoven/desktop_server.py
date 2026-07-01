@@ -30,7 +30,7 @@ from beethoven.solomlx import (
     solomlx_stop,
 )
 from beethoven.validation import list_validation_profiles
-from beethoven.workspace import inspect_workspace, list_workspace_files
+from beethoven.workspace import inspect_workspace, inspect_workspace_diff, list_workspace_files
 
 
 DESKTOP_ROOT = Path(__file__).resolve().parents[2] / "desktop"
@@ -102,6 +102,9 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             return
         if path == "/api/workspace":
             self._send_json({"workspace": inspect_workspace()})
+            return
+        if path == "/api/diff":
+            self._send_json({"diff": inspect_workspace_diff()})
             return
         if path == "/api/files":
             self._send_json(list_workspace_files())

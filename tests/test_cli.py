@@ -480,6 +480,15 @@ def test_workspace_files_command_prints_attachable_files(capsys) -> None:
     assert "- " in captured.out
 
 
+def test_workspace_diff_command_prints_status(capsys) -> None:
+    exit_code = main(["workspace", "diff", "--max-chars", "200"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Workspace diff: Beethoven" in captured.out
+    assert "Status:" in captured.out
+
+
 def test_terminal_session_runs_objectives_and_commands(capsys) -> None:
     inputs = iter(
         [

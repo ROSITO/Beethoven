@@ -74,6 +74,7 @@ const sessionPanelMeta = document.querySelector("#sessionPanelMeta");
 const copyScoreIdButton = document.querySelector("#copyScoreIdButton");
 const insertSessionCommandButton = document.querySelector("#insertSessionCommandButton");
 const exportScoreButton = document.querySelector("#exportScoreButton");
+const inspectDiffButton = document.querySelector("#inspectDiffButton");
 const openCommandsFromMenuButton = document.querySelector("#openCommandsFromMenuButton");
 
 let currentWorkspace = null;
@@ -1496,6 +1497,35 @@ async function loadWorkspace() {
   }
 }
 
+async function inspectWorkspaceDiff() {
+  composerStatus.classList.remove("error");
+  composerStatus.textContent = "Loading workspace diff…";
+  try {
+    const response = await fetch("/api/diff");
+    if (!response.ok) {
+      throw new Error(`Diff API returned ${response.status}`);
+    }
+    const payload = await response.json();
+    const diff = payload.diff ?? {};
+    const body = diff.diff
+      ? `${diff.message}${diff.truncated ? " Diff truncated." : ""}\n\n${diff.diff}`
+      : diff.message ?? "No workspace diff.";
+    chatMessages.push({
+      role: "assistant",
+      meta: "Workspace diff",
+      content: body,
+    });
+    renderChat();
+    composerStatus.textContent = diff.status === "dirty" ? "Workspace diff loaded." : "Workspace has no diff.";
+    sessionPanel.hidden = true;
+    moreOptionsButton.classList.remove("active");
+  } catch (error) {
+    composerStatus.classList.add("error");
+    composerStatus.textContent = "Unable to load workspace diff.";
+    console.error(error);
+  }
+}
+
 async function checkRecursiveMas() {
   checkRecursiveMasButton.textContent = "Checking…";
   checkRecursiveMasButton.disabled = true;
@@ -1653,6 +1683,7 @@ exportScoreButton.addEventListener("click", () => {
   exportCurrentScore();
   toggleSessionPanel(false);
 });
+inspectDiffButton.addEventListener("click", inspectWorkspaceDiff);
 openCommandsFromMenuButton.addEventListener("click", () => toggleCommandPanel(true));
 commandSearch.addEventListener("input", () => renderCommandList());
 commandSearch.addEventListener("keydown", (event) => {

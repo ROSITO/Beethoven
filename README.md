@@ -271,6 +271,7 @@ beethoven skills list
 beethoven validation profiles
 beethoven workspace
 beethoven workspace files
+beethoven workspace diff
 beethoven package sidecar
 beethoven package recursivemas-bridge
 ```
@@ -399,6 +400,15 @@ beethoven run "Check generated files" --validate "printf ok" --approve-validatio
 The desktop uses the same mechanism: blocked validation results appear in the
 assistant-side validation message and can be approved for a rerun without
 changing the whole run to `auto`.
+
+Diff inspection is available from both surfaces:
+
+```bash
+beethoven workspace diff
+```
+
+The desktop session menu can load the current bounded Git diff into the
+conversation before approval-oriented code workflows.
 
 Attach files directly with `@path`. Beethoven keeps reads inside the workspace,
 blocks ignored/binary files, applies a total byte budget, and can expand small

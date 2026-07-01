@@ -44,6 +44,8 @@ The foundation is pre-alpha but executable. It includes:
 - workspace file discovery and safe `@path` file attachment reads with binary
   blocking, MIME/size/snippet metadata, total byte budget, and bounded directory
   bundles;
+- bounded Git diff inspection through CLI, desktop API, and desktop session
+  menu;
 - governed validation commands appended as explicit `validate` score tasks, with
   a policy gate that blocks mutating or unknown commands unless permission mode
   is `auto` or the exact command is explicitly approved for that run;
@@ -372,7 +374,7 @@ Current test suite:
 
 Latest known status after the current implementation:
 
-- `73 passed`;
+- `75 passed`;
 - Ruff passes;
 - `node --check desktop/app.js` passes.
 
@@ -399,6 +401,7 @@ Test coverage currently includes:
   metadata/event recording;
 - workspace attachment packing with binary blocking, total byte budget,
   MIME/size/snippet metadata, directory expansion, and enriched file listing;
+- bounded workspace diff inspection in CLI/API/desktop;
 - conductor dependency execution;
 - invalid dependency rejection.
 
@@ -459,7 +462,7 @@ This completed with trace `understand:openai-compatible`,
   policy gate for mutating/unknown commands plus exact-command approval for
   `ask` mode. The desktop can approve blocked validation commands and rerun, but
   the approval UX is still a compact message action rather than a full modal.
-- No diff, patch, or approval workflow yet.
+- Bounded diff inspection exists, but there is no patch apply workflow yet.
 - No persistent conversation message history beyond saved run/session summaries.
 - No plugin SDK.
 - No real automation/scheduled scores.

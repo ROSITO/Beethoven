@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from beethoven.workspace import list_workspace_files, read_workspace_attachments
+import os
+import subprocess
+
+from beethoven.workspace import inspect_workspace_diff, list_workspace_files, read_workspace_attachments
 
 
 def test_workspace_attachment_includes_metadata_and_snippet(tmp_path) -> None:
@@ -73,3 +76,31 @@ def test_workspace_file_listing_exposes_size_and_media_type(tmp_path) -> None:
     assert file_info["path"] == "app.py"
     assert file_info["bytes"] > 0
     assert file_info["media_type"] == "text/x-python"
+
+
+def test_workspace_diff_returns_bounded_git_diff(tmp_path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    tracked = tmp_path / "tracked.txt"
+    tracked.write_text("before\n", encoding="utf-8")
+    subprocess.run(["git", "add", "tracked.txt"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "initial"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        env={
+            **os.environ,
+            "GIT_AUTHOR_NAME": "Test",
+            "GIT_AUTHOR_EMAIL": "test@example.com",
+            "GIT_COMMITTER_NAME": "Test",
+            "GIT_COMMITTER_EMAIL": "test@example.com",
+        },
+    )
+    tracked.write_text("after\n", encoding="utf-8")
+
+    payload = inspect_workspace_diff(tmp_path, max_chars=20)
+
+    assert payload["available"] is True
+    assert payload["status"] == "dirty"
+    assert payload["truncated"] is True
+    assert "diff --git" in payload["diff"]

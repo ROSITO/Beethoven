@@ -32,7 +32,7 @@ from beethoven.solomlx import (
     solomlx_stop,
 )
 from beethoven.validation import list_validation_profiles
-from beethoven.workspace import inspect_workspace, list_workspace_files
+from beethoven.workspace import inspect_workspace, inspect_workspace_diff, list_workspace_files
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -213,6 +213,9 @@ def build_parser() -> argparse.ArgumentParser:
     workspace_files = workspace_subparsers.add_parser("files", help="List attachable workspace files.")
     workspace_files.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
     workspace_files.add_argument("--limit", default=80, type=int, help="Maximum files to list.")
+    workspace_diff = workspace_subparsers.add_parser("diff", help="Show a bounded Git diff for the current workspace.")
+    workspace_diff.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+    workspace_diff.add_argument("--max-chars", default=48_000, type=int, help="Maximum diff characters to return.")
 
     package = subparsers.add_parser("package", help="Prepare desktop packaging assets.")
     package_subparsers = package.add_subparsers(dest="package_command", required=True)
@@ -476,6 +479,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print(json.dumps(workspace_files, indent=2, ensure_ascii=False))
             else:
                 print_workspace_files(workspace_files)
+            return 0
+        if args.workspace_command == "diff":
+            workspace_diff = inspect_workspace_diff(max_chars=args.max_chars)
+            if args.json:
+                print(json.dumps({"diff": workspace_diff}, indent=2, ensure_ascii=False))
+            else:
+                print_workspace_diff(workspace_diff)
             return 0
         workspace = inspect_workspace()
         if args.json:
@@ -933,6 +943,20 @@ def print_workspace_files(payload: dict[str, object]) -> None:
         assert isinstance(item, dict)
         detail = f"{item.get('media_type', 'text/plain')} · {item.get('bytes', 0)} bytes"
         print(f"- {item.get('path')} ({detail})")
+
+
+def print_workspace_diff(payload: dict[str, object]) -> None:
+    workspace = payload.get("workspace", {})
+    assert isinstance(workspace, dict)
+    print(f"Workspace diff: {workspace.get('name')}")
+    print(f"Status: {payload.get('status')}")
+    if payload.get("truncated"):
+        print(f"Truncated at {payload.get('max_chars')} characters")
+    diff = str(payload.get("diff", ""))
+    if diff:
+        print(diff)
+    else:
+        print(payload.get("message", "No diff."))
 
 
 if __name__ == "__main__":

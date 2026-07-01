@@ -38,6 +38,7 @@ MAX_ATTACHMENT_BYTES = 64_000
 MAX_ATTACHMENT_TOTAL_BYTES = 128_000
 MAX_DIRECTORY_ATTACHMENT_FILES = 8
 MAX_ATTACHMENT_SNIPPET_CHARS = 420
+MAX_WORKSPACE_DIFF_CHARS = 48_000
 ATTACHMENT_PATTERN = re.compile(r"(?<!\S)@([A-Za-z0-9_./-]+)")
 FILE_REFERENCE_PATTERN = re.compile(r"(?<![@\w./-])([A-Za-z0-9_.-]+\.[A-Za-z0-9]{1,8})(?![\w./-])")
 
@@ -88,6 +89,34 @@ def list_workspace_files(path: str | Path | None = None, limit: int = 80) -> dic
         "workspace": workspace,
         "files": files,
         "limit": limit,
+    }
+
+
+def inspect_workspace_diff(path: str | Path | None = None, *, max_chars: int = MAX_WORKSPACE_DIFF_CHARS) -> dict[str, Any]:
+    workspace = inspect_workspace(path)
+    root = Path(str(workspace["path"]))
+    if not workspace.get("is_git"):
+        return {
+            "workspace": workspace,
+            "available": False,
+            "status": "not_git",
+            "diff": "",
+            "truncated": False,
+            "message": "Workspace is not a Git repository.",
+        }
+    diff = _git(root, "diff", "--", ".") or ""
+    truncated = len(diff) > max_chars
+    if truncated:
+        diff = diff[:max_chars]
+    return {
+        "workspace": workspace,
+        "available": True,
+        "status": "dirty" if diff else "clean",
+        "diff": diff,
+        "bytes": len(diff.encode("utf-8")),
+        "truncated": truncated,
+        "max_chars": max_chars,
+        "message": "Workspace diff loaded." if diff else "Workspace has no unstaged diff.",
     }
 
 

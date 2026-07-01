@@ -167,6 +167,23 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
             if line.strip()
         ]
 
+        approved_validation_request = Request(
+            f"http://{host}:{port}/api/run",
+            data=json.dumps(
+                {
+                    "objective": "approved validation desktop api",
+                    "validation_commands": ["printf ok"],
+                    "approved_validation_commands": ["printf ok"],
+                    "permission_mode": "ask",
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        approved_validation_payload = json.loads(
+            urlopen(approved_validation_request, timeout=2).read().decode("utf-8")
+        )
+
         sessions = urlopen(f"http://{host}:{port}/api/sessions", timeout=2)
         sessions_data = json.loads(sessions.read().decode("utf-8"))
 
@@ -211,6 +228,8 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
     assert any(event["event"]["type"] == "validation_blocked" for event in blocked_stream_events)
     blocked_context = blocked_stream_events[-1]["event"]["context"]
     assert blocked_context["artifacts"]["validation"]["output"][0]["blocked"] is True
+    assert approved_validation_payload["artifacts"]["validation"]["output"][0]["passed"] is True
+    assert approved_validation_payload["artifacts"]["validation"]["metadata"]["approved_commands"] == ["printf ok"]
     assert soloists_data["soloists"][0]["id"] == "local-echo"
     assert soloists_data["soloists"][0]["status"] == "available"
     assert orchestrator_data["orchestrator"]["id"] == "beethoven-orchestrator"

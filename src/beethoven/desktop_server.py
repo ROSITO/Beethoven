@@ -254,6 +254,7 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             recursive_rounds = self._read_recursive_rounds(payload)
             validation_commands = self._read_validation_commands(payload)
             validation_profiles = self._read_validation_profiles(payload)
+            approved_validation_commands = self._read_approved_validation_commands(payload)
             context = run_objective(
                 objective,
                 soloist=soloist,
@@ -264,6 +265,7 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
                 recursive_rounds=recursive_rounds,
                 validation_commands=validation_commands,
                 validation_profiles=validation_profiles,
+                approved_validation_commands=approved_validation_commands,
             )
             session = self.store.save_run(
                 context,
@@ -293,6 +295,7 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             recursive_rounds = self._read_recursive_rounds(payload)
             validation_commands = self._read_validation_commands(payload)
             validation_profiles = self._read_validation_profiles(payload)
+            approved_validation_commands = self._read_approved_validation_commands(payload)
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
             self.send_header("Cache-Control", "no-store")
@@ -313,6 +316,7 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
                     recursive_rounds=recursive_rounds,
                     validation_commands=validation_commands,
                     validation_profiles=validation_profiles,
+                    approved_validation_commands=approved_validation_commands,
                     event_sink=write_event,
                 )
                 session = self.store.save_run(
@@ -410,6 +414,18 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
                 if str(profile).strip()
             ]
             if isinstance(raw_validation_profiles, list)
+            else []
+        )
+
+    def _read_approved_validation_commands(self, payload: dict[str, Any]) -> list[str]:
+        raw_commands = payload.get("approved_validation_commands", [])
+        return (
+            [
+                str(command)
+                for command in raw_commands
+                if str(command).strip()
+            ]
+            if isinstance(raw_commands, list)
             else []
         )
 

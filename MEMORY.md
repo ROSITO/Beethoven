@@ -46,7 +46,7 @@ The foundation is pre-alpha but executable. It includes:
   bundles;
 - governed validation commands appended as explicit `validate` score tasks, with
   a policy gate that blocks mutating or unknown commands unless permission mode
-  is `auto`;
+  is `auto` or the exact command is explicitly approved for that run;
 - named validation profiles (`desktop`, `lint`, `tests`, `full`) selectable from
   CLI, desktop API, and the composer;
 - RecursiveMAS-inspired recursive score strategies;
@@ -368,7 +368,7 @@ Current test suite:
 
 Latest known status after the current implementation:
 
-- `69 passed`;
+- `73 passed`;
 - Ruff passes;
 - `node --check desktop/app.js` passes.
 
@@ -452,8 +452,8 @@ This completed with trace `understand:openai-compatible`,
 - Desktop consumes NDJSON run events, but the visual timeline is still mostly
   rendered from final context.
 - Validation hooks now become explicit `validate` score tasks and include a
-  policy gate for mutating/unknown commands. There is still no interactive human
-  approval prompt.
+  policy gate for mutating/unknown commands plus exact-command approval for
+  `ask` mode. There is still no interactive desktop approval prompt.
 - No diff, patch, or approval workflow yet.
 - No persistent conversation message history beyond saved run/session summaries.
 - No plugin SDK.
@@ -506,7 +506,8 @@ Goal: move beyond post-run hooks into policy-aware validation work.
 Suggested steps:
 
 - Surface stdout/stderr and pass/fail/block details in the desktop inspector.
-- Add interactive permission prompts before commands that mutate the workspace.
+- Add interactive desktop permission prompts before commands that mutate the
+  workspace.
 - Extend the same policy model to diff/code actions.
 
 ### 5. Strengthen Native Desktop Packaging

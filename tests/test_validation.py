@@ -11,6 +11,7 @@ from beethoven.validation import (
     list_validation_profiles,
     merge_validation_commands,
     plan_validation_hooks,
+    plan_validation_hooks_with_approvals,
     resolve_validation_profiles,
 )
 
@@ -80,6 +81,29 @@ def test_validation_policy_allows_risky_commands_in_auto_permission() -> None:
     assert plan["blocked"] == []
 
 
+def test_validation_policy_allows_explicit_approval_in_ask_mode() -> None:
+    plan = plan_validation_hooks_with_approvals(
+        ["rm -rf build"],
+        permission_mode="ask",
+        approved_commands=["rm -rf build"],
+    )
+
+    assert plan["approved"] == ["rm -rf build"]
+    assert plan["blocked"] == []
+    assert plan["decisions"][0]["reason"] == "Command was explicitly approved for this run."
+
+
+def test_validation_policy_keeps_read_only_strict_even_when_approved() -> None:
+    plan = plan_validation_hooks_with_approvals(
+        ["rm -rf build"],
+        permission_mode="read-only",
+        approved_commands=["rm -rf build"],
+    )
+
+    assert plan["approved"] == []
+    assert plan["blocked"][0]["command"] == "rm -rf build"
+
+
 def test_run_objective_records_blocked_validation_without_executing() -> None:
     context = run_objective(
         "block risky validation",
@@ -94,3 +118,18 @@ def test_run_objective_records_blocked_validation_without_executing() -> None:
     assert validation.metadata["approved_commands"] == []
     assert validation.metadata["blocked_commands"][0]["risk"] == "mutating"
     assert any(event["type"] == "validation_blocked" for event in context_to_dict(context)["events"])
+
+
+def test_run_objective_executes_explicitly_approved_validation() -> None:
+    context = run_objective(
+        "approve validation",
+        validation_commands=["printf ok"],
+        permission_mode="ask",
+        approved_validation_commands=["printf ok"],
+    )
+
+    validation = context.artifacts["validation"]
+    assert validation.output[0]["passed"] is True
+    assert validation.output[0]["stdout"] == "ok"
+    assert validation.metadata["approved_commands"] == ["printf ok"]
+    assert validation.metadata["blocked_commands"] == []

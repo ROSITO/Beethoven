@@ -170,6 +170,26 @@ def test_run_command_reports_blocked_validation(capsys) -> None:
     assert "Ask permission requires explicit approval" in captured.out
 
 
+def test_run_command_can_approve_one_validation_command(capsys) -> None:
+    exit_code = main(
+        [
+            "run",
+            "Validate",
+            "approval",
+            "--validate",
+            "printf ok",
+            "--approve-validation",
+            "printf ok",
+            "--permission",
+            "ask",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "printf ok: passed" in captured.out
+
+
 def test_validation_profiles_command_lists_profiles(capsys) -> None:
     exit_code = main(["validation", "profiles", "--json"])
 

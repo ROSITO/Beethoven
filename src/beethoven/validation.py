@@ -145,7 +145,12 @@ class ValidationSoloist:
         ]
         permission_mode = str(context.score.metadata.get("permission_mode", "ask"))
         profiles = context.score.metadata.get("validation_profiles", [])
-        validation_plan = plan_validation_hooks(commands, permission_mode=permission_mode)
+        approved_validation_commands = context.score.metadata.get("approved_validation_commands", [])
+        validation_plan = plan_validation_hooks_with_approvals(
+            commands,
+            permission_mode=permission_mode,
+            approved_commands=approved_validation_commands if isinstance(approved_validation_commands, list) else [],
+        )
         approved_commands = [
             str(command)
             for command in validation_plan.get("approved", [])
@@ -183,7 +188,24 @@ class ValidationSoloist:
 
 
 def plan_validation_hooks(commands: list[str], *, permission_mode: str = "ask") -> dict[str, object]:
-    decisions = [classify_validation_command(command, permission_mode=permission_mode) for command in commands]
+    return plan_validation_hooks_with_approvals(commands, permission_mode=permission_mode)
+
+
+def plan_validation_hooks_with_approvals(
+    commands: list[str],
+    *,
+    permission_mode: str = "ask",
+    approved_commands: list[str] | None = None,
+) -> dict[str, object]:
+    approved_set = {str(command).strip() for command in approved_commands or [] if str(command).strip()}
+    decisions = [
+        classify_validation_command(
+            command,
+            permission_mode=permission_mode,
+            explicitly_approved=str(command).strip() in approved_set,
+        )
+        for command in commands
+    ]
     approved = [decision.command for decision in decisions if decision.status == "approved"]
     blocked = [decision for decision in decisions if decision.status == "blocked"]
     return {
@@ -210,16 +232,23 @@ def plan_validation_hooks(commands: list[str], *, permission_mode: str = "ask") 
     }
 
 
-def classify_validation_command(command: str, *, permission_mode: str = "ask") -> ValidationDecision:
+def classify_validation_command(
+    command: str,
+    *,
+    permission_mode: str = "ask",
+    explicitly_approved: bool = False,
+) -> ValidationDecision:
     clean_command = str(command).strip()
     risk, reason = _validation_risk(clean_command)
     normalized_permission = str(permission_mode).strip().lower()
     if risk == "read_only":
         return ValidationDecision(clean_command, "approved", risk, reason)
-    if normalized_permission == "auto":
-        return ValidationDecision(clean_command, "approved", risk, "Permission mode auto approved validation command.")
     if normalized_permission == "read-only":
         return ValidationDecision(clean_command, "blocked", risk, "Read-only permission blocks mutating or unknown validation commands.")
+    if explicitly_approved:
+        return ValidationDecision(clean_command, "approved", risk, "Command was explicitly approved for this run.")
+    if normalized_permission == "auto":
+        return ValidationDecision(clean_command, "approved", risk, "Permission mode auto approved validation command.")
     return ValidationDecision(clean_command, "blocked", risk, "Ask permission requires explicit approval before this validation command can run.")
 
 

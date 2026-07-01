@@ -75,6 +75,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help="Named validation profile to run after orchestration. Can be repeated.",
     )
+    run.add_argument(
+        "--approve-validation",
+        action="append",
+        default=[],
+        help="Explicitly approve one validation command in ask permission mode. Can be repeated.",
+    )
     add_strategy_arguments(run)
 
     chat = subparsers.add_parser(
@@ -280,6 +286,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             recursive_rounds=args.recursive_rounds,
             validation_commands=args.validate,
             validation_profiles=args.validation_profile,
+            approved_validation_commands=args.approve_validation,
         )
         if args.json:
             print(json.dumps(context_to_dict(context), indent=2, ensure_ascii=False))

@@ -294,6 +294,7 @@ def run_objective(
     recursive_rounds: int = 2,
     validation_commands: list[str] | None = None,
     validation_profiles: list[str] | None = None,
+    approved_validation_commands: list[str] | None = None,
     event_sink: Callable[[dict[str, object]], None] | None = None,
 ) -> ExecutionContext:
     if soloist == "ollama" and not ollama_is_enabled():
@@ -318,6 +319,11 @@ def run_objective(
             "recursive_rounds": recursive_rounds if strategy == "recursive" else None,
             "validation_commands": merged_validation_commands,
             "validation_profiles": selected_validation_profiles,
+            "approved_validation_commands": [
+                str(command).strip()
+                for command in approved_validation_commands or []
+                if str(command).strip()
+            ],
         },
         planner_soloist=soloist,
         strategy=strategy,

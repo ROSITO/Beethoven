@@ -978,6 +978,10 @@ function updateRunEventStatus(event) {
     composerStatus.textContent = "Running validation…";
     return;
   }
+  if (event.type === "validation_blocked") {
+    composerStatus.textContent = "Validation blocked by permission policy.";
+    return;
+  }
   if (event.type === "score_completed") {
     composerStatus.textContent = "Score completed. Saving session…";
   }

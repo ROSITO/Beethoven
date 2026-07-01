@@ -379,6 +379,10 @@ The current built-in profiles are `desktop`, `lint`, `tests`, and `full`.
 Desktop runs expose the same profiles in the composer and summarize pass/fail
 results as a normal assistant-side message.
 
+Validation is policy-gated before execution. Known read-only checks run in
+`ask` and `read-only` modes. Unknown or mutating commands are blocked unless the
+run uses `--permission auto`, so risky shell actions do not execute silently.
+
 Attach files directly with `@path`. Beethoven keeps reads inside the workspace,
 blocks ignored/binary files, applies a total byte budget, and can expand small
 directories as bounded file bundles:

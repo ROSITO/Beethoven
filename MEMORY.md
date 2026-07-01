@@ -44,7 +44,8 @@ The foundation is pre-alpha but executable. It includes:
 - workspace file discovery and safe `@path` file attachment reads with binary
   blocking, MIME/size/snippet metadata, total byte budget, and bounded directory
   bundles;
-- validation command hooks after a run;
+- validation command hooks after a run, with a first policy gate that blocks
+  mutating or unknown commands unless permission mode is `auto`;
 - named validation profiles (`desktop`, `lint`, `tests`, `full`) selectable from
   CLI, desktop API, and the composer;
 - RecursiveMAS-inspired recursive score strategies;
@@ -366,7 +367,7 @@ Current test suite:
 
 Latest known status after the current implementation:
 
-- `59 passed`;
+- `69 passed`;
 - Ruff passes;
 - `node --check desktop/app.js` passes.
 
@@ -388,8 +389,9 @@ Test coverage currently includes:
 - desktop API orchestrator/SoloMLX status and mocked SoloMLX install trigger;
 - OpenAI-compatible execution soloist config, healthcheck, registry routing,
   and mocked chat completion execution;
-- validation profile discovery, command/profile merge behavior, CLI execution,
-  desktop API exposure, and validation metadata recording;
+- validation profile discovery, command/profile merge behavior, policy
+  approval/blocking, CLI execution, desktop API exposure, and validation
+  metadata/event recording;
 - workspace attachment packing with binary blocking, total byte budget,
   MIME/size/snippet metadata, directory expansion, and enriched file listing;
 - conductor dependency execution;
@@ -448,8 +450,9 @@ This completed with trace `understand:openai-compatible`,
   estimation is still byte-based rather than model-token based.
 - Desktop consumes NDJSON run events, but the visual timeline is still mostly
   rendered from final context.
-- Validation hooks can run local commands and named profiles, but there is no
-  policy/approval layer and no validation task graph yet.
+- Validation hooks can run local commands and named profiles, and now include a
+  policy gate for mutating/unknown commands. There is still no explicit
+  validation task graph or interactive human approval prompt.
 - No diff, patch, or approval workflow yet.
 - No persistent conversation message history beyond saved run/session summaries.
 - No plugin SDK.
@@ -502,8 +505,8 @@ Goal: move beyond post-run hooks into policy-aware validation work.
 Suggested steps:
 
 - Route validation through a real `validate` task capability.
-- Surface stdout/stderr and pass/fail summary in the desktop inspector.
-- Add permission prompts before commands that mutate the workspace.
+- Surface stdout/stderr and pass/fail/block summary in the desktop inspector.
+- Add interactive permission prompts before commands that mutate the workspace.
 
 ### 5. Strengthen Native Desktop Packaging
 

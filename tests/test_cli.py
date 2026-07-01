@@ -161,6 +161,15 @@ def test_run_command_can_execute_validation_profile(capsys) -> None:
     assert "node --check desktop/app.js: passed" in captured.out
 
 
+def test_run_command_reports_blocked_validation(capsys) -> None:
+    exit_code = main(["run", "Validate", "policy", "--validate", "rm -rf build", "--permission", "ask"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "rm -rf build: blocked" in captured.out
+    assert "Ask permission requires explicit approval" in captured.out
+
+
 def test_validation_profiles_command_lists_profiles(capsys) -> None:
     exit_code = main(["validation", "profiles", "--json"])
 

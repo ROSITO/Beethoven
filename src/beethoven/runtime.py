@@ -31,7 +31,7 @@ from beethoven.soloists import (
     ollama_is_enabled,
     recursivemas_is_available,
 )
-from beethoven.validation import merge_validation_commands, run_validation_hooks
+from beethoven.validation import merge_validation_commands, plan_validation_hooks, run_validation_hooks
 from beethoven.workspace import read_workspace_attachments
 
 
@@ -328,28 +328,68 @@ def run_objective(
         event_sink=event_sink,
     ).perform(score)
     if merged_validation_commands:
+        validation_plan = plan_validation_hooks(
+            merged_validation_commands,
+            permission_mode=permission_mode,
+        )
+        approved_commands = [
+            str(command)
+            for command in validation_plan.get("approved", [])
+        ]
+        blocked_commands = [
+            item
+            for item in validation_plan.get("blocked", [])
+            if isinstance(item, dict)
+        ]
         if event_sink is not None:
             event_sink(
                 {
                     "type": "validation_started",
-                    "commands": merged_validation_commands,
+                    "commands": approved_commands,
                     "profiles": selected_validation_profiles,
+                    "policy": validation_plan,
                 }
             )
+        validation_results = run_validation_hooks(approved_commands)
+        validation_results.extend(
+            {
+                "command": item.get("command", ""),
+                "returncode": None,
+                "passed": False,
+                "blocked": True,
+                "risk": item.get("risk", "requires_approval"),
+                "reason": item.get("reason", "Validation command was blocked by policy."),
+                "stdout": "",
+                "stderr": "",
+            }
+            for item in blocked_commands
+        )
         context.artifacts["validation"] = SoloistResult(
-            output=run_validation_hooks(merged_validation_commands),
+            output=validation_results,
             metadata={
                 "mode": "validation",
                 "profiles": selected_validation_profiles,
                 "commands": merged_validation_commands,
+                "approved_commands": approved_commands,
+                "blocked_commands": blocked_commands,
+                "policy": validation_plan,
             },
         )
+        if blocked_commands and event_sink is not None:
+            event_sink(
+                {
+                    "type": "validation_blocked",
+                    "commands": blocked_commands,
+                    "profiles": selected_validation_profiles,
+                }
+            )
         if event_sink is not None:
             event_sink(
                 {
                     "type": "validation_completed",
-                    "commands": merged_validation_commands,
+                    "commands": approved_commands,
                     "profiles": selected_validation_profiles,
+                    "blocked": blocked_commands,
                 }
             )
     return context

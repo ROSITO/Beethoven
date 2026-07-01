@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 from dataclasses import dataclass
 
 
@@ -17,6 +18,14 @@ class ValidationProfile:
     name: str
     description: str
     commands: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ValidationDecision:
+    command: str
+    status: str
+    risk: str
+    reason: str
 
 
 DEFAULT_VALIDATION_PROFILES: tuple[ValidationProfile, ...] = (
@@ -119,6 +128,47 @@ def run_validation_hooks(commands: list[str]) -> list[dict[str, object]]:
     return results
 
 
+def plan_validation_hooks(commands: list[str], *, permission_mode: str = "ask") -> dict[str, object]:
+    decisions = [classify_validation_command(command, permission_mode=permission_mode) for command in commands]
+    approved = [decision.command for decision in decisions if decision.status == "approved"]
+    blocked = [decision for decision in decisions if decision.status == "blocked"]
+    return {
+        "permission_mode": permission_mode,
+        "approved": approved,
+        "blocked": [
+            {
+                "command": decision.command,
+                "status": decision.status,
+                "risk": decision.risk,
+                "reason": decision.reason,
+            }
+            for decision in blocked
+        ],
+        "decisions": [
+            {
+                "command": decision.command,
+                "status": decision.status,
+                "risk": decision.risk,
+                "reason": decision.reason,
+            }
+            for decision in decisions
+        ],
+    }
+
+
+def classify_validation_command(command: str, *, permission_mode: str = "ask") -> ValidationDecision:
+    clean_command = str(command).strip()
+    risk, reason = _validation_risk(clean_command)
+    normalized_permission = str(permission_mode).strip().lower()
+    if risk == "read_only":
+        return ValidationDecision(clean_command, "approved", risk, reason)
+    if normalized_permission == "auto":
+        return ValidationDecision(clean_command, "approved", risk, "Permission mode auto approved validation command.")
+    if normalized_permission == "read-only":
+        return ValidationDecision(clean_command, "blocked", risk, "Read-only permission blocks mutating or unknown validation commands.")
+    return ValidationDecision(clean_command, "blocked", risk, "Ask permission requires explicit approval before this validation command can run.")
+
+
 def _dedupe_commands(commands: list[str]) -> list[str]:
     deduped: list[str] = []
     seen: set[str] = set()
@@ -129,3 +179,57 @@ def _dedupe_commands(commands: list[str]) -> list[str]:
         deduped.append(clean_command)
         seen.add(clean_command)
     return deduped
+
+
+def _validation_risk(command: str) -> tuple[str, str]:
+    lowered = command.lower()
+    dangerous_fragments = (
+        " rm ",
+        "rm -",
+        " rmdir ",
+        " mv ",
+        " cp ",
+        " chmod ",
+        " chown ",
+        "git clean",
+        "git reset",
+        "git checkout",
+        "git switch",
+        "git apply",
+        "git commit",
+        "git push",
+        "npm install",
+        "pip install",
+        ">",
+        ">>",
+    )
+    padded = f" {lowered} "
+    if any(fragment in padded for fragment in dangerous_fragments):
+        return "mutating", "Command appears able to modify files, dependencies, or Git state."
+    read_only_prefixes = (
+        "node --check ",
+        ".venv/bin/ruff check ",
+        "ruff check ",
+        ".venv/bin/python -m pytest",
+        f"{sys.executable} -m pytest",
+        "python -m pytest",
+        "python3 -m pytest",
+        "pytest",
+        "git diff --check",
+        "git status",
+        "git show",
+    )
+    if lowered.startswith(read_only_prefixes):
+        return "read_only", "Command matches a known read-only validation command."
+    if _is_simple_python_print(command):
+        return "read_only", "Command is a simple Python print smoke test."
+    return "requires_approval", "Command is not in Beethoven's read-only validation allowlist."
+
+
+def _is_simple_python_print(command: str) -> bool:
+    lowered = command.lower()
+    python_markers = ("python -c", "python3 -c", f"{sys.executable.lower()} -c")
+    if not any(marker in lowered for marker in python_markers):
+        return False
+    blocked = ("open(", "write(", "import os", "import subprocess", "import pathlib", "import shutil", "socket", "__import__")
+    return "print(" in lowered and not any(fragment in lowered for fragment in blocked)

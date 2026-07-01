@@ -764,8 +764,12 @@ def print_run(data: dict[str, object]) -> None:
             for result in validation.get("output", []):
                 if not isinstance(result, dict):
                     continue
-                marker = "passed" if result.get("passed") else "failed"
-                print(f"- {result.get('command')}: {marker}")
+                if result.get("blocked"):
+                    marker = "blocked"
+                else:
+                    marker = "passed" if result.get("passed") else "failed"
+                reason = f" ({result.get('reason')})" if result.get("reason") else ""
+                print(f"- {result.get('command')}: {marker}{reason}")
 
 
 def print_sessions(sessions: list[dict[str, object]]) -> None:

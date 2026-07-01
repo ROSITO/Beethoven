@@ -44,8 +44,13 @@ def context_events(context: ExecutionContext) -> list[dict[str, object]]:
                     "status": status.value,
                 }
             )
-    if "validation" in context.artifacts:
-        events.append({"type": "validation_completed"})
+    validation = context.artifacts.get("validation")
+    if validation is not None:
+        metadata = getattr(validation, "metadata", {})
+        blocked = metadata.get("blocked_commands", []) if isinstance(metadata, dict) else []
+        if blocked:
+            events.append({"type": "validation_blocked", "commands": blocked})
+        events.append({"type": "validation_completed", "blocked": blocked})
     events.append(
         {
             "type": "score_completed",

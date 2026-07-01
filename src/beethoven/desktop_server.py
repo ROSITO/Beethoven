@@ -22,6 +22,7 @@ from beethoven.runtime import (
 )
 from beethoven.serialization import context_to_dict, score_to_dict
 from beethoven.solomlx import (
+    ensure_solomlx_orchestrator,
     solomlx_install,
     solomlx_prepare_orchestrator,
     solomlx_start,
@@ -215,6 +216,25 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
                 kwargs["model"] = model
             try:
                 self._send_json({"solomlx": solomlx_prepare_orchestrator(**kwargs)})
+            except RuntimeError as error:
+                self._send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+            return
+
+        if path == "/api/solomlx/ensure":
+            payload = self._read_payload()
+            if payload is None:
+                return
+            try:
+                self._send_json(
+                    {
+                        "solomlx": ensure_solomlx_orchestrator(
+                            auto_install=bool(payload.get("install", False)),
+                            auto_prepare=bool(payload.get("prepare", False)),
+                            auto_start=bool(payload.get("start", False)),
+                            with_mlx=bool(payload.get("with_mlx", True)),
+                        )
+                    }
+                )
             except RuntimeError as error:
                 self._send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
             return

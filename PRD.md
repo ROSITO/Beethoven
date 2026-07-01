@@ -166,7 +166,7 @@ As of 2026-07-01, Beethoven has crossed from concept into a working pre-alpha:
 | Terminal CLI | Done | `beethoven chat`, `score`, `run`, sessions, workspace, soloists, skills, orchestrator, SoloMLX. |
 | Desktop workbench | In progress | Working local API, score preview, streaming run endpoint, session restore, file attachments, runtime board. |
 | Hidden Beethoven orchestrator | Done | Local conductor uses SoloMLX/OpenAI-compatible `/v1` first, then Ollama. It is not user-selectable. |
-| SoloMLX runtime brick | Done | Install, prepare Ministral, start, stop, status, memory guardrails, desktop API. |
+| SoloMLX runtime brick | Done | Managed runtime class, install, prepare Ministral, start, stop, status, ensure/autostart policy, memory guardrails, desktop API. |
 | Ollama adapter | Done | Available when explicitly enabled and model exists. |
 | OpenAI-compatible adapter | Done | Hidden orchestrator and execution-side `openai-compatible` soloist with CLI/API/desktop config. |
 | Codex/Claude adapters | Done | Local CLI adapters are available when installed and logged in. |
@@ -183,6 +183,8 @@ The MVP is acceptable when:
   without prefilled demo content.
 - Beethoven's hidden local orchestrator drafts the score by default through the
   managed SoloMLX/Ministral runtime when available.
+- Beethoven treats SoloMLX as an internal runtime dependency with explicit
+  ensure/autostart policy, not as a user-selected conductor.
 - The user can see whether the conductor, SoloMLX, RecursiveMAS, Codex, Claude,
   Ollama, and deterministic fallback are available.
 - The desktop conversation shows normal user and assistant message flow, while
@@ -200,8 +202,8 @@ The MVP is acceptable when:
 P0:
 
 - finish the desktop first-run state, runtime board, and conversation/run split;
-- make SoloMLX/Ministral the default hidden conductor path in product copy and
-  runtime diagnostics;
+- test SoloMLX/Ministral on-device as the default hidden conductor path and tune
+  runtime diagnostics for real memory/load behavior;
 - turn validation into governed task-graph capabilities with approval policy.
 
 P1:

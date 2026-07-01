@@ -252,3 +252,57 @@ def test_desktop_api_can_trigger_solomlx_install(tmp_path, monkeypatch) -> None:
     assert install_calls == [{"upgrade": True, "with_mlx": False}]
     assert payload["solomlx"]["installed"] is True
     assert payload["solomlx"]["with_mlx"] is False
+
+
+def test_desktop_api_can_ensure_solomlx_runtime(tmp_path, monkeypatch) -> None:
+    class TestHandler(BeethovenDesktopHandler):
+        store = DesktopSessionStore(tmp_path / "sessions.json")
+
+    ensure_calls: list[dict[str, object]] = []
+
+    def fake_ensure(**kwargs) -> dict[str, object]:
+        ensure_calls.append(kwargs)
+        return {
+            "id": "solomlx",
+            "status": "available",
+            "ensured": True,
+            "actions": [{"action": "start"}],
+        }
+
+    monkeypatch.setattr("beethoven.desktop_server.ensure_solomlx_orchestrator", fake_ensure)
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), TestHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    try:
+        host, port = server.server_address
+        request = Request(
+            f"http://{host}:{port}/api/solomlx/ensure",
+            data=json.dumps(
+                {
+                    "install": False,
+                    "prepare": True,
+                    "start": True,
+                    "with_mlx": False,
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        payload = json.loads(urlopen(request, timeout=2).read().decode("utf-8"))
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+    assert ensure_calls == [
+        {
+            "auto_install": False,
+            "auto_prepare": True,
+            "auto_start": True,
+            "with_mlx": False,
+        }
+    ]
+    assert payload["solomlx"]["ensured"] is True
+    assert payload["solomlx"]["actions"][0]["action"] == "start"

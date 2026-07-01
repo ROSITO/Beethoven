@@ -5,6 +5,8 @@ from pathlib import Path
 
 from beethoven.solomlx import (
     DEFAULT_MINISTRAL_ORCHESTRATOR_MODEL,
+    SoloMLXRuntime,
+    ensure_solomlx_orchestrator,
     solomlx_prepare_orchestrator,
     solomlx_python,
     solomlx_start,
@@ -85,3 +87,84 @@ def test_solomlx_start_sets_ministral_default_model(tmp_path, monkeypatch) -> No
     assert Path(report["log"]).name == "solomlx.log"
     assert report["pid"] == 4242
     assert os.environ["BEETHOVEN_HOME"] == str(tmp_path / "home")
+
+
+def test_solomlx_runtime_ensure_does_not_start_without_policy(monkeypatch) -> None:
+    calls: list[str] = []
+    runtime = SoloMLXRuntime()
+
+    monkeypatch.setattr(
+        "beethoven.solomlx.solomlx_status",
+        lambda **kwargs: {
+            "id": "solomlx",
+            "installed": True,
+            "available": False,
+            "status": "stopped",
+        },
+    )
+    monkeypatch.setattr("beethoven.solomlx.solomlx_start", lambda **kwargs: calls.append("start"))
+
+    report = runtime.ensure_orchestrator()
+
+    assert report["ensured"] is False
+    assert report["actions"] == []
+    assert calls == []
+
+
+def test_solomlx_runtime_ensure_can_start_installed_runtime(monkeypatch) -> None:
+    statuses = iter(
+        [
+            {
+                "id": "solomlx",
+                "installed": True,
+                "available": False,
+                "status": "stopped",
+            },
+            {
+                "id": "solomlx",
+                "installed": True,
+                "available": True,
+                "status": "available",
+            },
+            {
+                "id": "solomlx",
+                "installed": True,
+                "available": True,
+                "status": "available",
+            },
+        ]
+    )
+    monkeypatch.setattr("beethoven.solomlx.solomlx_status", lambda **kwargs: next(statuses))
+    monkeypatch.setattr(
+        "beethoven.solomlx.solomlx_start",
+        lambda **kwargs: {
+            "id": "solomlx",
+            "started": True,
+            "pid": 4242,
+        },
+    )
+
+    report = SoloMLXRuntime().ensure_orchestrator(auto_start=True)
+
+    assert report["ensured"] is True
+    assert report["status"] == "available"
+    assert report["actions"][0]["action"] == "start"
+
+
+def test_ensure_solomlx_orchestrator_uses_env_policy(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_ensure(self, **kwargs):
+        captured.update(kwargs)
+        return {"id": "solomlx", "ensured": False}
+
+    monkeypatch.setenv("BEETHOVEN_SOLOMLX_AUTOSTART", "1")
+    monkeypatch.setenv("BEETHOVEN_SOLOMLX_AUTOPREPARE", "true")
+    monkeypatch.setattr("beethoven.solomlx.SoloMLXRuntime.ensure_orchestrator", fake_ensure)
+
+    report = ensure_solomlx_orchestrator()
+
+    assert report["id"] == "solomlx"
+    assert captured["auto_start"] is True
+    assert captured["auto_prepare"] is True
+    assert captured["auto_install"] is False

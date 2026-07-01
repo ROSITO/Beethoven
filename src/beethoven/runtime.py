@@ -12,6 +12,7 @@ from beethoven.orchestrator import check_local_orchestrator, create_local_orches
 from beethoven.planning import create_baseline_score, create_dynamic_score
 from beethoven.recursive import DEFAULT_RECURSIVE_STYLE, create_recursive_score
 from beethoven.routing import CapabilityRouter, SoloistRegistry
+from beethoven.solomlx import ensure_solomlx_orchestrator
 from beethoven.soloists import (
     ClaudeCliSoloist,
     CodexCliSoloist,
@@ -247,6 +248,8 @@ def score_objective(
             return _prefer_recursivemas_for_recursive_score(recursive_score)
         return recursive_score
     if _local_orchestrator_planning_enabled():
+        runtime_report = ensure_solomlx_orchestrator()
+        combined_metadata["orchestrator_runtime"] = _public_runtime_report(runtime_report)
         orchestrator = create_local_orchestrator()
         if orchestrator is not None:
             planned_score = create_dynamic_score(
@@ -354,6 +357,23 @@ def run_objective(
 
 def _local_orchestrator_planning_enabled() -> bool:
     return os.getenv("BEETHOVEN_DYNAMIC_PLANNING", "1").lower() not in {"0", "false", "no"}
+
+
+def _public_runtime_report(report: dict[str, object]) -> dict[str, object]:
+    return {
+        key: report[key]
+        for key in (
+            "id",
+            "status",
+            "available",
+            "installed",
+            "process_running",
+            "base_url",
+            "preferred_orchestrator_model",
+            "ensured",
+        )
+        if key in report
+    }
 
 
 def _prefer_recursivemas_for_recursive_score(score: Score) -> Score:

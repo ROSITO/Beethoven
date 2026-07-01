@@ -71,8 +71,11 @@ Important modules:
   and RecursiveMAS delegation.
 - `src/beethoven/solomlx.py`: managed `ROSITO/SoloMLX-server` runtime brick.
   Beethoven can clone/install it into `BEETHOVEN_HOME`, start/stop the
-  `mlxserve` server, prepare the default Ministral orchestration model, and
-  inspect `/v1/models`.
+  `mlxserve` server, prepare the default Ministral orchestration model, inspect
+  `/v1/models`, and run an explicit `ensure` flow through `SoloMLXRuntime`.
+  Planning can call this brick before checking the hidden conductor; by default
+  it inspects only, while `BEETHOVEN_SOLOMLX_AUTOSTART=1` permits starting an
+  already installed runtime.
 - `src/beethoven/recursive.py`: RecursiveMAS-inspired score strategies that
   express sequential, deliberation, mixture, and distillation patterns as
   portable Beethoven tasks.
@@ -434,9 +437,9 @@ This completed with trace `understand:openai-compatible`,
 ## Known Gaps
 
 - SoloMLX-server/OpenAI-compatible and Ollama can now back the hidden local
-  orchestrator, the desktop can inspect/control the managed SoloMLX brick, and
-  OpenAI-compatible `/v1` APIs can be configured as execution soloists.
-  Persisted hidden orchestrator config UI is still missing.
+  orchestrator, the desktop can inspect/control/ensure the managed SoloMLX
+  brick, and OpenAI-compatible `/v1` APIs can be configured as execution
+  soloists. Persisted hidden orchestrator config UI is still missing.
 - The terminal CLI is line-oriented, not a full-screen TUI like OpenCode yet.
 - `soloist`, `permission_mode`, and `effort` are recorded but not deeply enforced
   beyond metadata/routing scaffolding.

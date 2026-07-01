@@ -43,6 +43,7 @@ const closeSkillsPanel = document.querySelector("#closeSkillsPanel");
 const skillsGrid = document.querySelector("#skillsGrid");
 const runtimeGrid = document.querySelector("#runtimeGrid");
 const refreshRuntimeButton = document.querySelector("#refreshRuntimeButton");
+const ensureSoloMlxButton = document.querySelector("#ensureSoloMlxButton");
 const installSoloMlxButton = document.querySelector("#installSoloMlxButton");
 const prepareSoloMlxButton = document.querySelector("#prepareSoloMlxButton");
 const startSoloMlxButton = document.querySelector("#startSoloMlxButton");
@@ -1179,14 +1180,14 @@ async function loadRuntimeStatus() {
   }
 }
 
-async function runSoloMlxAction(button, label, endpoint, method = "POST") {
+async function runSoloMlxAction(button, label, endpoint, method = "POST", body = {}) {
   button.textContent = `${label}…`;
   button.disabled = true;
   try {
     const response = await fetch(endpoint, {
       method,
       headers: method === "POST" ? { "Content-Type": "application/json" } : undefined,
-      body: method === "POST" ? JSON.stringify({}) : undefined
+      body: method === "POST" ? JSON.stringify(body) : undefined
     });
     const payload = await response.json();
     if (!response.ok) {
@@ -1540,6 +1541,13 @@ scorePreviewButton.addEventListener("click", previewComposerScore);
 closeCommandPanel.addEventListener("click", () => toggleCommandPanel(false));
 closeSkillsPanel.addEventListener("click", () => toggleSkillsPanel(false));
 refreshRuntimeButton.addEventListener("click", loadRuntimeStatus);
+ensureSoloMlxButton.addEventListener("click", () =>
+  runSoloMlxAction(ensureSoloMlxButton, "Ensure SoloMLX", "/api/solomlx/ensure", "POST", {
+    start: true,
+    prepare: false,
+    install: false
+  })
+);
 installSoloMlxButton.addEventListener("click", () =>
   runSoloMlxAction(installSoloMlxButton, "Install SoloMLX", "/api/solomlx/install")
 );

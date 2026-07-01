@@ -1014,6 +1014,12 @@ button {
   font-size: 13px;
 }
 
+.text-button.primary {
+  color: #16130a;
+  background: var(--gold);
+  border-color: var(--gold-dark);
+}
+
 .context-chip.warning {
   color: #7a5a0c;
   background: rgba(212, 175, 55, 0.18);

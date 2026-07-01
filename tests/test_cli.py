@@ -53,11 +53,28 @@ def test_score_command_prints_json(capsys) -> None:
 def test_score_objective_uses_hidden_local_orchestrator(monkeypatch) -> None:
     monkeypatch.setenv("BEETHOVEN_DYNAMIC_PLANNING", "1")
     monkeypatch.setattr("beethoven.runtime.create_local_orchestrator", lambda: FakeLocalOrchestrator())
+    monkeypatch.setattr(
+        "beethoven.runtime.ensure_solomlx_orchestrator",
+        lambda: {
+            "id": "solomlx",
+            "status": "available",
+            "available": True,
+            "installed": True,
+            "process_running": True,
+            "base_url": "http://127.0.0.1:8080/v1",
+            "preferred_orchestrator_model": "ministral",
+            "ensured": True,
+            "actions": [{"action": "start"}],
+        },
+    )
 
     score = score_objective("Build a local orchestration brain")
 
     assert score.metadata["orchestrator"] == "beethoven-local"
     assert score.metadata["planner"] == "beethoven-orchestrator"
+    assert score.metadata["orchestrator_runtime"]["id"] == "solomlx"
+    assert score.metadata["orchestrator_runtime"]["ensured"] is True
+    assert "actions" not in score.metadata["orchestrator_runtime"]
     assert [task.id for task in score.tasks] == ["inspect", "answer"]
     assert score.tasks[0].metadata["preferred_soloist"] == "local-reader"
 
@@ -319,6 +336,31 @@ def test_solomlx_prepare_orchestrator_pulls_model(monkeypatch, capsys) -> None:
     assert calls == [{"target_dir": None}]
     assert data["solomlx"]["prepared"] is True
     assert "Ministral" in data["solomlx"]["model"]
+
+
+def test_solomlx_ensure_command_uses_explicit_policy(monkeypatch, capsys) -> None:
+    calls: list[dict[str, object]] = []
+
+    def fake_ensure(**kwargs):
+        calls.append(kwargs)
+        return {"id": "solomlx", "status": "available", "ensured": True, "actions": []}
+
+    monkeypatch.setattr("beethoven.cli.ensure_solomlx_orchestrator", fake_ensure)
+
+    exit_code = main(["solomlx", "ensure", "--install", "--prepare", "--start", "--without-mlx", "--json"])
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert exit_code == 0
+    assert data["solomlx"]["ensured"] is True
+    assert calls == [
+        {
+            "auto_install": True,
+            "auto_prepare": True,
+            "auto_start": True,
+            "with_mlx": False,
+        }
+    ]
 
 
 def test_soloists_check_reports_unconfigured_recursivemas(monkeypatch, capsys) -> None:

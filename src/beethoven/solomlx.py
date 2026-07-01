@@ -8,6 +8,7 @@ import signal
 import shutil
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -20,6 +21,65 @@ from beethoven.orchestrator import DEFAULT_MINISTRAL_ORCHESTRATOR_MODEL, DEFAULT
 SOLOMLX_REPOSITORY_URL = "https://github.com/ROSITO/SoloMLX-server.git"
 DEFAULT_SOLOMLX_PORT = 8080
 DEFAULT_SOLOMLX_HOST = "127.0.0.1"
+SOLOMLX_AUTOSTART_ENV = "BEETHOVEN_SOLOMLX_AUTOSTART"
+SOLOMLX_AUTOPREPARE_ENV = "BEETHOVEN_SOLOMLX_AUTOPREPARE"
+
+
+@dataclass(frozen=True)
+class SoloMLXRuntime:
+    """Beethoven-managed SoloMLX-server runtime brick."""
+
+    host: str = DEFAULT_SOLOMLX_HOST
+    port: int = DEFAULT_SOLOMLX_PORT
+    target_dir: str | Path | None = None
+    pid_path: str | Path | None = None
+
+    def status(self) -> dict[str, object]:
+        return solomlx_status(
+            base_url=solomlx_base_url(self.host, self.port),
+            pid_path=self.pid_path,
+        )
+
+    def install(self, *, upgrade: bool = False, with_mlx: bool = True) -> dict[str, object]:
+        return solomlx_install(
+            target_dir=self.target_dir,
+            upgrade=upgrade,
+            with_mlx=with_mlx,
+        )
+
+    def prepare_orchestrator(self, *, model: str = DEFAULT_MINISTRAL_ORCHESTRATOR_MODEL) -> dict[str, object]:
+        return solomlx_prepare_orchestrator(model=model, target_dir=self.target_dir)
+
+    def start(self) -> dict[str, object]:
+        return solomlx_start(
+            host=self.host,
+            port=self.port,
+            target_dir=self.target_dir,
+            pid_path=self.pid_path,
+        )
+
+    def ensure_orchestrator(
+        self,
+        *,
+        auto_install: bool = False,
+        auto_prepare: bool = False,
+        auto_start: bool = False,
+        with_mlx: bool = True,
+    ) -> dict[str, object]:
+        """Bring the managed runtime as close to ready as policy allows."""
+        actions: list[dict[str, object]] = []
+        status = self.status()
+        if status.get("available"):
+            return {**status, "ensured": True, "actions": actions}
+        if not status.get("installed") and auto_install:
+            actions.append({"action": "install", **self.install(with_mlx=with_mlx)})
+            status = self.status()
+        if status.get("installed") and auto_prepare:
+            actions.append({"action": "prepare_orchestrator", **self.prepare_orchestrator()})
+        if status.get("installed") and auto_start:
+            actions.append({"action": "start", **self.start()})
+            status = self.status()
+        return {**status, "ensured": bool(status.get("available")), "actions": actions}
 
 
 def default_solomlx_dir() -> Path:
@@ -50,6 +110,30 @@ def solomlx_base_url(host: str = DEFAULT_SOLOMLX_HOST, port: int = DEFAULT_SOLOM
     if host != DEFAULT_SOLOMLX_HOST or port != DEFAULT_SOLOMLX_PORT:
         default_url = f"http://{host}:{port}/v1"
     return os.getenv("BEETHOVEN_ORCHESTRATOR_BASE_URL", default_url).rstrip("/")
+
+
+def solomlx_autostart_enabled() -> bool:
+    return os.getenv(SOLOMLX_AUTOSTART_ENV, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def solomlx_autoprepare_enabled() -> bool:
+    return os.getenv(SOLOMLX_AUTOPREPARE_ENV, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def ensure_solomlx_orchestrator(
+    *,
+    auto_install: bool = False,
+    auto_prepare: bool | None = None,
+    auto_start: bool | None = None,
+    with_mlx: bool = True,
+) -> dict[str, object]:
+    """Ensure Beethoven's managed SoloMLX runtime according to explicit policy."""
+    return SoloMLXRuntime().ensure_orchestrator(
+        auto_install=auto_install,
+        auto_prepare=solomlx_autoprepare_enabled() if auto_prepare is None else auto_prepare,
+        auto_start=solomlx_autostart_enabled() if auto_start is None else auto_start,
+        with_mlx=with_mlx,
+    )
 
 
 def solomlx_install(

@@ -266,6 +266,7 @@ beethoven solomlx status
 beethoven solomlx install
 beethoven solomlx prepare-orchestrator
 beethoven solomlx start
+beethoven solomlx ensure --start
 beethoven skills list
 beethoven validation profiles
 beethoven workspace
@@ -293,6 +294,7 @@ OpenAI-compatible API and can be managed by Beethoven:
 beethoven solomlx install
 beethoven solomlx prepare-orchestrator
 beethoven solomlx start
+beethoven solomlx ensure --start
 beethoven solomlx status
 
 BEETHOVEN_ORCHESTRATOR_PROVIDER=solomlx \
@@ -310,6 +312,13 @@ Beethoven starts SoloMLX with `MLXSERVE_DEFAULT_MODEL` set to that model unless
 `BEETHOVEN_ORCHESTRATOR_MODEL` overrides it. The orchestrator prompt is tuned
 for compact score generation, local-first routing, and RecursiveMAS delegation
 when `recursivemas` is available.
+
+During planning, Beethoven treats SoloMLX as an internal runtime dependency, not
+as a user-selected soloist. By default it only inspects the managed runtime. Set
+`BEETHOVEN_SOLOMLX_AUTOSTART=1` to let Beethoven start an already installed
+SoloMLX server automatically before checking the hidden conductor. Set
+`BEETHOVEN_SOLOMLX_AUTOPREPARE=1` only when you explicitly want Beethoven to
+pull/prepare the default orchestration model as part of that ensure step.
 
 SoloMLX downloads are isolated from the global Hugging Face cache by default:
 `~/.beethoven/huggingface`. Override with `BEETHOVEN_SOLOMLX_CACHE` when needed.

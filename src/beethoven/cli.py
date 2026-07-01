@@ -24,6 +24,7 @@ from beethoven.runtime import (
 )
 from beethoven.serialization import context_to_dict, score_to_dict
 from beethoven.solomlx import (
+    ensure_solomlx_orchestrator,
     solomlx_install,
     solomlx_prepare_orchestrator,
     solomlx_start,
@@ -174,6 +175,19 @@ def build_parser() -> argparse.ArgumentParser:
     solomlx_start_parser.add_argument("--port", default=8080, type=int, help="Port to bind.")
     solomlx_start_parser.add_argument("--dir", dest="target_dir", help="Installation directory.")
     solomlx_start_parser.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+    solomlx_ensure_parser = solomlx_subparsers.add_parser(
+        "ensure",
+        help="Ensure the managed SoloMLX orchestrator brick according to explicit flags.",
+    )
+    solomlx_ensure_parser.add_argument("--install", action="store_true", help="Install SoloMLX if missing.")
+    solomlx_ensure_parser.add_argument("--prepare", action="store_true", help="Pull the default orchestration model.")
+    solomlx_ensure_parser.add_argument("--start", action="store_true", help="Start SoloMLX if installed and stopped.")
+    solomlx_ensure_parser.add_argument(
+        "--without-mlx",
+        action="store_true",
+        help="Install only the API package when --install is used.",
+    )
+    solomlx_ensure_parser.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
     solomlx_stop_parser = solomlx_subparsers.add_parser("stop", help="Stop the managed SoloMLX-server.")
     solomlx_stop_parser.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
 
@@ -408,6 +422,20 @@ def main(argv: Sequence[str] | None = None) -> int:
             else:
                 print_solomlx_status(report)
             return 0
+        if args.solomlx_command == "ensure":
+            report = ensure_solomlx_orchestrator(
+                auto_install=args.install,
+                auto_prepare=args.prepare,
+                auto_start=args.start,
+                with_mlx=not args.without_mlx,
+            )
+            if args.json:
+                print(json.dumps({"solomlx": report}, indent=2, ensure_ascii=False))
+            else:
+                print_solomlx_status(report)
+                if report.get("actions"):
+                    print(f"Actions: {len(report['actions'])}")
+            return 0 if report.get("ensured") else 1
         if args.solomlx_command == "stop":
             report = solomlx_stop()
             if args.json:

@@ -39,6 +39,18 @@ beethoven desktop --host "$BEETHOVEN_HOST" --port "$BEETHOVEN_PORT"
 
 with defaults of `127.0.0.1` and `4173`.
 
+The launcher is also versioned at `src-tauri/bin/beethoven-sidecar` and is
+listed in `tauri.conf.json` as an external binary. `beforeBuildCommand`
+regenerates it before a Tauri build.
+
+Resolution order:
+
+1. `BEETHOVEN_BIN`, when set;
+2. `beethoven` on `PATH`;
+3. `BEETHOVEN_PYTHON`, when set;
+4. local `.venv/bin/python`;
+5. `python3` on `PATH`, using `-m beethoven.cli`.
+
 ## Python Sidecar Strategy
 
 The desktop app should treat Python as Beethoven's orchestration engine, not as
@@ -47,7 +59,8 @@ an implementation detail hidden inside the frontend. The packaging path is:
 1. **Development**: Tauri starts `beethoven desktop` with the editable Python
    package installed in the active environment.
 2. **Local sidecar launcher**: `beethoven package sidecar` writes a launcher in
-   `src-tauri/bin/` that delegates to the installed `beethoven` console script.
+   `src-tauri/bin/` that delegates to the installed `beethoven` console script
+   or a Python module fallback.
 3. **Bundled sidecar**: production builds should ship a hermetic Python runtime
    containing the `beethoven` package and its dependencies, then launch it as a
    Tauri sidecar process.

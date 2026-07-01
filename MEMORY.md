@@ -95,7 +95,9 @@ Important modules:
 - `src/beethoven/desktop_state.py`: local JSON-backed session store.
 - `src/beethoven/workspace.py`: Git/workspace inspection, attachable file
   listing, and safe attachment packing.
-- `src/beethoven/packaging.py`: sidecar launcher generation.
+- `src/beethoven/packaging.py`: sidecar launcher generation. The generated
+  launcher resolves `BEETHOVEN_BIN`, `beethoven`, `BEETHOVEN_PYTHON`, local
+  `.venv/bin/python`, then `python3 -m beethoven.cli`.
 
 Current baseline score tasks:
 
@@ -353,10 +355,11 @@ Sidecar generation:
 beethoven package sidecar
 ```
 
-This writes `src-tauri/bin/beethoven-sidecar`.
+This writes `src-tauri/bin/beethoven-sidecar`, which is also versioned and
+listed in `src-tauri/tauri.conf.json` as `bundle.externalBin`.
 
-Packaging is not production-complete. A bundled Python sidecar/runtime strategy
-is still needed before real installers.
+Packaging is not production-complete. A bundled hermetic Python runtime is still
+needed before real installers.
 
 ## Tests And Validation
 

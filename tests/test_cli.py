@@ -520,7 +520,10 @@ def test_package_sidecar_command_writes_launcher(tmp_path, capsys) -> None:
     assert exit_code == 0
     assert "Sidecar launcher written" in captured.out
     assert output.exists()
-    assert "beethoven desktop" in output.read_text(encoding="utf-8")
+    launcher = output.read_text(encoding="utf-8")
+    assert "BEETHOVEN_BIN" in launcher
+    assert "BEETHOVEN_PYTHON" in launcher
+    assert "-m beethoven.cli desktop" in launcher
     assert output.stat().st_mode & 0o111
 
 

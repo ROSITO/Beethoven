@@ -173,7 +173,7 @@ As of 2026-07-01, Beethoven has crossed from concept into a working pre-alpha:
 | RecursiveMAS integration | Partial | Native recursive scores and optional sidecar bridge are present; deeper runtime collaboration remains experimental. |
 | `@path` attachments | Done | Safe workspace reads with binary blocking, MIME/size/snippet metadata, total byte budget, bounded directory bundles, and desktop inspection. |
 | Validation tasks | Partial | Local commands and named profiles are appended as governed `validate` score tasks with policy gating, exact command approval, and desktop approve/rerun action; richer prompt UX remains. |
-| Production packaging | Partial | Tauri scaffold and sidecar generation exist; installer-grade bundled Python strategy remains. |
+| Production packaging | Partial | Tauri scaffold, versioned sidecar launcher, external binary config, and sidecar generation exist; installer-grade bundled Python runtime remains. |
 
 ### MVP Acceptance Criteria
 

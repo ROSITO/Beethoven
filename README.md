@@ -275,6 +275,11 @@ beethoven package sidecar
 beethoven package recursivemas-bridge
 ```
 
+The Tauri shell includes a versioned sidecar launcher at
+`src-tauri/bin/beethoven-sidecar`. It prefers `BEETHOVEN_BIN`/`beethoven` and
+falls back to `BEETHOVEN_PYTHON`, `.venv/bin/python`, or `python3 -m
+beethoven.cli`.
+
 Inside `beethoven chat`, type an objective to run it directly, or use slash
 commands such as `/score`, `/run`, `/files`, `/workspace`, `/permission`,
 `/effort`, `/soloist`, `/orchestrator`, `/strategy`, `/recursive-style`,

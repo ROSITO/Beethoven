@@ -121,6 +121,8 @@ def build_parser() -> argparse.ArgumentParser:
     sessions_show = session_subparsers.add_parser("show", help="Show one desktop session.")
     sessions_show.add_argument("session_id", help="Session or score id to inspect.")
     sessions_show.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+    sessions_clear = session_subparsers.add_parser("clear", help="Clear local desktop session history.")
+    sessions_clear.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
 
     soloists = subparsers.add_parser("soloists", help="Inspect configured soloists.")
     soloist_subparsers = soloists.add_subparsers(dest="soloists_command", required=True)
@@ -343,6 +345,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print(json.dumps({"session": session}, indent=2, ensure_ascii=False))
             else:
                 print_session(session)
+            return 0
+        if args.sessions_command == "clear":
+            cleared = store.clear()
+            if args.json:
+                print(json.dumps({"sessions": {"cleared": cleared}}, indent=2, ensure_ascii=False))
+            else:
+                print(f"Cleared {cleared} desktop session(s).")
             return 0
 
     if args.command == "soloists":

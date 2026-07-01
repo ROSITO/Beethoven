@@ -35,6 +35,11 @@ class DesktopSessionStore:
                 return session
         return None
 
+    def clear(self) -> int:
+        sessions = self._read_sessions()
+        self._write([])
+        return len(sessions)
+
     def _read_sessions(self) -> list[dict[str, Any]]:
         if not self.path.exists():
             return []

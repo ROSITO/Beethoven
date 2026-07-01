@@ -184,6 +184,8 @@ beethoven sessions list
 beethoven sessions list --json
 beethoven sessions show <session-id>
 beethoven sessions show <session-id> --json
+beethoven sessions clear
+beethoven sessions clear --json
 beethoven soloists list
 beethoven soloists list --json
 beethoven soloists configure recursivemas --command "python3 /path/to/bridge.py"
@@ -238,6 +240,7 @@ Implemented endpoints:
 
 - `GET /api/health`;
 - `GET /api/sessions`;
+- `DELETE /api/sessions`;
 - `GET /api/sessions/<id>`;
 - `GET /api/soloists`;
 - `GET /api/orchestrator`;

@@ -255,6 +255,7 @@ beethoven desktop
 beethoven desktop --open
 beethoven sessions list
 beethoven sessions show <session-id>
+beethoven sessions clear
 beethoven soloists list
 beethoven soloists configure recursivemas --command "python3 /path/to/bridge.py"
 beethoven soloists check recursivemas

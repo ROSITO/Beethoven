@@ -208,6 +208,14 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path, monkeypatch) ->
 
         detail = urlopen(f"http://{host}:{port}/api/sessions/{payload['score']['id']}", timeout=2)
         detail_data = json.loads(detail.read().decode("utf-8"))
+
+        clear_sessions_request = Request(
+            f"http://{host}:{port}/api/sessions",
+            method="DELETE",
+        )
+        clear_sessions_data = json.loads(urlopen(clear_sessions_request, timeout=2).read().decode("utf-8"))
+        empty_sessions = urlopen(f"http://{host}:{port}/api/sessions", timeout=2)
+        empty_sessions_data = json.loads(empty_sessions.read().decode("utf-8"))
     finally:
         server.shutdown()
         server.server_close()
@@ -241,6 +249,8 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path, monkeypatch) ->
     assert any(session["id"] == payload["score"]["id"] for session in sessions_data["sessions"])
     assert "run" not in sessions_data["sessions"][0]
     assert detail_data["session"]["run"]["score"]["id"] == payload["score"]["id"]
+    assert clear_sessions_data["sessions"]["cleared"] >= 1
+    assert empty_sessions_data["sessions"] == []
     assert stream_events[0]["event"]["type"] == "score_started"
     assert stream_events[-1]["event"]["type"] == "run_completed"
     assert stream_events[-1]["event"]["context"]["score"]["objective"] == "stream desktop api"

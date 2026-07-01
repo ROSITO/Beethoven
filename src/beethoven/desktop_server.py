@@ -371,6 +371,10 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
 
     def do_DELETE(self) -> None:
         path = urlparse(self.path).path
+        if path == "/api/sessions":
+            cleared = self.store.clear()
+            self._send_json({"sessions": {"cleared": cleared}})
+            return
         if path == "/api/soloists/recursivemas/config":
             config_path = BeethovenConfig().clear_recursivemas_command()
             self._send_json({"config": {"id": "recursivemas", "command": "", "configured": False, "path": str(config_path)}})

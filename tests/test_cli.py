@@ -261,6 +261,13 @@ def test_sessions_list_command_prints_history(tmp_path, monkeypatch, capsys) -> 
     assert "Session: review desktop session history" in show_captured.out
     assert "Trace" in show_captured.out
 
+    clear_exit_code = main(["sessions", "clear", "--json"])
+    clear_captured = capsys.readouterr()
+    clear_data = json.loads(clear_captured.out)
+    assert clear_exit_code == 0
+    assert clear_data["sessions"]["cleared"] == 1
+    assert DesktopSessionStore().list_sessions() == []
+
 
 def test_soloists_list_command_prints_catalog(capsys) -> None:
     exit_code = main(["soloists", "list"])

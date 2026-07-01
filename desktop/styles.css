@@ -225,6 +225,7 @@ button {
 .context-bar,
 .topbar,
 .topbar-actions,
+.header-actions,
 .account-strip {
   display: flex;
   align-items: center;
@@ -237,6 +238,10 @@ button {
 .topbar {
   justify-content: space-between;
   gap: 16px;
+}
+
+.header-actions {
+  gap: 6px;
 }
 
 .section-header h2,

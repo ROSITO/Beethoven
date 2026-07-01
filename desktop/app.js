@@ -12,6 +12,7 @@ const newTaskButton = document.querySelector("#newTaskButton");
 const searchButton = document.querySelector("#searchButton");
 const skillsButton = document.querySelector("#skillsButton");
 const sessionFilterButton = document.querySelector("#sessionFilterButton");
+const clearSessionsButton = document.querySelector("#clearSessionsButton");
 const sessionSearch = document.querySelector("#sessionSearch");
 const modeTabs = [...document.querySelectorAll(".mode-tab")];
 const chatThread = document.querySelector("#chatThread");
@@ -1679,6 +1680,36 @@ async function loadSessions() {
   renderFilteredSessions();
 }
 
+async function clearSessionHistory() {
+  if (!allSessions.length) {
+    composerStatus.classList.remove("error");
+    composerStatus.textContent = "No sessions to clear.";
+    return;
+  }
+  if (!window.confirm("Clear local session history?")) {
+    return;
+  }
+  clearSessionsButton.disabled = true;
+  composerStatus.classList.remove("error");
+  composerStatus.textContent = "Clearing sessions…";
+  try {
+    const response = await fetch("/api/sessions", { method: "DELETE" });
+    if (!response.ok) {
+      throw new Error(`Session API returned ${response.status}`);
+    }
+    allSessions = [];
+    activeSessionId = null;
+    renderFilteredSessions();
+    composerStatus.textContent = "Session history cleared.";
+  } catch (error) {
+    composerStatus.classList.add("error");
+    composerStatus.textContent = "Unable to clear session history.";
+    console.error(error);
+  } finally {
+    clearSessionsButton.disabled = false;
+  }
+}
+
 async function startNewTask() {
   activeSessionId = null;
   composer.value = "";
@@ -1735,6 +1766,7 @@ newTaskButton.addEventListener("click", startNewTask);
 searchButton.addEventListener("click", () => setSearchOpen(sessionSearch.hidden));
 skillsButton.addEventListener("click", () => toggleSkillsPanel());
 sessionFilterButton.addEventListener("click", () => setSearchOpen(sessionSearch.hidden));
+clearSessionsButton.addEventListener("click", clearSessionHistory);
 sessionSearch.addEventListener("input", renderFilteredSessions);
 sessionSearch.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {

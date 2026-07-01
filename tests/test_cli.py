@@ -489,6 +489,54 @@ def test_workspace_diff_command_prints_status(capsys) -> None:
     assert "Status:" in captured.out
 
 
+def test_workspace_patch_commands_require_approval(tmp_path, monkeypatch, capsys) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    target = tmp_path / "hello.txt"
+    target.write_text("before\n", encoding="utf-8")
+    subprocess.run(["git", "add", "hello.txt"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "initial"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        env={
+            **os.environ,
+            "GIT_AUTHOR_NAME": "Test",
+            "GIT_AUTHOR_EMAIL": "test@example.com",
+            "GIT_COMMITTER_NAME": "Test",
+            "GIT_COMMITTER_EMAIL": "test@example.com",
+        },
+    )
+    target.write_text("after\n", encoding="utf-8")
+    patch = subprocess.run(["git", "diff"], cwd=tmp_path, check=True, capture_output=True, text=True).stdout
+    subprocess.run(["git", "checkout", "--", "hello.txt"], cwd=tmp_path, check=True, capture_output=True)
+    patch_file = tmp_path / "change.patch"
+    patch_file.write_text(patch, encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    check_exit = main(["workspace", "patch-check", str(patch_file), "--json"])
+    check_payload = json.loads(capsys.readouterr().out)
+    denied_exit = main(["workspace", "patch-apply", str(patch_file), "--approve", "wrong"])
+    denied_output = capsys.readouterr().out
+    apply_exit = main(
+        [
+            "workspace",
+            "patch-apply",
+            str(patch_file),
+            "--approve",
+            check_payload["patch"]["token"],
+        ]
+    )
+    apply_output = capsys.readouterr().out
+
+    assert check_exit == 0
+    assert denied_exit == 1
+    assert "approval_required" in denied_output
+    assert apply_exit == 0
+    assert "Patch: applied" in apply_output
+    assert target.read_text(encoding="utf-8") == "after\n"
+
+
 def test_terminal_session_runs_objectives_and_commands(capsys) -> None:
     inputs = iter(
         [

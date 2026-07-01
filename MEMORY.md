@@ -46,6 +46,7 @@ The foundation is pre-alpha but executable. It includes:
   bundles;
 - bounded Git diff inspection through CLI, desktop API, and desktop session
   menu;
+- approval-token gated patch check/apply helpers through CLI and desktop API;
 - governed validation commands appended as explicit `validate` score tasks, with
   a policy gate that blocks mutating or unknown commands unless permission mode
   is `auto` or the exact command is explicitly approved for that run;
@@ -374,7 +375,7 @@ Current test suite:
 
 Latest known status after the current implementation:
 
-- `75 passed`;
+- `77 passed`;
 - Ruff passes;
 - `node --check desktop/app.js` passes.
 
@@ -402,6 +403,7 @@ Test coverage currently includes:
 - workspace attachment packing with binary blocking, total byte budget,
   MIME/size/snippet metadata, directory expansion, and enriched file listing;
 - bounded workspace diff inspection in CLI/API/desktop;
+- patch check/apply approval token behavior;
 - conductor dependency execution;
 - invalid dependency rejection.
 
@@ -462,7 +464,8 @@ This completed with trace `understand:openai-compatible`,
   policy gate for mutating/unknown commands plus exact-command approval for
   `ask` mode. The desktop can approve blocked validation commands and rerun, but
   the approval UX is still a compact message action rather than a full modal.
-- Bounded diff inspection exists, but there is no patch apply workflow yet.
+- Bounded diff inspection and approval-token gated patch apply exist, but the
+  desktop patch apply UX is not implemented yet.
 - No persistent conversation message history beyond saved run/session summaries.
 - No plugin SDK.
 - No real automation/scheduled scores.

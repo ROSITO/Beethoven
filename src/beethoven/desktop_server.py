@@ -12,6 +12,7 @@ from urllib.parse import unquote, urlparse
 
 from beethoven.config import BeethovenConfig
 from beethoven.desktop_state import DesktopSessionStore
+from beethoven.patching import apply_approved_patch, inspect_patch
 from beethoven.runtime import (
     check_orchestrator,
     check_soloist,
@@ -177,6 +178,31 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
                     )
                 )
             )
+            return
+
+        if path == "/api/patch/check":
+            payload = self._read_payload()
+            if payload is None:
+                return
+            patch = str(payload.get("patch", ""))
+            if not patch.strip():
+                self._send_json({"error": "Missing patch"}, HTTPStatus.BAD_REQUEST)
+                return
+            report = inspect_patch(patch)
+            self._send_json({"patch": report}, HTTPStatus.OK if report.get("applicable") else HTTPStatus.BAD_REQUEST)
+            return
+
+        if path == "/api/patch/apply":
+            payload = self._read_payload()
+            if payload is None:
+                return
+            patch = str(payload.get("patch", ""))
+            approval_token = str(payload.get("approval_token", ""))
+            if not patch.strip():
+                self._send_json({"error": "Missing patch"}, HTTPStatus.BAD_REQUEST)
+                return
+            report = apply_approved_patch(patch, approval_token=approval_token)
+            self._send_json({"patch": report}, HTTPStatus.OK if report.get("applied") else HTTPStatus.BAD_REQUEST)
             return
 
         if path == "/api/solomlx/start":

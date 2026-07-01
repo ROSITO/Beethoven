@@ -6,6 +6,7 @@ import argparse
 import json
 import sys
 from collections.abc import Callable
+from pathlib import Path
 from typing import Sequence
 
 from beethoven.desktop_server import serve_desktop
@@ -13,6 +14,7 @@ from beethoven.core import Score
 from beethoven.config import BeethovenConfig
 from beethoven.desktop_state import DesktopSessionStore
 from beethoven.packaging import write_recursivemas_bridge, write_sidecar_script
+from beethoven.patching import apply_approved_patch, inspect_patch
 from beethoven.recursive import DEFAULT_RECURSIVE_STYLE, RECURSIVE_STYLES
 from beethoven.runtime import (
     check_orchestrator,
@@ -216,6 +218,13 @@ def build_parser() -> argparse.ArgumentParser:
     workspace_diff = workspace_subparsers.add_parser("diff", help="Show a bounded Git diff for the current workspace.")
     workspace_diff.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
     workspace_diff.add_argument("--max-chars", default=48_000, type=int, help="Maximum diff characters to return.")
+    workspace_patch_check = workspace_subparsers.add_parser("patch-check", help="Check a patch and print its approval token.")
+    workspace_patch_check.add_argument("patch_file", help="Unified diff patch file to check.")
+    workspace_patch_check.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+    workspace_patch_apply = workspace_subparsers.add_parser("patch-apply", help="Apply a checked patch with an approval token.")
+    workspace_patch_apply.add_argument("patch_file", help="Unified diff patch file to apply.")
+    workspace_patch_apply.add_argument("--approve", required=True, help="Approval token returned by patch-check.")
+    workspace_patch_apply.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
 
     package = subparsers.add_parser("package", help="Prepare desktop packaging assets.")
     package_subparsers = package.add_subparsers(dest="package_command", required=True)
@@ -487,6 +496,22 @@ def main(argv: Sequence[str] | None = None) -> int:
             else:
                 print_workspace_diff(workspace_diff)
             return 0
+        if args.workspace_command == "patch-check":
+            patch_text = Path(args.patch_file).read_text(encoding="utf-8")
+            report = inspect_patch(patch_text)
+            if args.json:
+                print(json.dumps({"patch": report}, indent=2, ensure_ascii=False))
+            else:
+                print_patch_report(report)
+            return 0 if report.get("applicable") else 1
+        if args.workspace_command == "patch-apply":
+            patch_text = Path(args.patch_file).read_text(encoding="utf-8")
+            report = apply_approved_patch(patch_text, approval_token=args.approve)
+            if args.json:
+                print(json.dumps({"patch": report}, indent=2, ensure_ascii=False))
+            else:
+                print_patch_report(report)
+            return 0 if report.get("applied") else 1
         workspace = inspect_workspace()
         if args.json:
             print(json.dumps({"workspace": workspace}, indent=2, ensure_ascii=False))
@@ -957,6 +982,18 @@ def print_workspace_diff(payload: dict[str, object]) -> None:
         print(diff)
     else:
         print(payload.get("message", "No diff."))
+
+
+def print_patch_report(payload: dict[str, object]) -> None:
+    print(f"Patch: {payload.get('status')}")
+    print(f"Applicable: {payload.get('applicable')}")
+    print(f"Applied: {payload.get('applied', False)}")
+    if payload.get("token"):
+        print(f"Approval token: {payload.get('token')}")
+    print(f"Message: {payload.get('message')}")
+    stderr = str(payload.get("stderr", ""))
+    if stderr:
+        print(stderr)
 
 
 if __name__ == "__main__":

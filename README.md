@@ -272,6 +272,8 @@ beethoven validation profiles
 beethoven workspace
 beethoven workspace files
 beethoven workspace diff
+beethoven workspace patch-check change.patch
+beethoven workspace patch-apply change.patch --approve <token>
 beethoven package sidecar
 beethoven package recursivemas-bridge
 ```
@@ -409,6 +411,10 @@ beethoven workspace diff
 
 The desktop session menu can load the current bounded Git diff into the
 conversation before approval-oriented code workflows.
+
+Patch application is approval-gated. `patch-check` runs `git apply --check` and
+prints a token derived from the exact patch. `patch-apply` applies only when the
+same token is provided.
 
 Attach files directly with `@path`. Beethoven keeps reads inside the workspace,
 blocks ignored/binary files, applies a total byte budget, and can expand small

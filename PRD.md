@@ -173,7 +173,7 @@ As of 2026-07-01, Beethoven has crossed from concept into a working pre-alpha:
 | RecursiveMAS integration | Partial | Native recursive scores and optional sidecar bridge are present; deeper runtime collaboration remains experimental. |
 | `@path` attachments | Done | Safe workspace reads with binary blocking, MIME/size/snippet metadata, total byte budget, bounded directory bundles, and desktop inspection. |
 | Validation tasks | Partial | Local commands and named profiles are appended as governed `validate` score tasks with policy gating, exact command approval, and desktop approve/rerun action; richer prompt UX remains. |
-| Diff/patch workflow | Partial | Bounded Git diff is available in CLI, desktop API, and desktop session menu; patch check/apply is approval-token gated in CLI/API; desktop apply UX remains. |
+| Diff/patch workflow | Partial | Bounded Git diff and approval-token patch check/apply are available in CLI, desktop API, and desktop session menu; richer patch review UX remains. |
 | Production packaging | Partial | Tauri scaffold, versioned sidecar launcher, external binary config, and sidecar generation exist; installer-grade bundled Python runtime remains. |
 
 ### MVP Acceptance Criteria
@@ -210,7 +210,7 @@ P0:
 
 P1:
 
-- add desktop patch approval/apply UX for code changes;
+- refine desktop patch review UX for code changes;
 - deepen RecursiveMAS collaboration beyond the bridge protocol;
 - add semantic memory/cache;
 - package Tauri with the Python sidecar and managed local runtime checks.

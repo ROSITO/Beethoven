@@ -374,7 +374,8 @@ button {
 .skills-panel,
 .score-panel,
 .files-panel,
-.session-panel {
+.session-panel,
+.patch-panel {
   display: grid;
   gap: 16px;
   margin: 16px 26px 0;
@@ -388,7 +389,8 @@ button {
 .skills-panel[hidden],
 .score-panel[hidden],
 .files-panel[hidden],
-.session-panel[hidden] {
+.session-panel[hidden],
+.patch-panel[hidden] {
   display: none;
 }
 
@@ -396,7 +398,8 @@ button {
 .skills-panel-header,
 .score-panel-header,
 .files-panel-header,
-.session-panel-header {
+.session-panel-header,
+.patch-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -408,7 +411,8 @@ button {
 .skills-panel h2,
 .score-panel h2,
 .files-panel h2,
-.session-panel h2 {
+.session-panel h2,
+.patch-panel h2 {
   margin: 0;
 }
 
@@ -416,7 +420,8 @@ button {
 .skills-panel h2,
 .score-panel h2,
 .files-panel h2,
-.session-panel h2 {
+.session-panel h2,
+.patch-panel h2 {
   font-size: 16px;
 }
 
@@ -430,7 +435,8 @@ button {
 .skills-panel-header span,
 .score-panel-header span,
 .files-panel-header span,
-.session-panel-header span {
+.session-panel-header span,
+.patch-panel-header span {
   display: block;
   margin-top: 2px;
   color: var(--muted);
@@ -471,6 +477,22 @@ button {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.patch-actions {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto auto;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.patch-actions input {
+  min-width: 0;
+  padding: 8px 10px;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
 }
 
 .preview-score-list {

@@ -354,3 +354,53 @@ def test_desktop_api_can_ensure_solomlx_runtime(tmp_path, monkeypatch) -> None:
     ]
     assert payload["solomlx"]["ensured"] is True
     assert payload["solomlx"]["actions"][0]["action"] == "start"
+
+
+def test_desktop_api_can_check_and_apply_patch_with_approval(tmp_path, monkeypatch) -> None:
+    class TestHandler(BeethovenDesktopHandler):
+        store = DesktopSessionStore(tmp_path / "sessions.json")
+
+    calls: list[dict[str, object]] = []
+
+    def fake_inspect(patch: str) -> dict[str, object]:
+        calls.append({"action": "check", "patch": patch})
+        return {"status": "applicable", "applicable": True, "token": "abc123", "message": "ok"}
+
+    def fake_apply(patch: str, *, approval_token: str) -> dict[str, object]:
+        calls.append({"action": "apply", "patch": patch, "approval_token": approval_token})
+        return {"status": "applied", "applicable": True, "applied": True, "token": "abc123", "message": "done"}
+
+    monkeypatch.setattr("beethoven.desktop_server.inspect_patch", fake_inspect)
+    monkeypatch.setattr("beethoven.desktop_server.apply_approved_patch", fake_apply)
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), TestHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    try:
+        host, port = server.server_address
+        check_request = Request(
+            f"http://{host}:{port}/api/patch/check",
+            data=json.dumps({"patch": "diff --git a/x b/x"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        check_payload = json.loads(urlopen(check_request, timeout=2).read().decode("utf-8"))
+        apply_request = Request(
+            f"http://{host}:{port}/api/patch/apply",
+            data=json.dumps({"patch": "diff --git a/x b/x", "approval_token": "abc123"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        apply_payload = json.loads(urlopen(apply_request, timeout=2).read().decode("utf-8"))
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+    assert check_payload["patch"]["token"] == "abc123"
+    assert apply_payload["patch"]["applied"] is True
+    assert calls == [
+        {"action": "check", "patch": "diff --git a/x b/x"},
+        {"action": "apply", "patch": "diff --git a/x b/x", "approval_token": "abc123"},
+    ]

@@ -239,7 +239,29 @@
               <strong>Open Command Center</strong>
               <span>Show the CLI surface for this workspace.</span>
             </button>
+            <button class="action-row" id="openPatchPanelButton" type="button">
+              <strong>Check/apply patch</strong>
+              <span>Approve a unified diff before it changes files.</span>
+            </button>
           </div>
+        </section>
+
+        <section class="patch-panel" id="patchPanel" aria-label="Patch approval" hidden>
+          <div class="patch-panel-header">
+            <div>
+              <h2>Patch Approval</h2>
+              <span>Check a unified diff, then apply it with the exact approval token.</span>
+            </div>
+            <button class="icon-button" id="closePatchPanel" type="button" aria-label="Close patch panel">×</button>
+          </div>
+          <label class="composer-label" for="patchInput">Unified diff</label>
+          <textarea id="patchInput" rows="8" spellcheck="false" placeholder="Paste a git diff here"></textarea>
+          <div class="patch-actions">
+            <input id="patchApprovalToken" type="text" placeholder="approval token" autocomplete="off" />
+            <button class="text-button" id="checkPatchButton" type="button">Check patch</button>
+            <button class="text-button primary" id="applyPatchButton" type="button">Apply patch</button>
+          </div>
+          <div class="soloist-check-result" id="patchResult" hidden></div>
         </section>
 
         <section class="canvas">

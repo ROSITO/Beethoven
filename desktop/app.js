@@ -76,6 +76,14 @@ const insertSessionCommandButton = document.querySelector("#insertSessionCommand
 const exportScoreButton = document.querySelector("#exportScoreButton");
 const inspectDiffButton = document.querySelector("#inspectDiffButton");
 const openCommandsFromMenuButton = document.querySelector("#openCommandsFromMenuButton");
+const openPatchPanelButton = document.querySelector("#openPatchPanelButton");
+const patchPanel = document.querySelector("#patchPanel");
+const closePatchPanel = document.querySelector("#closePatchPanel");
+const patchInput = document.querySelector("#patchInput");
+const patchApprovalToken = document.querySelector("#patchApprovalToken");
+const checkPatchButton = document.querySelector("#checkPatchButton");
+const applyPatchButton = document.querySelector("#applyPatchButton");
+const patchResult = document.querySelector("#patchResult");
 
 let currentWorkspace = null;
 let allSessions = [];
@@ -1526,6 +1534,86 @@ async function inspectWorkspaceDiff() {
   }
 }
 
+function renderPatchResult(report) {
+  patchResult.hidden = false;
+  patchResult.classList.toggle("available", Boolean(report.applicable || report.applied));
+  patchResult.classList.toggle("unavailable", !Boolean(report.applicable || report.applied));
+  patchApprovalToken.value = report.token ?? patchApprovalToken.value;
+  patchResult.innerHTML = `
+    <strong>${escapeHtml(report.status ?? "patch")} · ${escapeHtml(report.applied ? "applied" : report.applicable ? "applicable" : "blocked")}</strong>
+    <p>${escapeHtml(report.message ?? "No patch report returned.")}</p>
+    ${report.token ? `<p><code>${escapeHtml(report.token)}</code></p>` : ""}
+    ${report.stderr ? `<p>${escapeHtml(report.stderr)}</p>` : ""}
+  `;
+}
+
+async function checkPatch() {
+  const patch = patchInput.value.trim();
+  if (!patch) {
+    patchInput.focus();
+    return;
+  }
+  checkPatchButton.textContent = "Checking…";
+  checkPatchButton.disabled = true;
+  try {
+    const response = await fetch("/api/patch/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ patch })
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error ?? payload.patch?.message ?? `Patch API returned ${response.status}`);
+    }
+    renderPatchResult(payload.patch ?? {});
+  } catch (error) {
+    renderPatchResult({ status: "error", applicable: false, message: error.message ?? "Patch check failed." });
+    console.error(error);
+  } finally {
+    checkPatchButton.textContent = "Check patch";
+    checkPatchButton.disabled = false;
+  }
+}
+
+async function applyCheckedPatch() {
+  const patch = patchInput.value.trim();
+  const approvalToken = patchApprovalToken.value.trim();
+  if (!patch || !approvalToken) {
+    patchInput.focus();
+    return;
+  }
+  applyPatchButton.textContent = "Applying…";
+  applyPatchButton.disabled = true;
+  try {
+    const response = await fetch("/api/patch/apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ patch, approval_token: approvalToken })
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error ?? payload.patch?.message ?? `Patch API returned ${response.status}`);
+    }
+    renderPatchResult(payload.patch ?? {});
+    await loadWorkspace();
+  } catch (error) {
+    renderPatchResult({ status: "error", applied: false, message: error.message ?? "Patch apply failed." });
+    console.error(error);
+  } finally {
+    applyPatchButton.textContent = "Apply patch";
+    applyPatchButton.disabled = false;
+  }
+}
+
+function togglePatchPanel(open = patchPanel.hidden) {
+  patchPanel.hidden = !open;
+  sessionPanel.hidden = true;
+  moreOptionsButton.classList.toggle("active", open);
+  if (open) {
+    patchInput.focus();
+  }
+}
+
 async function checkRecursiveMas() {
   checkRecursiveMasButton.textContent = "Checking…";
   checkRecursiveMasButton.disabled = true;
@@ -1582,6 +1670,10 @@ async function startNewTask() {
   scorePanel.hidden = true;
   filesPanel.hidden = true;
   sessionPanel.hidden = true;
+  patchPanel.hidden = true;
+  patchInput.value = "";
+  patchApprovalToken.value = "";
+  patchResult.hidden = true;
   scorePreviewButton.classList.remove("active");
   attachFilesButton.classList.remove("active");
   moreOptionsButton.classList.remove("active");
@@ -1668,6 +1760,7 @@ clearOpenAiButton.addEventListener("click", clearOpenAiConfig);
 closeScorePanel.addEventListener("click", () => toggleScorePanel(false));
 closeFilesPanel.addEventListener("click", () => toggleFilesPanel(false));
 closeSessionPanel.addEventListener("click", () => toggleSessionPanel(false));
+closePatchPanel.addEventListener("click", () => togglePatchPanel(false));
 copyScoreIdButton.addEventListener("click", async () => {
   await copyText(scoreId.textContent, "score ID");
   toggleSessionPanel(false);
@@ -1685,6 +1778,9 @@ exportScoreButton.addEventListener("click", () => {
 });
 inspectDiffButton.addEventListener("click", inspectWorkspaceDiff);
 openCommandsFromMenuButton.addEventListener("click", () => toggleCommandPanel(true));
+openPatchPanelButton.addEventListener("click", () => togglePatchPanel(true));
+checkPatchButton.addEventListener("click", checkPatch);
+applyPatchButton.addEventListener("click", applyCheckedPatch);
 commandSearch.addEventListener("input", () => renderCommandList());
 commandSearch.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {

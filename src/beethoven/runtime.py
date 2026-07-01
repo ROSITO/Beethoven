@@ -30,7 +30,7 @@ from beethoven.soloists import (
     ollama_is_enabled,
     recursivemas_is_available,
 )
-from beethoven.validation import run_validation_hooks
+from beethoven.validation import merge_validation_commands, run_validation_hooks
 from beethoven.workspace import read_workspace_attachments
 
 
@@ -289,6 +289,7 @@ def run_objective(
     recursive_style: str = DEFAULT_RECURSIVE_STYLE,
     recursive_rounds: int = 2,
     validation_commands: list[str] | None = None,
+    validation_profiles: list[str] | None = None,
     event_sink: Callable[[dict[str, object]], None] | None = None,
 ) -> ExecutionContext:
     if soloist == "ollama" and not ollama_is_enabled():
@@ -298,6 +299,10 @@ def run_objective(
     registry = create_default_registry()
     if not any(candidate.name == soloist for candidate in registry.all()):
         raise RuntimeError(f"Soloist requested but unavailable: {soloist}")
+    merged_validation_commands, selected_validation_profiles = merge_validation_commands(
+        validation_commands,
+        validation_profiles,
+    )
     score = score_objective(
         objective,
         metadata={
@@ -307,7 +312,8 @@ def run_objective(
             "strategy": strategy,
             "recursive_style": recursive_style if strategy == "recursive" else None,
             "recursive_rounds": recursive_rounds if strategy == "recursive" else None,
-            "validation_commands": validation_commands or [],
+            "validation_commands": merged_validation_commands,
+            "validation_profiles": selected_validation_profiles,
         },
         planner_soloist=soloist,
         strategy=strategy,
@@ -318,15 +324,31 @@ def run_objective(
         CapabilityRouter(registry, preferred_soloist=soloist),
         event_sink=event_sink,
     ).perform(score)
-    if validation_commands:
+    if merged_validation_commands:
         if event_sink is not None:
-            event_sink({"type": "validation_started", "commands": validation_commands})
+            event_sink(
+                {
+                    "type": "validation_started",
+                    "commands": merged_validation_commands,
+                    "profiles": selected_validation_profiles,
+                }
+            )
         context.artifacts["validation"] = SoloistResult(
-            output=run_validation_hooks(validation_commands),
-            metadata={"mode": "validation"},
+            output=run_validation_hooks(merged_validation_commands),
+            metadata={
+                "mode": "validation",
+                "profiles": selected_validation_profiles,
+                "commands": merged_validation_commands,
+            },
         )
         if event_sink is not None:
-            event_sink({"type": "validation_completed", "commands": validation_commands})
+            event_sink(
+                {
+                    "type": "validation_completed",
+                    "commands": merged_validation_commands,
+                    "profiles": selected_validation_profiles,
+                }
+            )
     return context
 
 

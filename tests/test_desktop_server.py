@@ -85,6 +85,9 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
         skills = urlopen(f"http://{host}:{port}/api/skills", timeout=2)
         skills_data = json.loads(skills.read().decode("utf-8"))
 
+        validation_profiles = urlopen(f"http://{host}:{port}/api/validation-profiles", timeout=2)
+        validation_profiles_data = json.loads(validation_profiles.read().decode("utf-8"))
+
         workspace = urlopen(f"http://{host}:{port}/api/workspace", timeout=2)
         workspace_data = json.loads(workspace.read().decode("utf-8"))
 
@@ -100,6 +103,7 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
                     "permission_mode": "read-only",
                     "effort": "high",
                     "validation_commands": [f"{sys.executable} -c \"print('ok')\""],
+                    "validation_profiles": ["desktop"],
                 }
             ).encode("utf-8"),
             headers={"Content-Type": "application/json"},
@@ -164,6 +168,8 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
     assert payload["events"][0]["type"] == "score_started"
     assert payload["events"][-1]["type"] == "score_completed"
     assert payload["artifacts"]["validation"]["output"][0]["passed"] is True
+    assert payload["artifacts"]["validation"]["metadata"]["profiles"][0]["id"] == "desktop"
+    assert any(item["command"] == "node --check desktop/app.js" for item in payload["artifacts"]["validation"]["output"])
     assert payload["session"]["title"] == "test desktop api"
     assert payload["session"]["permission_mode"] == "read-only"
     assert payload["session"]["effort"] == "high"
@@ -200,6 +206,8 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
     assert openai_clear_payload["config"]["configured"] is False
     assert skills_data["skills"][0]["id"] == "analyze"
     assert skills_data["skills"][0]["status"] == "available"
+    assert validation_profiles_data["profiles"][0]["id"] == "desktop"
+    assert validation_profiles_data["profiles"][-1]["id"] == "full"
     assert workspace_data["workspace"]["name"] == "Beethoven"
     assert "changes" in workspace_data["workspace"]
     assert files_data["workspace"]["name"] == "Beethoven"

@@ -244,6 +244,8 @@ beethoven score "Refactor this repository"
 beethoven run "Refactor this repository"
 beethoven run "Refactor this repository" --json
 beethoven run "Review @README.md" --validate "python -m pytest"
+beethoven run "Review @README.md" --validation-profile desktop
+beethoven run "Review @README.md" --validation-profile full
 beethoven run "Review @README.md" --soloist claude-cli
 beethoven run "Review @README.md" --soloist codex-cli
 beethoven run "Explore RecursiveMAS" --strategy recursive --recursive-style deliberation --recursive-rounds 2
@@ -263,6 +265,7 @@ beethoven solomlx install
 beethoven solomlx prepare-orchestrator
 beethoven solomlx start
 beethoven skills list
+beethoven validation profiles
 beethoven workspace
 beethoven workspace files
 beethoven package sidecar
@@ -352,6 +355,18 @@ beethoven run "Summarize @README.md" --soloist openai-compatible
 `BEETHOVEN_OPENAI_COMPAT_BASE_URL`, `BEETHOVEN_OPENAI_COMPAT_MODEL`, and
 `BEETHOVEN_OPENAI_COMPAT_API_KEY` can override the persisted config. Plain
 `OPENAI_BASE_URL`, `OPENAI_MODEL`, and `OPENAI_API_KEY` are also recognized.
+
+Validation can run as ad hoc commands or named profiles:
+
+```bash
+beethoven validation profiles
+beethoven run "Check the desktop" --validation-profile desktop
+beethoven run "Check everything local" --validation-profile full
+```
+
+The current built-in profiles are `desktop`, `lint`, `tests`, and `full`.
+Desktop runs expose the same profiles in the composer and summarize pass/fail
+results as a normal assistant-side message.
 
 Without installing dev dependencies, the current tests can also run with:
 

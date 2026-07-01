@@ -28,6 +28,7 @@ from beethoven.solomlx import (
     solomlx_status,
     solomlx_stop,
 )
+from beethoven.validation import list_validation_profiles
 from beethoven.workspace import inspect_workspace, list_workspace_files
 
 
@@ -94,6 +95,9 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             return
         if path == "/api/skills":
             self._send_json({"skills": list_skills()})
+            return
+        if path == "/api/validation-profiles":
+            self._send_json({"profiles": list_validation_profiles()})
             return
         if path == "/api/workspace":
             self._send_json({"workspace": inspect_workspace()})
@@ -229,6 +233,7 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             recursive_style = str(payload.get("recursive_style", "deliberation"))
             recursive_rounds = self._read_recursive_rounds(payload)
             validation_commands = self._read_validation_commands(payload)
+            validation_profiles = self._read_validation_profiles(payload)
             context = run_objective(
                 objective,
                 soloist=soloist,
@@ -238,6 +243,7 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
                 recursive_style=recursive_style,
                 recursive_rounds=recursive_rounds,
                 validation_commands=validation_commands,
+                validation_profiles=validation_profiles,
             )
             session = self.store.save_run(
                 context,
@@ -266,6 +272,7 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             recursive_style = str(payload.get("recursive_style", "deliberation"))
             recursive_rounds = self._read_recursive_rounds(payload)
             validation_commands = self._read_validation_commands(payload)
+            validation_profiles = self._read_validation_profiles(payload)
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
             self.send_header("Cache-Control", "no-store")
@@ -285,6 +292,7 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
                     recursive_style=recursive_style,
                     recursive_rounds=recursive_rounds,
                     validation_commands=validation_commands,
+                    validation_profiles=validation_profiles,
                     event_sink=write_event,
                 )
                 session = self.store.save_run(
@@ -370,6 +378,18 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
                 if str(command).strip()
             ]
             if isinstance(raw_validation_commands, list)
+            else []
+        )
+
+    def _read_validation_profiles(self, payload: dict[str, Any]) -> list[str]:
+        raw_validation_profiles = payload.get("validation_profiles", [])
+        return (
+            [
+                str(profile)
+                for profile in raw_validation_profiles
+                if str(profile).strip()
+            ]
+            if isinstance(raw_validation_profiles, list)
             else []
         )
 

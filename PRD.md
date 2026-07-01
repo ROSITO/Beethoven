@@ -172,7 +172,7 @@ As of 2026-07-01, Beethoven has crossed from concept into a working pre-alpha:
 | Codex/Claude adapters | Done | Local CLI adapters are available when installed and logged in. |
 | RecursiveMAS integration | Partial | Native recursive scores and optional sidecar bridge are present; deeper runtime collaboration remains experimental. |
 | `@path` attachments | Partial | Safe workspace file reads exist; richer packing/token UI is still needed. |
-| Validation hooks | Partial | Local commands run after a score; policy profiles and approval gates remain. |
+| Validation hooks | Partial | Local commands and named profiles run after a score; policy approval gates remain. |
 | Production packaging | Partial | Tauri scaffold and sidecar generation exist; installer-grade bundled Python strategy remains. |
 
 ### MVP Acceptance Criteria
@@ -202,7 +202,6 @@ P0:
 - finish the desktop first-run state, runtime board, and conversation/run split;
 - make SoloMLX/Ministral the default hidden conductor path in product copy and
   runtime diagnostics;
-- turn validation hooks into named test profiles with visible results;
 - harden attachment packing and desktop attachment inspection.
 
 P1:

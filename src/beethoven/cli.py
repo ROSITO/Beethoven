@@ -30,6 +30,7 @@ from beethoven.solomlx import (
     solomlx_status,
     solomlx_stop,
 )
+from beethoven.validation import list_validation_profiles
 from beethoven.workspace import inspect_workspace, list_workspace_files
 
 
@@ -66,6 +67,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         help="Validation command to run after orchestration. Can be repeated.",
+    )
+    run.add_argument(
+        "--validation-profile",
+        action="append",
+        default=[],
+        help="Named validation profile to run after orchestration. Can be repeated.",
     )
     add_strategy_arguments(run)
 
@@ -175,6 +182,11 @@ def build_parser() -> argparse.ArgumentParser:
     skills_list = skills_subparsers.add_parser("list", help="List skills and compatible soloists.")
     skills_list.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
 
+    validation = subparsers.add_parser("validation", help="Inspect validation profiles.")
+    validation_subparsers = validation.add_subparsers(dest="validation_command", required=True)
+    validation_profiles = validation_subparsers.add_parser("profiles", help="List named validation profiles.")
+    validation_profiles.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+
     workspace = subparsers.add_parser("workspace", help="Inspect current project and Git context.")
     workspace_subparsers = workspace.add_subparsers(dest="workspace_command")
     workspace.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
@@ -253,6 +265,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             recursive_style=args.recursive_style,
             recursive_rounds=args.recursive_rounds,
             validation_commands=args.validate,
+            validation_profiles=args.validation_profile,
         )
         if args.json:
             print(json.dumps(context_to_dict(context), indent=2, ensure_ascii=False))
@@ -412,6 +425,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print_skills(skills)
             return 0
 
+    if args.command == "validation":
+        profiles = list_validation_profiles()
+        if args.validation_command == "profiles":
+            if args.json:
+                print(json.dumps({"profiles": profiles}, indent=2, ensure_ascii=False))
+            else:
+                print_validation_profiles(profiles)
+            return 0
+
     if args.command == "workspace":
         if args.workspace_command == "files":
             workspace_files = list_workspace_files(limit=args.limit)
@@ -461,6 +483,7 @@ def run_terminal_session(
         "strategy": strategy,
         "recursive_style": recursive_style,
         "recursive_rounds": str(recursive_rounds),
+        "validation_profile": "none",
     }
     output_fn("Beethoven terminal workbench")
     output_fn("Type an objective to run it, or /help for commands.")
@@ -535,6 +558,9 @@ def handle_terminal_command(
     if command == "/skills":
         print_skills(list_skills())
         return
+    if command == "/validation-profiles":
+        print_validation_profiles(list_validation_profiles())
+        return
     if command == "/workspace":
         print_workspace(inspect_workspace())
         return
@@ -575,6 +601,10 @@ def handle_terminal_command(
         controls["recursive_rounds"] = str(rounds)
         output_fn(f"recursive_rounds={rounds}")
         return
+    if command == "/validation-profile":
+        allowed_profiles = {str(profile["id"]) for profile in list_validation_profiles()}
+        set_terminal_control("validation_profile", argument, {"none", *allowed_profiles}, controls, output_fn)
+        return
     if command == "/soloist":
         if not argument:
             output_fn(f"soloist={controls['soloist']}")
@@ -601,6 +631,7 @@ def run_terminal_objective(
         strategy=controls["strategy"],
         recursive_style=controls["recursive_style"],
         recursive_rounds=int(controls["recursive_rounds"]),
+        validation_profiles=[] if controls["validation_profile"] == "none" else [controls["validation_profile"]],
     )
     print_run(context_to_dict(context))
     output_fn("")
@@ -631,7 +662,8 @@ def print_terminal_controls(controls: dict[str, str], output_fn: Callable[[str],
         f"permission={controls['permission_mode']} · "
         f"effort={controls['effort']} · "
         f"strategy={controls['strategy']} · "
-        f"recursive={controls['recursive_style']}/{controls['recursive_rounds']}"
+        f"recursive={controls['recursive_style']}/{controls['recursive_rounds']} · "
+        f"validation={controls['validation_profile']}"
     )
 
 
@@ -644,6 +676,7 @@ def print_terminal_help(output_fn: Callable[[str], None]) -> None:
     output_fn("- /orchestrator          Show hidden local orchestrator status")
     output_fn("- /solomlx               Show embedded SoloMLX runtime status")
     output_fn("- /skills                List orchestration skills")
+    output_fn("- /validation-profiles   List named validation profiles")
     output_fn("- /workspace             Show workspace/Git context")
     output_fn("- /files [query]         List attachable files")
     output_fn("- /permission <mode>     ask, auto, read-only")
@@ -652,6 +685,7 @@ def print_terminal_help(output_fn: Callable[[str], None]) -> None:
     output_fn("- /strategy <mode>       baseline, recursive")
     output_fn("- /recursive-style <s>   sequential, deliberation, mixture, distillation")
     output_fn("- /recursive-rounds <n>  Set recursive rounds")
+    output_fn("- /validation-profile <p> none, desktop, lint, tests, full")
     output_fn("- /controls              Show current controls")
     output_fn("- /exit                  Close the terminal session")
 
@@ -826,6 +860,16 @@ def print_skills(skills: list[dict[str, object]]) -> None:
             print(f"  available: {', '.join(available)}")
         if planned:
             print(f"  planned: {', '.join(planned)}")
+
+
+def print_validation_profiles(profiles: list[dict[str, object]]) -> None:
+    for profile in profiles:
+        commands = profile.get("commands", [])
+        assert isinstance(commands, list)
+        print(f"- {profile.get('name')} [{profile.get('id')}]")
+        print(f"  {profile.get('description')}")
+        for command in commands:
+            print(f"  command: {command}")
 
 
 def print_workspace(workspace: dict[str, object]) -> None:

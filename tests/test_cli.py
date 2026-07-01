@@ -135,6 +135,25 @@ def test_run_command_can_execute_validation_hook(capsys) -> None:
     assert f"{command}: passed" in captured.out
 
 
+def test_run_command_can_execute_validation_profile(capsys) -> None:
+    exit_code = main(["run", "Validate", "profile", "--validation-profile", "desktop"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Validation" in captured.out
+    assert "node --check desktop/app.js: passed" in captured.out
+
+
+def test_validation_profiles_command_lists_profiles(capsys) -> None:
+    exit_code = main(["validation", "profiles", "--json"])
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert exit_code == 0
+    assert data["profiles"][0]["id"] == "desktop"
+    assert data["profiles"][-1]["id"] == "full"
+
+
 def test_score_command_attaches_workspace_paths(capsys) -> None:
     exit_code = main(["score", "Review", "@README.md", "--json"])
 

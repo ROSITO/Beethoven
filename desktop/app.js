@@ -18,6 +18,7 @@ const chatThread = document.querySelector("#chatThread");
 const soloistSelect = document.querySelector("#soloistSelect");
 const permissionSelect = document.querySelector("#permissionSelect");
 const effortSelect = document.querySelector("#effortSelect");
+const validationProfileSelect = document.querySelector("#validationProfileSelect");
 const strategySelect = document.querySelector("#strategySelect");
 const recursiveStyleSelect = document.querySelector("#recursiveStyleSelect");
 const recursiveRoundsSelect = document.querySelector("#recursiveRoundsSelect");
@@ -87,6 +88,7 @@ let runtimeStatus = {
   solomlx: null,
   recursivemas: null
 };
+let validationProfiles = [];
 
 const modeCopy = {
   chat: {
@@ -196,6 +198,14 @@ function setConversationForRun(context) {
       content: finalResponseFromContext(context),
     },
   ];
+  const validationSummary = validationSummaryFromContext(context);
+  if (validationSummary) {
+    chatMessages.push({
+      role: "assistant",
+      meta: "Validation",
+      content: validationSummary,
+    });
+  }
   renderChat();
 }
 
@@ -230,6 +240,24 @@ function finalResponseFromContext(context) {
     }
   }
   return "The run completed. Inspect the score trace on the right for task artifacts.";
+}
+
+function validationSummaryFromContext(context) {
+  const validation = context.artifacts?.validation;
+  const results = validation?.output;
+  if (!Array.isArray(results) || !results.length) {
+    return "";
+  }
+  const passed = results.filter((result) => result?.passed).length;
+  const failed = results.length - passed;
+  const lines = results.map((result) => {
+    const marker = result?.passed ? "passed" : "failed";
+    return `${result?.command}: ${marker}`;
+  });
+  return [
+    `${passed}/${results.length} validation commands passed${failed ? `, ${failed} failed` : ""}.`,
+    ...lines,
+  ].join("\n");
 }
 
 function soloistLabel(context) {
@@ -382,6 +410,18 @@ function renderSoloists(soloists) {
     )
   ];
   soloistSelect.innerHTML = options.join("");
+}
+
+function renderValidationProfiles(profiles) {
+  validationProfiles = profiles;
+  const options = [
+    '<option value="none">No validation</option>',
+    ...profiles.map(
+      (profile) =>
+        `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.name)}</option>`
+    )
+  ];
+  validationProfileSelect.innerHTML = options.join("");
 }
 
 function renderSkills(skills) {
@@ -800,12 +840,16 @@ function taskFromScore(task) {
 }
 
 function scoreRequestPayload(objective) {
+  const selectedValidationProfile = validationProfileSelect.value;
   return {
     objective,
     soloist: soloistSelect.value,
     strategy: strategySelect.value,
     recursive_style: recursiveStyleSelect.value,
-    recursive_rounds: Number(recursiveRoundsSelect.value)
+    recursive_rounds: Number(recursiveRoundsSelect.value),
+    validation_profiles: selectedValidationProfile && selectedValidationProfile !== "none"
+      ? [selectedValidationProfile]
+      : []
   };
 }
 
@@ -1043,6 +1087,32 @@ async function loadSkills() {
     ];
   }
   renderSkills(allSkills);
+}
+
+async function loadValidationProfiles() {
+  try {
+    const response = await fetch("/api/validation-profiles");
+    if (!response.ok) {
+      throw new Error(`Validation profiles API returned ${response.status}`);
+    }
+    const payload = await response.json();
+    renderValidationProfiles(payload.profiles ?? []);
+  } catch {
+    renderValidationProfiles([
+      {
+        id: "desktop",
+        name: "Desktop JS",
+        description: "Check the desktop application JavaScript syntax.",
+        commands: ["node --check desktop/app.js"]
+      },
+      {
+        id: "full",
+        name: "Full local gate",
+        description: "Run the local validation gate.",
+        commands: ["node --check desktop/app.js", ".venv/bin/ruff check .", ".venv/bin/python -m pytest"]
+      }
+    ]);
+  }
 }
 
 async function loadRuntimeStatus() {
@@ -1529,6 +1599,7 @@ renderScore();
 loadWorkspace();
 loadSoloists();
 loadSkills();
+loadValidationProfiles();
 loadRuntimeStatus();
 checkRecursiveMas();
 loadRecursiveMasConfig();

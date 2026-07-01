@@ -43,6 +43,8 @@ The foundation is pre-alpha but executable. It includes:
 - workspace and Git context;
 - workspace file discovery and safe `@path` file attachment reads;
 - validation command hooks after a run;
+- named validation profiles (`desktop`, `lint`, `tests`, `full`) selectable from
+  CLI, desktop API, and the composer;
 - RecursiveMAS-inspired recursive score strategies;
 - a Tauri v2 desktop shell scaffold;
 - tests for core execution, CLI, and desktop API.
@@ -80,7 +82,8 @@ Important modules:
   `check_orchestrator`.
 - `src/beethoven/serialization.py`: `score_to_dict` and `context_to_dict`.
 - `src/beethoven/events.py`: event reconstruction for non-streaming clients.
-- `src/beethoven/validation.py`: local validation command hooks.
+- `src/beethoven/validation.py`: local validation command hooks and named
+  validation profiles.
 - `src/beethoven/desktop_state.py`: local JSON-backed session store.
 - `src/beethoven/workspace.py`: Git/workspace inspection and attachable file
   listing.
@@ -156,6 +159,8 @@ beethoven run "Review @README.md" --soloist local-reader
 beethoven run "Review @README.md" --soloist claude-cli
 beethoven run "Review @README.md" --soloist codex-cli
 beethoven run "<objective>" --validate "python -m pytest"
+beethoven run "<objective>" --validation-profile desktop
+beethoven run "<objective>" --validation-profile full
 beethoven desktop
 beethoven desktop --open
 beethoven sessions list
@@ -174,6 +179,8 @@ beethoven soloists check openai-compatible
 beethoven run "Summarize @README.md" --soloist openai-compatible
 beethoven skills list
 beethoven skills list --json
+beethoven validation profiles
+beethoven validation profiles --json
 beethoven workspace
 beethoven workspace --json
 beethoven workspace files
@@ -221,6 +228,7 @@ Implemented endpoints:
 - `POST /api/solomlx/prepare-orchestrator`;
 - `DELETE /api/solomlx`;
 - `GET /api/skills`;
+- `GET /api/validation-profiles`;
 - `GET /api/workspace`;
 - `GET /api/files`;
 - `POST /api/score`;
@@ -257,11 +265,15 @@ Implemented UI:
 - search/filter for recent sessions;
 - `New task` resets composer and score state;
 - composer with permission mode, soloist selector, effort selector;
+- validation profile selector in the composer, backed by
+  `/api/validation-profiles`;
 - strategy controls for baseline vs recursive score generation, recursive
   pattern, and rounds;
 - score preview through `/api/score`;
 - run through `/api/run/stream`, with live composer status updates while events
   arrive;
+- validation result summary rendered as a normal assistant-side chat message
+  after a run;
 - score inspector and progress timeline;
 - runtime board for Beethoven's hidden local orchestrator, the managed SoloMLX
   brick, and RecursiveMAS availability;
@@ -347,7 +359,7 @@ Current test suite:
 
 Latest known status after the current implementation:
 
-- `48 passed`;
+- `54 passed`;
 - Ruff passes;
 - `node --check desktop/app.js` passes.
 
@@ -369,6 +381,8 @@ Test coverage currently includes:
 - desktop API orchestrator/SoloMLX status and mocked SoloMLX install trigger;
 - OpenAI-compatible execution soloist config, healthcheck, registry routing,
   and mocked chat completion execution;
+- validation profile discovery, command/profile merge behavior, CLI execution,
+  desktop API exposure, and validation metadata recording;
 - conductor dependency execution;
 - invalid dependency rejection.
 
@@ -381,6 +395,7 @@ Browser QA has been done with the in-app browser for:
 - workspace file attachment;
 - slash command palette;
 - session action menu;
+- validation profile selector populated from `/api/validation-profiles`;
 - mobile 390px no horizontal overflow.
 
 Runtime proof after adding the execution-side OpenAI-compatible soloist:
@@ -423,8 +438,8 @@ This completed with trace `understand:openai-compatible`,
   richer context packing, binary detection, token budgeting, or UI inspector yet.
 - Desktop consumes NDJSON run events, but the visual timeline is still mostly
   rendered from final context.
-- Validation hooks can run local commands, but there is no policy/approval layer,
-  no configured test profiles, and no validation task graph yet.
+- Validation hooks can run local commands and named profiles, but there is no
+  policy/approval layer and no validation task graph yet.
 - No diff, patch, or approval workflow yet.
 - No persistent conversation message history beyond saved run/session summaries.
 - No plugin SDK.
@@ -442,8 +457,6 @@ Ollama, OpenAI-compatible APIs, Codex, tools, and future workers consistently.
 
 Suggested steps:
 
-- Add adapter metadata/config objects instead of hard-coded env reads in
-  `soloists.py`.
 - Keep hardening adapter metadata/config objects instead of hard-coded env reads
   in `soloists.py`.
 - Add tests that mock subprocess/API calls and never require network/API keys.
@@ -474,13 +487,12 @@ Suggested steps:
 - Add cancellation support for active runs.
 - Persist event logs with sessions, not only reconstructed final trace.
 
-### 4. Turn Validation Hooks Into Profiles
+### 4. Promote Validation Into A Governed Task Graph
 
-Goal: make validation trustworthy and repeatable rather than ad hoc commands.
+Goal: move beyond post-run hooks into policy-aware validation work.
 
 Suggested steps:
 
-- Add named validation profiles in config/metadata.
 - Route validation through a real `validate` task capability.
 - Surface stdout/stderr and pass/fail summary in the desktop inspector.
 - Add permission prompts before commands that mutate the workspace.

@@ -841,7 +841,11 @@ function taskFromApi(task, context) {
   const artifact = context.artifacts?.[task.id];
   const route = context.trace?.find((item) => item.startsWith(`${task.id}:`));
   const soloist = route?.split(":")[1] ?? "local-echo";
-  const output = typeof artifact?.output === "string" ? artifact.output.slice(0, 420) : "";
+  const output = task.capability === "validate"
+    ? validationTaskSummary(artifact?.output)
+    : typeof artifact?.output === "string"
+      ? artifact.output.slice(0, 420)
+      : "";
   return {
     id: task.id,
     capability: task.capability,
@@ -853,6 +857,16 @@ function taskFromApi(task, context) {
     summary: output,
     status: context.statuses?.[task.id] ?? "ready"
   };
+}
+
+function validationTaskSummary(results) {
+  if (!Array.isArray(results) || !results.length) {
+    return "";
+  }
+  const passed = results.filter((result) => result?.passed).length;
+  const blocked = results.filter((result) => result?.blocked).length;
+  const failed = results.length - passed - blocked;
+  return `${passed} passed${failed ? ` · ${failed} failed` : ""}${blocked ? ` · ${blocked} blocked` : ""}`;
 }
 
 function taskFromScore(task) {

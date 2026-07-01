@@ -7,7 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 
 from beethoven.conductor import Conductor
-from beethoven.core import ExecutionContext, Score, SoloistResult, Task
+from beethoven.core import Capability, ExecutionContext, Score, Task
 from beethoven.orchestrator import check_local_orchestrator, create_local_orchestrator
 from beethoven.planning import create_baseline_score, create_dynamic_score
 from beethoven.recursive import DEFAULT_RECURSIVE_STYLE, create_recursive_score
@@ -31,7 +31,7 @@ from beethoven.soloists import (
     ollama_is_enabled,
     recursivemas_is_available,
 )
-from beethoven.validation import merge_validation_commands, plan_validation_hooks, run_validation_hooks
+from beethoven.validation import ValidationSoloist, merge_validation_commands
 from beethoven.workspace import read_workspace_attachments
 
 
@@ -50,6 +50,7 @@ def create_default_registry() -> SoloistRegistry:
     registry = SoloistRegistry()
     registry.register(EchoSoloist())
     registry.register(LocalReaderSoloist())
+    registry.register(ValidationSoloist())
     if claude_cli_is_available():
         registry.register(ClaudeCliSoloist())
     if codex_cli_is_available():
@@ -323,75 +324,12 @@ def run_objective(
         recursive_style=recursive_style,
         recursive_rounds=recursive_rounds,
     )
+    if merged_validation_commands:
+        score = _with_validation_task(score, merged_validation_commands)
     context = Conductor(
         CapabilityRouter(registry, preferred_soloist=soloist),
         event_sink=event_sink,
     ).perform(score)
-    if merged_validation_commands:
-        validation_plan = plan_validation_hooks(
-            merged_validation_commands,
-            permission_mode=permission_mode,
-        )
-        approved_commands = [
-            str(command)
-            for command in validation_plan.get("approved", [])
-        ]
-        blocked_commands = [
-            item
-            for item in validation_plan.get("blocked", [])
-            if isinstance(item, dict)
-        ]
-        if event_sink is not None:
-            event_sink(
-                {
-                    "type": "validation_started",
-                    "commands": approved_commands,
-                    "profiles": selected_validation_profiles,
-                    "policy": validation_plan,
-                }
-            )
-        validation_results = run_validation_hooks(approved_commands)
-        validation_results.extend(
-            {
-                "command": item.get("command", ""),
-                "returncode": None,
-                "passed": False,
-                "blocked": True,
-                "risk": item.get("risk", "requires_approval"),
-                "reason": item.get("reason", "Validation command was blocked by policy."),
-                "stdout": "",
-                "stderr": "",
-            }
-            for item in blocked_commands
-        )
-        context.artifacts["validation"] = SoloistResult(
-            output=validation_results,
-            metadata={
-                "mode": "validation",
-                "profiles": selected_validation_profiles,
-                "commands": merged_validation_commands,
-                "approved_commands": approved_commands,
-                "blocked_commands": blocked_commands,
-                "policy": validation_plan,
-            },
-        )
-        if blocked_commands and event_sink is not None:
-            event_sink(
-                {
-                    "type": "validation_blocked",
-                    "commands": blocked_commands,
-                    "profiles": selected_validation_profiles,
-                }
-            )
-        if event_sink is not None:
-            event_sink(
-                {
-                    "type": "validation_completed",
-                    "commands": approved_commands,
-                    "profiles": selected_validation_profiles,
-                    "blocked": blocked_commands,
-                }
-            )
     return context
 
 
@@ -414,6 +352,37 @@ def _public_runtime_report(report: dict[str, object]) -> dict[str, object]:
         )
         if key in report
     }
+
+
+def _with_validation_task(score: Score, commands: list[str]) -> Score:
+    task_id = _unique_task_id(score, "validation")
+    dependency = score.tasks[-1].id if score.tasks else ""
+    return replace(
+        score,
+        tasks=(
+            *score.tasks,
+            Task(
+                id=task_id,
+                instruction="Run governed validation commands and report pass, fail, or blocked policy decisions.",
+                capability=Capability.VALIDATE,
+                depends_on=(dependency,) if dependency else (),
+                metadata={
+                    "preferred_soloist": "validation-runner",
+                    "validation_commands": commands,
+                },
+            ),
+        ),
+    )
+
+
+def _unique_task_id(score: Score, desired: str) -> str:
+    existing = score.task_ids()
+    if desired not in existing:
+        return desired
+    index = 2
+    while f"{desired}_{index}" in existing:
+        index += 1
+    return f"{desired}_{index}"
 
 
 def _prefer_recursivemas_for_recursive_score(score: Score) -> Score:

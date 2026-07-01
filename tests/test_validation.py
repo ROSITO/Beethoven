@@ -49,6 +49,9 @@ def test_run_objective_records_validation_profile_metadata() -> None:
     validation = context.artifacts["validation"]
     commands = validation.metadata["commands"]
     profiles = validation.metadata["profiles"]
+    assert context.score.tasks[-1].id == "validation"
+    assert context.score.tasks[-1].capability.value == "validate"
+    assert context.trace[-1] == "validation:validation-runner"
     assert command in commands
     assert "node --check desktop/app.js" in commands
     assert profiles[0]["id"] == "desktop"
@@ -85,6 +88,7 @@ def test_run_objective_records_blocked_validation_without_executing() -> None:
     )
 
     validation = context.artifacts["validation"]
+    assert context.trace[-1] == "validation:validation-runner"
     assert validation.output[0]["blocked"] is True
     assert validation.output[0]["passed"] is False
     assert validation.metadata["approved_commands"] == []

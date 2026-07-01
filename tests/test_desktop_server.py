@@ -182,8 +182,10 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
         "understand:local-echo",
         "plan:local-echo",
         "synthesize:local-echo",
+        "validation:validation-runner",
     ]
     assert payload["statuses"]["synthesize"] == "completed"
+    assert payload["statuses"]["validation"] == "completed"
     assert payload["events"][0]["type"] == "score_started"
     assert payload["events"][-1]["type"] == "score_completed"
     assert payload["artifacts"]["validation"]["output"][0]["passed"] is True

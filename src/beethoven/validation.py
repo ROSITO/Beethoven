@@ -6,6 +6,8 @@ import subprocess
 import sys
 from dataclasses import dataclass
 
+from beethoven.core import Capability, ExecutionContext, SoloistResult, Task
+
 
 @dataclass(frozen=True)
 class ValidationHook:
@@ -126,6 +128,58 @@ def run_validation_hooks(commands: list[str]) -> list[dict[str, object]]:
             }
         )
     return results
+
+
+@dataclass(frozen=True)
+class ValidationSoloist:
+    """Internal soloist that executes governed validation commands."""
+
+    name: str = "validation-runner"
+    capabilities: frozenset[Capability] = frozenset({Capability.VALIDATE})
+
+    def perform(self, task: Task, context: ExecutionContext) -> SoloistResult:
+        commands = [
+            str(command)
+            for command in task.metadata.get("validation_commands", [])
+            if str(command).strip()
+        ]
+        permission_mode = str(context.score.metadata.get("permission_mode", "ask"))
+        profiles = context.score.metadata.get("validation_profiles", [])
+        validation_plan = plan_validation_hooks(commands, permission_mode=permission_mode)
+        approved_commands = [
+            str(command)
+            for command in validation_plan.get("approved", [])
+        ]
+        blocked_commands = [
+            item
+            for item in validation_plan.get("blocked", [])
+            if isinstance(item, dict)
+        ]
+        validation_results = run_validation_hooks(approved_commands)
+        validation_results.extend(
+            {
+                "command": item.get("command", ""),
+                "returncode": None,
+                "passed": False,
+                "blocked": True,
+                "risk": item.get("risk", "requires_approval"),
+                "reason": item.get("reason", "Validation command was blocked by policy."),
+                "stdout": "",
+                "stderr": "",
+            }
+            for item in blocked_commands
+        )
+        return SoloistResult(
+            output=validation_results,
+            metadata={
+                "mode": "validation",
+                "profiles": profiles if isinstance(profiles, list) else [],
+                "commands": commands,
+                "approved_commands": approved_commands,
+                "blocked_commands": blocked_commands,
+                "policy": validation_plan,
+            },
+        )
 
 
 def plan_validation_hooks(commands: list[str], *, permission_mode: str = "ask") -> dict[str, object]:

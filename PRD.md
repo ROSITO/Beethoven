@@ -172,7 +172,7 @@ As of 2026-07-01, Beethoven has crossed from concept into a working pre-alpha:
 | Codex/Claude adapters | Done | Local CLI adapters are available when installed and logged in. |
 | RecursiveMAS integration | Partial | Native recursive scores and optional sidecar bridge are present; deeper runtime collaboration remains experimental. |
 | `@path` attachments | Done | Safe workspace reads with binary blocking, MIME/size/snippet metadata, total byte budget, bounded directory bundles, and desktop inspection. |
-| Validation hooks | Partial | Local commands and named profiles run after a score with policy gating for mutating/unknown commands; validation task graph remains. |
+| Validation tasks | Partial | Local commands and named profiles are appended as governed `validate` score tasks with policy gating; interactive approval prompts remain. |
 | Production packaging | Partial | Tauri scaffold and sidecar generation exist; installer-grade bundled Python strategy remains. |
 
 ### MVP Acceptance Criteria
@@ -204,8 +204,8 @@ P0:
 - finish the desktop first-run state, runtime board, and conversation/run split;
 - test SoloMLX/Ministral on-device as the default hidden conductor path and tune
   runtime diagnostics for real memory/load behavior;
-- promote validation into explicit `validate` score tasks with desktop inspector
-  output and interactive approval prompts.
+- add interactive approval prompts and richer desktop inspector output for
+  governed validation and future diff/code actions.
 
 P1:
 

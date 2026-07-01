@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from beethoven.core import ExecutionContext, Score, Task, TaskStatus
+from beethoven.core import Capability, ExecutionContext, Score, Task, TaskStatus
 from beethoven.routing import CapabilityRouter
 
 
@@ -48,6 +48,14 @@ class Conductor:
         context.trace.append(f"{task.id}:{soloist.name}")
         self._emit({"type": "task_routed", "task_id": task.id, "soloist": soloist.name})
         self._emit({"type": "task_started", "task_id": task.id})
+        if task.capability == Capability.VALIDATE:
+            self._emit(
+                {
+                    "type": "validation_started",
+                    "task_id": task.id,
+                    "commands": task.metadata.get("validation_commands", []),
+                }
+            )
 
         try:
             result = soloist.perform(task, context)
@@ -59,6 +67,18 @@ class Conductor:
         context.artifacts[task.id] = result
         context.statuses[task.id] = TaskStatus.COMPLETED
         self._emit({"type": "artifact_produced", "task_id": task.id})
+        if task.capability == Capability.VALIDATE:
+            blocked = result.metadata.get("blocked_commands", [])
+            if blocked:
+                self._emit({"type": "validation_blocked", "task_id": task.id, "commands": blocked})
+            self._emit(
+                {
+                    "type": "validation_completed",
+                    "task_id": task.id,
+                    "commands": result.metadata.get("approved_commands", []),
+                    "blocked": blocked,
+                }
+            )
         self._emit({"type": "task_completed", "task_id": task.id, "status": TaskStatus.COMPLETED.value})
 
     def _emit(self, event: dict[str, object]) -> None:

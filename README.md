@@ -391,6 +391,10 @@ In `ask` mode, approve one exact command without making the whole run automatic:
 beethoven run "Check generated files" --validate "printf ok" --approve-validation "printf ok"
 ```
 
+The desktop uses the same mechanism: blocked validation results appear in the
+assistant-side validation message and can be approved for a rerun without
+changing the whole run to `auto`.
+
 Attach files directly with `@path`. Beethoven keeps reads inside the workspace,
 blocks ignored/binary files, applies a total byte budget, and can expand small
 directories as bounded file bundles:

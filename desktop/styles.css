@@ -811,6 +811,11 @@ button {
   font-weight: 650;
 }
 
+.message-action {
+  margin-top: 10px;
+  border-color: rgba(212, 175, 55, 0.34);
+}
+
 .assistant-message {
   justify-self: start;
   border-left: 3px solid var(--maestro-purple);

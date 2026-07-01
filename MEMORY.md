@@ -47,6 +47,7 @@ The foundation is pre-alpha but executable. It includes:
 - governed validation commands appended as explicit `validate` score tasks, with
   a policy gate that blocks mutating or unknown commands unless permission mode
   is `auto` or the exact command is explicitly approved for that run;
+- desktop approve-and-rerun action for blocked validation commands;
 - named validation profiles (`desktop`, `lint`, `tests`, `full`) selectable from
   CLI, desktop API, and the composer;
 - RecursiveMAS-inspired recursive score strategies;
@@ -453,7 +454,8 @@ This completed with trace `understand:openai-compatible`,
   rendered from final context.
 - Validation hooks now become explicit `validate` score tasks and include a
   policy gate for mutating/unknown commands plus exact-command approval for
-  `ask` mode. There is still no interactive desktop approval prompt.
+  `ask` mode. The desktop can approve blocked validation commands and rerun, but
+  the approval UX is still a compact message action rather than a full modal.
 - No diff, patch, or approval workflow yet.
 - No persistent conversation message history beyond saved run/session summaries.
 - No plugin SDK.
@@ -506,7 +508,7 @@ Goal: move beyond post-run hooks into policy-aware validation work.
 Suggested steps:
 
 - Surface stdout/stderr and pass/fail/block details in the desktop inspector.
-- Add interactive desktop permission prompts before commands that mutate the
+- Refine interactive desktop permission prompts before commands that mutate the
   workspace.
 - Extend the same policy model to diff/code actions.
 

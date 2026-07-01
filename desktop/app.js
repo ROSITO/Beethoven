@@ -84,6 +84,7 @@ let allFiles = [];
 let currentScore = null;
 let currentRunContext = null;
 let chatMessages = [];
+let pendingValidationApproval = null;
 let runtimeStatus = {
   orchestrator: null,
   solomlx: null,
@@ -170,10 +171,13 @@ function renderChat() {
 
   chatThread.innerHTML = chatMessages
     .map(
-      (message) => `
+      (message, index) => `
         <article class="message ${message.role === "user" ? "user-message" : "assistant-message"}">
           <div class="message-meta">${escapeHtml(message.meta)}</div>
           <p>${escapeHtml(message.content)}</p>
+          ${message.action === "approve-validation"
+            ? `<button class="text-button message-action" type="button" data-chat-action="approve-validation" data-message-index="${index}">Approve and rerun</button>`
+            : ""}
         </article>
       `
     )
@@ -201,11 +205,21 @@ function setConversationForRun(context) {
   ];
   const validationSummary = validationSummaryFromContext(context);
   if (validationSummary) {
+    const blockedCommands = blockedValidationCommands(context);
+    pendingValidationApproval = blockedCommands.length
+      ? {
+          objective: context.score.objective,
+          commands: blockedCommands,
+        }
+      : null;
     chatMessages.push({
       role: "assistant",
       meta: "Validation",
       content: validationSummary,
+      action: blockedCommands.length ? "approve-validation" : "",
     });
+  } else {
+    pendingValidationApproval = null;
   }
   renderChat();
 }
@@ -261,6 +275,16 @@ function validationSummaryFromContext(context) {
     `${passed}/${results.length} validation commands passed${failed ? `, ${failed} failed` : ""}${blocked ? `, ${blocked} blocked` : ""}.`,
     ...lines,
   ].join("\n");
+}
+
+function blockedValidationCommands(context) {
+  const results = context.artifacts?.validation?.output;
+  if (!Array.isArray(results)) {
+    return [];
+  }
+  return results
+    .filter((result) => result?.blocked && result?.command)
+    .map((result) => String(result.command));
 }
 
 function soloistLabel(context) {
@@ -880,7 +904,7 @@ function taskFromScore(task) {
   };
 }
 
-function scoreRequestPayload(objective) {
+function scoreRequestPayload(objective, approvedValidationCommands = []) {
   const selectedValidationProfile = validationProfileSelect.value;
   return {
     objective,
@@ -890,15 +914,19 @@ function scoreRequestPayload(objective) {
     recursive_rounds: Number(recursiveRoundsSelect.value),
     validation_profiles: selectedValidationProfile && selectedValidationProfile !== "none"
       ? [selectedValidationProfile]
-      : []
+      : [],
+    approved_validation_commands: approvedValidationCommands
   };
 }
 
-async function runComposer() {
-  const value = composer.value.trim();
+async function runComposer(options = {}) {
+  const value = (options.objective ?? composer.value).trim();
   if (!value) {
     composer.focus();
     return;
+  }
+  if (options.objective) {
+    composer.value = value;
   }
 
   sendButton.textContent = "…";
@@ -911,7 +939,7 @@ async function runComposer() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...scoreRequestPayload(value),
+        ...scoreRequestPayload(value, options.approvedValidationCommands ?? []),
         permission_mode: permissionSelect.value,
         effort: effortSelect.value
       })
@@ -937,6 +965,18 @@ async function runComposer() {
       sendButton.textContent = "↑";
     }, 900);
   }
+}
+
+async function approveBlockedValidation() {
+  if (!pendingValidationApproval?.commands?.length) {
+    return;
+  }
+  composerStatus.classList.remove("error");
+  composerStatus.textContent = "Approving blocked validation commands…";
+  await runComposer({
+    objective: pendingValidationApproval.objective,
+    approvedValidationCommands: pendingValidationApproval.commands,
+  });
 }
 
 async function readRunStream(response) {
@@ -1558,6 +1598,15 @@ moreOptionsButton.addEventListener("click", () => toggleSessionPanel());
 attachFilesButton.addEventListener("click", () => toggleFilesPanel());
 slashCommandsButton.addEventListener("click", () => toggleCommandPanel(true));
 scorePreviewButton.addEventListener("click", previewComposerScore);
+chatThread.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+  if (target.dataset.chatAction === "approve-validation") {
+    approveBlockedValidation();
+  }
+});
 closeCommandPanel.addEventListener("click", () => toggleCommandPanel(false));
 closeSkillsPanel.addEventListener("click", () => toggleSkillsPanel(false));
 refreshRuntimeButton.addEventListener("click", loadRuntimeStatus);

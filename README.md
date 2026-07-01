@@ -47,7 +47,9 @@ This repository now contains the first executable orchestration kernel:
   SoloMLX-server/OpenAI-compatible `/v1` or Ollama to create and route scores.
 - Managed SoloMLX brick: Beethoven can install, start, stop, and inspect
   `ROSITO/SoloMLX-server` as its local MLX runtime.
-- `@path` attachments: safe workspace file context with size limits.
+- `@path` attachments: safe workspace file context with binary blocking,
+  MIME/size/snippet metadata, total byte budgeting, and bounded directory
+  bundles.
 - Run events: score/task/validation events for desktop streaming.
 - Dynamic planning: Beethoven's local orchestrator proposes a task score, then
   Beethoven validates and executes the normalized plan.
@@ -367,6 +369,16 @@ beethoven run "Check everything local" --validation-profile full
 The current built-in profiles are `desktop`, `lint`, `tests`, and `full`.
 Desktop runs expose the same profiles in the composer and summarize pass/fail
 results as a normal assistant-side message.
+
+Attach files directly with `@path`. Beethoven keeps reads inside the workspace,
+blocks ignored/binary files, applies a total byte budget, and can expand small
+directories as bounded file bundles:
+
+```bash
+beethoven score "Review @README.md" --json
+beethoven score "Review @docs" --json
+beethoven run "Summarize @README.md" --soloist local-reader
+```
 
 Without installing dev dependencies, the current tests can also run with:
 

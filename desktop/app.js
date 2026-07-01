@@ -554,9 +554,9 @@ function renderScorePreview(score) {
               <h3>attached context</h3>
               <span class="pill success">${attachments.length}</span>
             </header>
-            <p>${attachments
-              .map((item) => `${escapeHtml(item.path)} · ${escapeHtml(item.status)}`)
-              .join("<br>")}</p>
+            <div class="attachment-list">
+              ${attachments.map((item) => attachmentPreview(item)).join("")}
+            </div>
           </div>
         </article>
       `
@@ -580,6 +580,27 @@ function renderScorePreview(score) {
     .join("");
 }
 
+function attachmentPreview(item) {
+  const statusClass = item.status === "attached" ? "success" : "warning";
+  const detail = [
+    item.media_type,
+    item.bytes ? `${item.bytes} bytes` : item.size_bytes ? `${item.size_bytes} bytes` : "",
+    item.truncated ? "truncated" : "",
+    item.source_directory ? `from ${item.source_directory}` : ""
+  ].filter(Boolean).join(" · ");
+  return `
+    <div class="attachment-preview">
+      <div>
+        <strong>${escapeHtml(item.path)}</strong>
+        <span class="pill ${statusClass}">${escapeHtml(item.status)}</span>
+      </div>
+      ${detail ? `<p>${escapeHtml(detail)}</p>` : ""}
+      ${item.reason ? `<p>${escapeHtml(item.reason)}</p>` : ""}
+      ${item.snippet ? `<p>${escapeHtml(item.snippet)}</p>` : ""}
+    </div>
+  `;
+}
+
 function preferReaderForAttachedScore(score) {
   const attachments = score.metadata?.attachments ?? [];
   const hasAttachedFiles = attachments.some((item) => item.status === "attached");
@@ -600,7 +621,10 @@ function renderFiles(files) {
       (file) => `
         <button class="file-row" type="button" data-file-path="${escapeHtml(file.path)}">
           <span class="file-extension">${escapeHtml(file.extension)}</span>
-          <span>${escapeHtml(file.path)}</span>
+          <span>
+            <strong>${escapeHtml(file.path)}</strong>
+            <small>${escapeHtml(file.media_type ?? "text/plain")} · ${escapeHtml(String(file.bytes ?? 0))} bytes</small>
+          </span>
         </button>
       `
     )

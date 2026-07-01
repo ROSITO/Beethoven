@@ -524,6 +524,17 @@ button {
   text-align: left;
 }
 
+.file-row strong,
+.file-row small {
+  display: block;
+}
+
+.file-row small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .file-extension {
   display: inline-grid;
   place-items: center;
@@ -668,6 +679,34 @@ button {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.4;
+}
+
+.attachment-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.attachment-preview {
+  display: grid;
+  gap: 4px;
+  padding: 9px;
+  background: rgba(250, 247, 240, 0.74);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.attachment-preview div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.attachment-preview strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
 }
 
 .command-row code,

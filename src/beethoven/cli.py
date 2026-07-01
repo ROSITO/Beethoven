@@ -892,7 +892,8 @@ def print_workspace_files(payload: dict[str, object]) -> None:
         return
     for item in files:
         assert isinstance(item, dict)
-        print(f"- {item.get('path')}")
+        detail = f"{item.get('media_type', 'text/plain')} · {item.get('bytes', 0)} bytes"
+        print(f"- {item.get('path')} ({detail})")
 
 
 if __name__ == "__main__":

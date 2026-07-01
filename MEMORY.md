@@ -41,7 +41,9 @@ The foundation is pre-alpha but executable. It includes:
 - a static desktop workbench;
 - session history;
 - workspace and Git context;
-- workspace file discovery and safe `@path` file attachment reads;
+- workspace file discovery and safe `@path` file attachment reads with binary
+  blocking, MIME/size/snippet metadata, total byte budget, and bounded directory
+  bundles;
 - validation command hooks after a run;
 - named validation profiles (`desktop`, `lint`, `tests`, `full`) selectable from
   CLI, desktop API, and the composer;
@@ -85,8 +87,8 @@ Important modules:
 - `src/beethoven/validation.py`: local validation command hooks and named
   validation profiles.
 - `src/beethoven/desktop_state.py`: local JSON-backed session store.
-- `src/beethoven/workspace.py`: Git/workspace inspection and attachable file
-  listing.
+- `src/beethoven/workspace.py`: Git/workspace inspection, attachable file
+  listing, and safe attachment packing.
 - `src/beethoven/packaging.py`: sidecar launcher generation.
 
 Current baseline score tasks:
@@ -281,6 +283,8 @@ Implemented UI:
   status from the desktop;
 - workspace/Git context through `/api/workspace`;
 - attachable context files through `/api/files`, inserted as `@path`;
+- score preview attachment inspector showing status, type, size, truncation,
+  snippets, and blocked/missing reasons;
 - filterable `/ commands` palette that inserts CLI commands into composer;
 - skills panel from `/api/skills`;
 - RecursiveMAS healthcheck from the skills panel through
@@ -359,7 +363,7 @@ Current test suite:
 
 Latest known status after the current implementation:
 
-- `54 passed`;
+- `59 passed`;
 - Ruff passes;
 - `node --check desktop/app.js` passes.
 
@@ -383,6 +387,8 @@ Test coverage currently includes:
   and mocked chat completion execution;
 - validation profile discovery, command/profile merge behavior, CLI execution,
   desktop API exposure, and validation metadata recording;
+- workspace attachment packing with binary blocking, total byte budget,
+  MIME/size/snippet metadata, directory expansion, and enriched file listing;
 - conductor dependency execution;
 - invalid dependency rejection.
 
@@ -434,8 +440,9 @@ This completed with trace `understand:openai-compatible`,
 - The terminal CLI is line-oriented, not a full-screen TUI like OpenCode yet.
 - `soloist`, `permission_mode`, and `effort` are recorded but not deeply enforced
   beyond metadata/routing scaffolding.
-- `@path` file ingestion exists with workspace and size guards, but there is no
-  richer context packing, binary detection, token budgeting, or UI inspector yet.
+- `@path` file ingestion now has richer context packing, binary detection,
+  budget enforcement, directory bundles, and desktop preview inspection. Token
+  estimation is still byte-based rather than model-token based.
 - Desktop consumes NDJSON run events, but the visual timeline is still mostly
   rendered from final context.
 - Validation hooks can run local commands and named profiles, but there is no
@@ -463,18 +470,16 @@ Suggested steps:
 - Decide how routing handles requested-but-unavailable soloists in desktop UI.
 - Keep `local-echo` as deterministic fallback for tests and demos.
 
-### 2. Upgrade Context Attachments
+### 2. Upgrade Context Attachments Further
 
-Goal: make `@path` context useful enough for real coding work without creating
-unsafe reads or runaway prompts.
+Goal: move from byte-safe context packing to model-aware context assembly.
 
 Suggested steps:
 
-- Add binary detection and MIME/extension metadata.
-- Add token/byte budgeting across multiple attachments.
-- Show attached file status/content snippets in the desktop inspector.
-- Add support for directories as bounded file bundles.
-- Add tests for ignored paths, missing files, traversal attempts, and truncation.
+- Estimate model-token budgets per adapter instead of bytes only.
+- Add user-controlled include/exclude patterns for directory bundles.
+- Add full attachment inspector drawer with copy/open actions.
+- Add semantic chunking for large files instead of simple head truncation.
 
 ### 3. Make Streaming Visibly Useful
 

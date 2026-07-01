@@ -578,9 +578,15 @@ def _models_from_openai_payload(payload: dict[str, Any]) -> list[str]:
 def _build_model_prompt(task: Task, context: ExecutionContext) -> str:
     attachments = context.score.metadata.get("attachments", [])
     attachment_text = "\n\n".join(
-        f"File: {item.get('path')}\n{str(item.get('content', ''))[:MAX_OLLAMA_ATTACHMENT_CHARS]}"
+        "\n".join(
+            [
+                f"File: {item.get('path')}",
+                f"Type: {item.get('media_type', 'text/plain')} · {item.get('bytes', 0)} bytes",
+                str(item.get("content", ""))[:MAX_OLLAMA_ATTACHMENT_CHARS],
+            ]
+        )
         for item in attachments
-        if isinstance(item, dict)
+        if isinstance(item, dict) and item.get("status") == "attached"
     )
     previous = "\n".join(
         f"- {task_id}: {artifact.output}" for task_id, artifact in context.artifacts.items()

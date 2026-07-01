@@ -27,6 +27,7 @@ const workspaceBranch = document.querySelector("#workspaceBranch");
 const composerWorkspaceName = document.querySelector("#composerWorkspaceName");
 const composerBranch = document.querySelector("#composerBranch");
 const workspaceChanges = document.querySelector("#workspaceChanges");
+const pageTitle = document.querySelector("#pageTitle");
 const terminalButton = document.querySelector("#terminalButton");
 const runScoreButton = document.querySelector("#runScoreButton");
 const moreOptionsButton = document.querySelector("#moreOptionsButton");
@@ -117,10 +118,8 @@ const modeCopy = {
   },
   code: {
     eyebrow: "Code",
-    summary:
-      "Build a Beethoven interface close to Codex Desktop, Claude Desktop, ZCode Desktop, with a real CLI surface.",
-    conductor:
-      "I created a portable score, routed it through the local echo soloist, and exposed the same loop through the CLI. The desktop workbench now mirrors that orchestration model.",
+    summary: "Start from the composer, attach files, inspect scores, and route work through local soloists.",
+    conductor: "Beethoven is ready to draft a score from your next objective.",
     placeholder: "Ask Beethoven anything, @ add files, / commands, # related score"
   }
 };
@@ -197,6 +196,9 @@ function renderChat() {
 function setConversationForMode(mode) {
   const copy = modeCopy[mode] ?? modeCopy.code;
   composer.placeholder = copy.placeholder;
+  if (!currentRunContext) {
+    pageTitle.textContent = "New task";
+  }
   renderChat();
 }
 
@@ -235,6 +237,7 @@ function setConversationForRun(context) {
 }
 
 function setPendingConversation(objective, soloistName) {
+  pageTitle.textContent = objective;
   chatMessages = [
     {
       role: "user",
@@ -411,6 +414,7 @@ function setSearchOpen(open) {
 function applyRunContext(context) {
   scoreTasks = context.score.tasks.map((task) => taskFromApi(task, context));
   scoreId.textContent = context.score.id;
+  pageTitle.textContent = context.score.objective;
   currentScore = context.score;
   currentRunContext = context;
   if (context.score.metadata?.soloist) {
@@ -1683,6 +1687,7 @@ async function startNewTask() {
   currentScore = null;
   currentRunContext = null;
   chatMessages = [];
+  pageTitle.textContent = "New task";
   setSearchOpen(false);
   composerStatus.classList.remove("error");
   composerStatus.textContent = "New task ready.";

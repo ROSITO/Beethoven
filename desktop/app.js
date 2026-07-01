@@ -147,6 +147,10 @@ const cliCommands = [
     description: "List recent desktop runs."
   },
   {
+    command: "beethoven sessions clear",
+    description: "Clear local desktop session history."
+  },
+  {
     command: "beethoven soloists list",
     description: "Show available and planned soloists."
   },
@@ -157,6 +161,10 @@ const cliCommands = [
   {
     command: "beethoven desktop --open",
     description: "Start the local workbench."
+  },
+  {
+    command: "beethoven package doctor",
+    description: "Check Tauri, Cargo, and sidecar packaging prerequisites."
   }
 ];
 

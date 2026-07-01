@@ -13,7 +13,7 @@ from beethoven.desktop_server import serve_desktop
 from beethoven.core import Score
 from beethoven.config import BeethovenConfig
 from beethoven.desktop_state import DesktopSessionStore
-from beethoven.packaging import write_recursivemas_bridge, write_sidecar_script
+from beethoven.packaging import packaging_doctor, write_recursivemas_bridge, write_sidecar_script
 from beethoven.patching import apply_approved_patch, inspect_patch
 from beethoven.recursive import DEFAULT_RECURSIVE_STYLE, RECURSIVE_STYLES
 from beethoven.runtime import (
@@ -228,6 +228,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     package = subparsers.add_parser("package", help="Prepare desktop packaging assets.")
     package_subparsers = package.add_subparsers(dest="package_command", required=True)
+    package_doctor_parser = package_subparsers.add_parser(
+        "doctor",
+        help="Check desktop packaging prerequisites.",
+    )
+    package_doctor_parser.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
     sidecar = package_subparsers.add_parser("sidecar", help="Write a desktop runtime sidecar launcher.")
     sidecar.add_argument(
         "--output",
@@ -520,6 +525,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.command == "package":
+        if args.package_command == "doctor":
+            report = packaging_doctor()
+            if args.json:
+                print(json.dumps({"packaging": report}, indent=2, ensure_ascii=False))
+            else:
+                print_packaging_doctor(report)
+            return 0 if report.get("ready") else 1
         if args.package_command == "sidecar":
             output_path = write_sidecar_script(args.output)
             print(f"Sidecar launcher written to {output_path}")
@@ -912,6 +924,25 @@ def print_solomlx_status(report: dict[str, object]) -> None:
     if isinstance(models, list) and models:
         print(f"Models: {', '.join(str(model) for model in models)}")
     print(f"Message: {report.get('message')}")
+
+
+def print_packaging_doctor(report: dict[str, object]) -> None:
+    print(f"Packaging: {report.get('status')}")
+    print(f"Root: {report.get('root')}")
+    print(f"Message: {report.get('message')}")
+    blockers = report.get("blockers", [])
+    if isinstance(blockers, list) and blockers:
+        print("Blockers:")
+        for blocker in blockers:
+            assert isinstance(blocker, dict)
+            print(f"- {blocker.get('name')}: {blocker.get('message')}")
+    checks = report.get("checks", [])
+    if isinstance(checks, list):
+        print("Checks:")
+        for check in checks:
+            assert isinstance(check, dict)
+            mark = "ok" if check.get("ok") else "fail"
+            print(f"- {mark}: {check.get('name')}")
 
 
 def print_skills(skills: list[dict[str, object]]) -> None:

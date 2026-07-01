@@ -12,6 +12,7 @@ from urllib.parse import unquote, urlparse
 
 from beethoven.config import BeethovenConfig
 from beethoven.desktop_state import DesktopSessionStore
+from beethoven.packaging import packaging_doctor
 from beethoven.patching import apply_approved_patch, inspect_patch
 from beethoven.runtime import (
     check_orchestrator,
@@ -71,6 +72,9 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             return
         if path == "/api/solomlx":
             self._send_json({"solomlx": solomlx_status()})
+            return
+        if path == "/api/packaging":
+            self._send_json({"packaging": packaging_doctor()})
             return
         if path.startswith("/api/soloists/") and path.endswith("/check"):
             soloist_id = unquote(path.removeprefix("/api/soloists/").removesuffix("/check"))

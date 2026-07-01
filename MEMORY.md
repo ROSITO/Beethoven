@@ -56,6 +56,7 @@ The foundation is pre-alpha but executable. It includes:
   CLI, desktop API, and the composer;
 - RecursiveMAS-inspired recursive score strategies;
 - a Tauri v2 desktop shell scaffold;
+- a packaging doctor available in CLI and desktop runtime status;
 - tests for core execution, CLI, and desktop API.
 
 ## Core Runtime
@@ -99,9 +100,11 @@ Important modules:
 - `src/beethoven/desktop_state.py`: local JSON-backed session store.
 - `src/beethoven/workspace.py`: Git/workspace inspection, attachable file
   listing, and safe attachment packing.
-- `src/beethoven/packaging.py`: sidecar launcher generation. The generated
-  launcher resolves `BEETHOVEN_BIN`, `beethoven`, `BEETHOVEN_PYTHON`, local
-  `.venv/bin/python`, then `python3 -m beethoven.cli`.
+- `src/beethoven/packaging.py`: sidecar launcher generation and packaging
+  doctor. The generated launcher resolves `BEETHOVEN_BIN`, `beethoven`,
+  `BEETHOVEN_PYTHON`, local `.venv/bin/python`, then
+  `python3 -m beethoven.cli`. The doctor checks npm, Tauri CLI, Cargo,
+  sidecar executability, and Tauri sidecar config without mutating the project.
 
 Current baseline score tasks:
 
@@ -200,6 +203,8 @@ beethoven workspace --json
 beethoven workspace files
 beethoven workspace files --json
 beethoven workspace files --limit 20
+beethoven package doctor
+beethoven package doctor --json
 beethoven package sidecar
 beethoven package recursivemas-bridge
 ```
@@ -237,6 +242,7 @@ Implemented endpoints:
 - `GET /api/soloists`;
 - `GET /api/orchestrator`;
 - `GET /api/solomlx`;
+- `GET /api/packaging`;
 - `POST /api/solomlx/install`;
 - `POST /api/solomlx/start`;
 - `POST /api/solomlx/prepare-orchestrator`;
@@ -362,12 +368,24 @@ beethoven package sidecar
 This writes `src-tauri/bin/beethoven-sidecar`, which is also versioned and
 listed in `src-tauri/tauri.conf.json` as `bundle.externalBin`.
 
+Packaging diagnostic:
+
+```bash
+beethoven package doctor
+```
+
+The same report is exposed to the desktop via `GET /api/packaging`.
+
 Packaging is not production-complete. A bundled hermetic Python runtime is still
 needed before real installers.
 
 Runtime audit on 2026-07-01:
 
 - `npm install` succeeds and installs `@tauri-apps/cli@2.11.4`.
+- `beethoven package doctor --json` reports npm, Tauri CLI, sidecar, and Tauri
+  config ready.
+- Cargo is not installed on the current machine, so `npm run tauri:dev` remains
+  blocked until the Rust toolchain is installed.
 - `npm run tauri -- --version` reports `tauri-cli 2.11.4`.
 - `npm run tauri:dev` is currently blocked on this machine because `cargo` is
   not installed (`cargo metadata` cannot run).
@@ -385,7 +403,7 @@ Current test suite:
 
 Latest known status after the current implementation:
 
-- `78 passed`;
+- `80 passed`;
 - Ruff passes;
 - `node --check desktop/app.js` passes.
 
@@ -402,6 +420,7 @@ Test coverage currently includes:
 - workspace command;
 - workspace files command;
 - sidecar launcher generation;
+- packaging doctor CLI and desktop API;
 - RecursiveMAS bridge generation;
 - desktop API health, soloists, skills, workspace, files, run, sessions, detail;
 - desktop API orchestrator/SoloMLX status and mocked SoloMLX install trigger;

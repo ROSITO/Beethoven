@@ -274,6 +274,7 @@ beethoven workspace files
 beethoven workspace diff
 beethoven workspace patch-check change.patch
 beethoven workspace patch-apply change.patch --approve <token>
+beethoven package doctor
 beethoven package sidecar
 beethoven package recursivemas-bridge
 ```
@@ -282,6 +283,8 @@ The Tauri shell includes a versioned sidecar launcher at
 `src-tauri/bin/beethoven-sidecar`. It prefers `BEETHOVEN_BIN`/`beethoven` and
 falls back to `BEETHOVEN_PYTHON`, `.venv/bin/python`, or `python3 -m
 beethoven.cli`.
+Run `beethoven package doctor` before `npm run tauri:dev` to check npm, the
+Tauri CLI, Cargo, sidecar generation, and Tauri sidecar config.
 
 Inside `beethoven chat`, type an objective to run it directly, or use slash
 commands such as `/score`, `/run`, `/files`, `/workspace`, `/permission`,

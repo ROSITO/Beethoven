@@ -12,7 +12,20 @@ from beethoven.desktop_server import BeethovenDesktopHandler
 from beethoven.desktop_state import DesktopSessionStore
 
 
-def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
+def test_desktop_api_runs_objective_and_lists_sessions(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        "beethoven.desktop_server.packaging_doctor",
+        lambda: {
+            "id": "tauri-packaging",
+            "status": "ready",
+            "ready": True,
+            "root": str(tmp_path),
+            "message": "Desktop packaging prerequisites are ready.",
+            "blockers": [],
+            "checks": [],
+        },
+    )
+
     class TestHandler(BeethovenDesktopHandler):
         store = DesktopSessionStore(tmp_path / "sessions.json")
 
@@ -34,6 +47,9 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
 
         solomlx = urlopen(f"http://{host}:{port}/api/solomlx", timeout=2)
         solomlx_data = json.loads(solomlx.read().decode("utf-8"))
+
+        packaging = urlopen(f"http://{host}:{port}/api/packaging", timeout=2)
+        packaging_data = json.loads(packaging.read().decode("utf-8"))
 
         try:
             urlopen(f"http://{host}:{port}/api/soloists/recursivemas/check", timeout=2)
@@ -239,6 +255,8 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
     assert "available" in orchestrator_data["orchestrator"]
     assert solomlx_data["solomlx"]["id"] == "solomlx"
     assert "installed" in solomlx_data["solomlx"]
+    assert packaging_data["packaging"]["id"] == "tauri-packaging"
+    assert packaging_data["packaging"]["ready"] is True
     assert soloist_check_status == 503
     assert soloist_check_data["check"]["status"] == "not_configured"
     assert config_payload["config"]["configured"] is True

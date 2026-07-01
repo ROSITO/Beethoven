@@ -97,7 +97,8 @@ let pendingValidationApproval = null;
 let runtimeStatus = {
   orchestrator: null,
   solomlx: null,
-  recursivemas: null
+  recursivemas: null,
+  packaging: null
 };
 let validationProfiles = [];
 
@@ -488,7 +489,7 @@ function renderSkills(skills) {
 }
 
 function runtimeTone(status) {
-  if (status === "available" || status === "running") {
+  if (status === "available" || status === "running" || status === "ready") {
     return "success";
   }
   if (status === "not_installed" || status === "stopped" || status === "planned") {
@@ -514,11 +515,18 @@ function renderRuntimeStatus() {
   const orchestrator = runtimeStatus.orchestrator;
   const solomlx = runtimeStatus.solomlx;
   const recursivemas = runtimeStatus.recursivemas;
+  const packaging = runtimeStatus.packaging;
   const solomlxModels = solomlx?.models?.length
     ? `Models: ${solomlx.models.slice(0, 2).join(", ")}`
     : solomlx?.preferred_orchestrator_model
       ? `Preferred: ${solomlx.preferred_orchestrator_model}`
       : "";
+  const packagingBlockers = packaging?.blockers?.length
+    ? `${packaging.blockers.length} blocker${packaging.blockers.length > 1 ? "s" : ""}: ${packaging.blockers
+        .slice(0, 2)
+        .map((blocker) => blocker.name)
+        .join(", ")}`
+    : packaging?.root;
 
   runtimeGrid.innerHTML = [
     runtimeCard({
@@ -545,6 +553,13 @@ function renderRuntimeStatus() {
       badge: recursivemas?.status,
       body: recursivemas?.message ?? "Optional recursive sidecar is not checked yet.",
       detail: recursivemas?.command
+    }),
+    runtimeCard({
+      title: "Tauri Packaging",
+      status: packaging?.status,
+      badge: packaging?.status,
+      body: packaging?.message ?? "Desktop packaging status is unavailable.",
+      detail: packagingBlockers
     })
   ].join("");
 }
@@ -1213,19 +1228,22 @@ async function loadRuntimeStatus() {
   refreshRuntimeButton.textContent = "Refreshing…";
   refreshRuntimeButton.disabled = true;
   try {
-    const [orchestratorResponse, soloMlxResponse] = await Promise.all([
+    const [orchestratorResponse, soloMlxResponse, packagingResponse] = await Promise.all([
       fetch("/api/orchestrator"),
-      fetch("/api/solomlx")
+      fetch("/api/solomlx"),
+      fetch("/api/packaging")
     ]);
-    if (!orchestratorResponse.ok || !soloMlxResponse.ok) {
+    if (!orchestratorResponse.ok || !soloMlxResponse.ok || !packagingResponse.ok) {
       throw new Error("Runtime status API returned an error.");
     }
     const orchestratorPayload = await orchestratorResponse.json();
     const soloMlxPayload = await soloMlxResponse.json();
+    const packagingPayload = await packagingResponse.json();
     runtimeStatus = {
       ...runtimeStatus,
       orchestrator: orchestratorPayload.orchestrator ?? null,
-      solomlx: soloMlxPayload.solomlx ?? null
+      solomlx: soloMlxPayload.solomlx ?? null,
+      packaging: packagingPayload.packaging ?? null
     };
   } catch (error) {
     runtimeStatus = {
@@ -1239,6 +1257,11 @@ async function loadRuntimeStatus() {
         status: "unavailable",
         available: false,
         message: "Unable to reach SoloMLX status endpoint."
+      },
+      packaging: {
+        status: "unavailable",
+        ready: false,
+        message: "Unable to reach packaging diagnostic endpoint."
       }
     };
     console.error(error);

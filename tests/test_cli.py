@@ -584,6 +584,50 @@ def test_package_sidecar_command_writes_launcher(tmp_path, capsys) -> None:
     assert output.stat().st_mode & 0o111
 
 
+def test_package_doctor_command_reports_blockers(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(
+        "beethoven.cli.packaging_doctor",
+        lambda: {
+            "id": "tauri-packaging",
+            "status": "blocked",
+            "ready": False,
+            "root": "/workspace",
+            "message": "1 packaging prerequisite(s) need attention.",
+            "blockers": [{"name": "Rust Cargo", "message": "Cargo is required."}],
+            "checks": [{"name": "Rust Cargo", "ok": False}],
+        },
+    )
+
+    exit_code = main(["package", "doctor"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "Packaging: blocked" in captured.out
+    assert "Rust Cargo" in captured.out
+
+
+def test_package_doctor_command_can_emit_json(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(
+        "beethoven.cli.packaging_doctor",
+        lambda: {
+            "id": "tauri-packaging",
+            "status": "ready",
+            "ready": True,
+            "root": "/workspace",
+            "message": "Desktop packaging prerequisites are ready.",
+            "blockers": [],
+            "checks": [],
+        },
+    )
+
+    exit_code = main(["package", "doctor", "--json"])
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert exit_code == 0
+    assert data["packaging"]["ready"] is True
+
+
 def test_package_recursivemas_bridge_writes_executable_bridge(tmp_path, monkeypatch, capsys) -> None:
     output = tmp_path / "recursivemas_bridge.py"
 

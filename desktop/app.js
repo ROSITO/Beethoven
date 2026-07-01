@@ -250,13 +250,15 @@ function validationSummaryFromContext(context) {
     return "";
   }
   const passed = results.filter((result) => result?.passed).length;
-  const failed = results.length - passed;
+  const blocked = results.filter((result) => result?.blocked).length;
+  const failed = results.length - passed - blocked;
   const lines = results.map((result) => {
-    const marker = result?.passed ? "passed" : "failed";
-    return `${result?.command}: ${marker}`;
+    const marker = result?.blocked ? "blocked" : result?.passed ? "passed" : "failed";
+    const reason = result?.reason ? ` (${result.reason})` : "";
+    return `${result?.command}: ${marker}${reason}`;
   });
   return [
-    `${passed}/${results.length} validation commands passed${failed ? `, ${failed} failed` : ""}.`,
+    `${passed}/${results.length} validation commands passed${failed ? `, ${failed} failed` : ""}${blocked ? `, ${blocked} blocked` : ""}.`,
     ...lines,
   ].join("\n");
 }

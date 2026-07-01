@@ -148,6 +148,25 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
             if line.strip()
         ]
 
+        blocked_stream_request = Request(
+            f"http://{host}:{port}/api/run/stream",
+            data=json.dumps(
+                {
+                    "objective": "blocked validation desktop api",
+                    "validation_commands": ["rm -rf build"],
+                    "permission_mode": "ask",
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        blocked_stream_response = urlopen(blocked_stream_request, timeout=2)
+        blocked_stream_events = [
+            json.loads(line.decode("utf-8"))
+            for line in blocked_stream_response.readlines()
+            if line.strip()
+        ]
+
         sessions = urlopen(f"http://{host}:{port}/api/sessions", timeout=2)
         sessions_data = json.loads(sessions.read().decode("utf-8"))
 
@@ -187,6 +206,9 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path) -> None:
     assert stream_events[0]["event"]["type"] == "score_started"
     assert stream_events[-1]["event"]["type"] == "run_completed"
     assert stream_events[-1]["event"]["context"]["score"]["objective"] == "stream desktop api"
+    assert any(event["event"]["type"] == "validation_blocked" for event in blocked_stream_events)
+    blocked_context = blocked_stream_events[-1]["event"]["context"]
+    assert blocked_context["artifacts"]["validation"]["output"][0]["blocked"] is True
     assert soloists_data["soloists"][0]["id"] == "local-echo"
     assert soloists_data["soloists"][0]["status"] == "available"
     assert orchestrator_data["orchestrator"]["id"] == "beethoven-orchestrator"

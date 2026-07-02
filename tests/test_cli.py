@@ -120,6 +120,19 @@ def test_run_command_prints_trace(capsys) -> None:
     assert "synthesize:local-echo" in captured.out
 
 
+def test_run_objective_accepts_auto_router_preference(monkeypatch) -> None:
+    monkeypatch.setenv("BEETHOVEN_DYNAMIC_PLANNING", "0")
+
+    context = run_objective("Build a CLI", soloist="auto")
+
+    assert context.score.metadata["soloist"] == "auto"
+    assert context.trace == [
+        "understand:local-echo",
+        "plan:local-echo",
+        "synthesize:local-echo",
+    ]
+
+
 def test_run_command_can_stream_human_events(capsys) -> None:
     exit_code = main(["run", "Stream", "events", "--stream"])
 

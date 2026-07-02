@@ -117,8 +117,10 @@ Current baseline score tasks:
 3. `synthesize` with capability `synthesize`, depends on `plan`.
 
 When `BEETHOVEN_DYNAMIC_PLANNING` is enabled, Beethoven first tries its hidden
-local orchestrator. The user can choose execution soloists, but not the
-orchestrator. The task list may differ, and tasks may carry a validated
+local orchestrator. The desktop uses `soloist=auto` by default, which means
+Beethoven routes each task without presenting the orchestrator as a user choice.
+The CLI can still force a specific execution soloist for debugging and power
+use. The task list may differ, and tasks may carry a validated
 `preferred_soloist` routing hint. Beethoven still enforces valid capabilities,
 unique task IDs, dependency order, a maximum of six tasks, and a final synthesize
 task.
@@ -295,7 +297,8 @@ Implemented UI:
 - session restore via `/api/sessions/<id>`;
 - search/filter for recent sessions;
 - `New task` resets composer and score state;
-- composer with permission mode, soloist selector, effort selector;
+- composer with permission mode, Beethoven Auto execution preference, and effort
+  selector;
 - validation profile selector in the composer, backed by
   `/api/validation-profiles`;
 - strategy controls for baseline vs recursive score generation, recursive
@@ -304,6 +307,8 @@ Implemented UI:
 - run through `/api/run/stream`, with `score_planned` emitted before execution
   and live score/timeline status updates for route, running, artifact,
   completed, blocked, and failed events;
+- central chat message updates while streaming, final answer rendering in the
+  main conversation, and dynamic inspector status/cost/privacy labels;
 - validation result summary rendered as a normal assistant-side chat message
   after a run;
 - score inspector and progress timeline;

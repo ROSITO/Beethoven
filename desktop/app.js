@@ -86,6 +86,10 @@ const patchApprovalToken = document.querySelector("#patchApprovalToken");
 const checkPatchButton = document.querySelector("#checkPatchButton");
 const applyPatchButton = document.querySelector("#applyPatchButton");
 const patchResult = document.querySelector("#patchResult");
+const inspectorSoloistPill = document.querySelector("#inspectorSoloistPill");
+const inspectorCost = document.querySelector("#inspectorCost");
+const inspectorPrivacy = document.querySelector("#inspectorPrivacy");
+const inspectorStatus = document.querySelector("#inspectorStatus");
 
 let currentWorkspace = null;
 let allSessions = [];
@@ -202,6 +206,33 @@ function renderChat() {
     .join("");
 }
 
+function formatArtifactOutput(output) {
+  if (typeof output === "string") {
+    return output.trim();
+  }
+  if (output === null || output === undefined) {
+    return "";
+  }
+  try {
+    return JSON.stringify(output, null, 2);
+  } catch {
+    return String(output);
+  }
+}
+
+function updateAssistantDraft(content, meta = "Beethoven") {
+  if (!chatMessages.length || chatMessages[chatMessages.length - 1]?.role !== "assistant") {
+    chatMessages.push({ role: "assistant", meta, content });
+  } else {
+    chatMessages[chatMessages.length - 1] = {
+      ...chatMessages[chatMessages.length - 1],
+      meta,
+      content
+    };
+  }
+  renderChat();
+}
+
 function setConversationForMode(mode) {
   const copy = modeCopy[mode] ?? modeCopy.code;
   composer.placeholder = copy.placeholder;
@@ -265,15 +296,16 @@ function setPendingConversation(objective, soloistName) {
 function finalResponseFromContext(context) {
   const artifacts = context.artifacts ?? {};
   const preferred = artifacts.synthesize?.output;
-  if (typeof preferred === "string" && preferred.trim()) {
-    return preferred.trim();
+  const preferredText = formatArtifactOutput(preferred);
+  if (preferredText) {
+    return preferredText;
   }
   const trace = [...(context.trace ?? [])].reverse();
   for (const route of trace) {
     const taskId = route.split(":")[0];
-    const output = artifacts[taskId]?.output;
-    if (typeof output === "string" && output.trim()) {
-      return output.trim();
+    const output = formatArtifactOutput(artifacts[taskId]?.output);
+    if (output) {
+      return output;
     }
   }
   return "The run completed. Inspect the score trace on the right for task artifacts.";
@@ -310,8 +342,44 @@ function blockedValidationCommands(context) {
 }
 
 function soloistLabel(context) {
-  const soloist = context.score.metadata?.soloist ?? context.trace?.[0]?.split(":")[1] ?? "Beethoven";
-  return String(soloist).replaceAll("-", " ");
+  const selected = context.score.metadata?.soloist;
+  if (!selected || selected === "auto") {
+    return "Beethoven";
+  }
+  return String(selected).replaceAll("-", " ");
+}
+
+function updateInspectorState(context = null) {
+  const traceSoloists = [
+    ...new Set(
+      (context?.trace ?? [])
+        .map((item) => item.split(":")[1])
+        .filter(Boolean)
+    )
+  ];
+  const selected = context?.score?.metadata?.soloist ?? soloistSelect.value;
+  const label = selected === "auto" || !selected
+    ? "Beethoven Auto"
+    : String(selected).replaceAll("-", " ");
+  inspectorSoloistPill.textContent = traceSoloists.length
+    ? traceSoloists.slice(0, 2).map((item) => item.replaceAll("-", " ")).join(" + ")
+    : label;
+  const cost = Object.values(context?.artifacts ?? {}).reduce(
+    (total, artifact) => total + (Number(artifact?.cost) || 0),
+    0
+  );
+  inspectorCost.textContent = `$${cost.toFixed(2)}`;
+  inspectorPrivacy.textContent = selected === "auto" || selected === "local-reader" || selected === "local-echo"
+    ? "Local first"
+    : "Hybrid";
+  const statuses = Object.values(context?.statuses ?? {});
+  inspectorStatus.textContent = statuses.includes("failed")
+    ? "Failed"
+    : statuses.length && statuses.every((status) => status === "completed")
+      ? "Completed"
+      : scoreTasks.some((task) => task.status === "running")
+        ? "Running"
+        : "Ready";
 }
 
 function renderScore() {
@@ -320,6 +388,7 @@ function renderScore() {
     timeline.innerHTML = '<li class="empty-timeline">No score drafted yet</li>';
     progressPill.textContent = "Ready";
     scoreId.textContent = currentScore?.id ?? "No active score";
+    updateInspectorState();
     return;
   }
 
@@ -361,6 +430,7 @@ function renderScore() {
   const completed = scoreTasks.filter((task) => (task.status ?? "done") === "completed").length;
   progressPill.textContent =
     completed > 0 ? `${completed} tasks completed` : `${scoreTasks.length} tasks ready`;
+  updateInspectorState(currentRunContext);
 }
 
 function taskStatusTone(status) {
@@ -439,7 +509,7 @@ function applyRunContext(context) {
   pageTitle.textContent = context.score.objective;
   currentScore = context.score;
   currentRunContext = context;
-  if (context.score.metadata?.soloist) {
+  if (context.score.metadata?.soloist && [...soloistSelect.options].some((option) => option.value === context.score.metadata.soloist)) {
     soloistSelect.value = context.score.metadata.soloist;
   }
   if (context.score.metadata?.permission_mode) {
@@ -465,6 +535,7 @@ function renderSoloists(soloists) {
   const available = soloists.filter((soloist) => soloist.status === "available");
   const planned = soloists.filter((soloist) => soloist.status !== "available");
   const options = [
+    '<option value="auto" selected>Beethoven Auto</option>',
     ...available.map(
       (soloist) => `<option value="${soloist.id}">${soloist.name}</option>`
     ),
@@ -473,6 +544,7 @@ function renderSoloists(soloists) {
     )
   ];
   soloistSelect.innerHTML = options.join("");
+  updateInspectorState(currentRunContext);
 }
 
 function renderValidationProfiles(profiles) {
@@ -917,9 +989,7 @@ function taskFromApi(task, context) {
   const soloist = route?.split(":")[1] ?? "local-echo";
   const output = task.capability === "validate"
     ? validationTaskSummary(artifact?.output)
-    : typeof artifact?.output === "string"
-      ? artifact.output.slice(0, 420)
-      : "";
+    : formatArtifactOutput(artifact?.output).slice(0, 420);
   return {
     id: task.id,
     capability: task.capability,
@@ -1003,6 +1073,9 @@ async function runComposer(options = {}) {
   composerStatus.classList.remove("error");
   composerStatus.textContent = "Running Beethoven locally…";
   setPendingConversation(value, soloistSelect.options[soloistSelect.selectedIndex]?.text ?? "Beethoven");
+  if (!options.objective) {
+    composer.value = "";
+  }
 
   try {
     const response = await fetch("/api/run/stream", {
@@ -1091,6 +1164,7 @@ function updateRunEventStatus(event) {
   if (event.type === "score_planned" && event.score) {
     ensureLiveScore(event.score);
     composerStatus.textContent = "Score planned. Starting execution…";
+    updateAssistantDraft(`Score planned with ${(event.score.tasks ?? []).length} tasks.`, "Beethoven");
     return;
   }
   if (event.type === "task_routed") {
@@ -1099,35 +1173,42 @@ function updateRunEventStatus(event) {
       reason: "routed by Beethoven runtime"
     });
     composerStatus.textContent = `${event.task_id} routed to ${event.soloist}`;
+    updateAssistantDraft(`${event.task_id} routed to ${event.soloist}.`, "Beethoven");
     return;
   }
   if (event.type === "task_started") {
     updateLiveTask(event.task_id, { status: "running" });
     composerStatus.textContent = `${event.task_id} running…`;
+    updateAssistantDraft(`${event.task_id} is running…`, "Beethoven");
     return;
   }
   if (event.type === "artifact_produced") {
     updateLiveTask(event.task_id, { status: "produced", reason: "artifact produced by Beethoven runtime" });
+    updateAssistantDraft(`${event.task_id} produced an artifact.`, "Beethoven");
     return;
   }
   if (event.type === "task_completed") {
     updateLiveTask(event.task_id, { status: event.status ?? "completed" });
     composerStatus.textContent = `${event.task_id} completed`;
+    updateAssistantDraft(`${event.task_id} completed.`, "Beethoven");
     return;
   }
   if (event.type === "task_failed") {
     updateLiveTask(event.task_id, { status: "failed" });
     composerStatus.textContent = `${event.task_id} failed`;
+    updateAssistantDraft(`${event.task_id} failed.`, "Beethoven");
     return;
   }
   if (event.type === "validation_started") {
     updateLiveTask(event.task_id, { status: "running", reason: "validation commands running" });
     composerStatus.textContent = "Running validation…";
+    updateAssistantDraft("Validation is running…", "Beethoven");
     return;
   }
   if (event.type === "validation_blocked") {
     updateLiveTask(event.task_id, { status: "blocked", reason: "blocked by permission policy" });
     composerStatus.textContent = "Validation blocked by permission policy.";
+    updateAssistantDraft("Validation is blocked by the current permission policy.", "Beethoven");
     return;
   }
   if (event.type === "validation_completed") {
@@ -1139,6 +1220,7 @@ function updateRunEventStatus(event) {
   }
   if (event.type === "score_completed") {
     composerStatus.textContent = "Score completed. Saving session…";
+    updateAssistantDraft("Score completed. Preparing the final response…", "Beethoven");
   }
 }
 
@@ -1794,6 +1876,7 @@ async function startNewTask() {
   composerStatus.textContent = "New task ready.";
   permissionSelect.value = "ask";
   effortSelect.value = "medium";
+  soloistSelect.value = "auto";
   commandPanel.hidden = true;
   skillsPanel.hidden = true;
   scorePanel.hidden = true;
@@ -1951,6 +2034,7 @@ sessionList.addEventListener("click", (event) => {
 modeTabs.forEach((tab) => {
   tab.addEventListener("click", () => setMode(tab.dataset.mode));
 });
+soloistSelect.addEventListener("change", () => updateInspectorState(currentRunContext));
 renderCommandList();
 setConversationForMode("code");
 renderScore();

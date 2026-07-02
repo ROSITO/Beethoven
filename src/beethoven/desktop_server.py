@@ -167,7 +167,7 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             objective = self._read_objective(payload)
             if objective is None:
                 return
-            soloist = str(payload.get("soloist", "local-echo"))
+            soloist = str(payload.get("soloist", "auto"))
             strategy = str(payload.get("strategy", "baseline"))
             recursive_style = str(payload.get("recursive_style", "deliberation"))
             recursive_rounds = self._read_recursive_rounds(payload)
@@ -279,7 +279,7 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             objective = self._read_objective(payload)
             if objective is None:
                 return
-            soloist = str(payload.get("soloist", "local-echo"))
+            soloist = str(payload.get("soloist", "auto"))
             permission_mode = str(payload.get("permission_mode", "ask"))
             effort = str(payload.get("effort", "medium"))
             strategy = str(payload.get("strategy", "baseline"))
@@ -320,7 +320,7 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             objective = self._read_objective(payload)
             if objective is None:
                 return
-            soloist = str(payload.get("soloist", "local-echo"))
+            soloist = str(payload.get("soloist", "auto"))
             permission_mode = str(payload.get("permission_mode", "ask"))
             effort = str(payload.get("effort", "medium"))
             strategy = str(payload.get("strategy", "baseline"))

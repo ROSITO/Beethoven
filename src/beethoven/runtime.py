@@ -298,12 +298,13 @@ def run_objective(
     approved_validation_commands: list[str] | None = None,
     event_sink: Callable[[dict[str, object]], None] | None = None,
 ) -> ExecutionContext:
+    preferred_soloist = None if soloist == "auto" else soloist
     if soloist == "ollama" and not ollama_is_enabled():
         raise RuntimeError("Ollama is disabled by default. Restart with BEETHOVEN_ENABLE_OLLAMA=1 to opt in.")
     if soloist == "ollama" and not ollama_is_available():
         raise RuntimeError("Ollama soloist requested but the configured local model is unavailable.")
     registry = create_default_registry()
-    if not any(candidate.name == soloist for candidate in registry.all()):
+    if preferred_soloist and not any(candidate.name == preferred_soloist for candidate in registry.all()):
         raise RuntimeError(f"Soloist requested but unavailable: {soloist}")
     merged_validation_commands, selected_validation_profiles = merge_validation_commands(
         validation_commands,
@@ -326,7 +327,7 @@ def run_objective(
                 if str(command).strip()
             ],
         },
-        planner_soloist=soloist,
+        planner_soloist=preferred_soloist,
         strategy=strategy,
         recursive_style=recursive_style,
         recursive_rounds=recursive_rounds,
@@ -336,7 +337,7 @@ def run_objective(
     if event_sink is not None:
         event_sink({"type": "score_planned", "score": score_to_dict(score)})
     context = Conductor(
-        CapabilityRouter(registry, preferred_soloist=soloist),
+        CapabilityRouter(registry, preferred_soloist=preferred_soloist),
         event_sink=event_sink,
     ).perform(score)
     return context

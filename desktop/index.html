@@ -267,6 +267,21 @@
           <div class="soloist-check-result" id="patchResult" hidden></div>
         </section>
 
+        <section class="validation-panel" id="validationPanel" aria-label="Validation approval" hidden>
+          <div class="validation-panel-header">
+            <div>
+              <h2>Validation Approval</h2>
+              <span id="validationPanelMeta">Review blocked commands before rerunning.</span>
+            </div>
+            <button class="icon-button" id="closeValidationPanel" type="button" aria-label="Close validation approval">×</button>
+          </div>
+          <div class="validation-command-list" id="validationCommandList"></div>
+          <div class="validation-actions">
+            <button class="text-button" id="cancelValidationApprovalButton" type="button">Cancel</button>
+            <button class="text-button primary" id="approveValidationButton" type="button">Approve and rerun</button>
+          </div>
+        </section>
+
         <section class="canvas">
           <div class="conversation">
             <div class="chat-thread" id="chatThread"></div>
@@ -320,6 +335,14 @@
                   <select class="control-select" id="validationProfileSelect">
                     <option value="none" selected>No validation</option>
                   </select>
+                  <label class="select-label" for="validationCommandInput">Command</label>
+                  <input
+                    class="control-input validation-command-input"
+                    id="validationCommandInput"
+                    type="text"
+                    placeholder="optional validation command"
+                    autocomplete="off"
+                  />
                   <label class="select-label" for="strategySelect">Strategy</label>
                   <select class="control-select" id="strategySelect">
                     <option value="baseline" selected>Baseline</option>

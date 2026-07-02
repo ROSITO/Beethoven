@@ -1,6 +1,6 @@
 # Beethoven Memory
 
-Last updated: 2026-07-01
+Last updated: 2026-07-02
 
 ## Vision
 
@@ -56,7 +56,8 @@ The foundation is pre-alpha but executable. It includes:
   is `auto` or the exact command is explicitly approved for that run;
 - auto-routing fallback: when Beethoven owns routing and a suggested soloist
   fails, the conductor can retry the task with another compatible local soloist;
-- desktop approve-and-rerun action for blocked validation commands;
+- desktop validation approval review panel for blocked validation commands,
+  with exact approve-and-rerun behavior;
 - named validation profiles (`desktop`, `lint`, `tests`, `full`) selectable from
   CLI, desktop API, and the composer;
 - RecursiveMAS-inspired recursive score strategies;
@@ -304,6 +305,7 @@ Implemented UI:
   selector;
 - validation profile selector in the composer, backed by
   `/api/validation-profiles`;
+- optional validation command input in the composer for one-off local gates;
 - strategy controls for baseline vs recursive score generation, recursive
   pattern, and rounds;
 - score preview through `/api/score`;
@@ -318,7 +320,8 @@ Implemented UI:
 - sanitized CLI adapter failures so usage limits or provider errors do not dump
   full prompts or attached context into the desktop chat;
 - validation result summary rendered as a normal assistant-side chat message
-  after a run;
+  after a run, with blocked commands opening a dedicated approval panel before
+  rerun;
 - score inspector and progress timeline;
 - runtime board for Beethoven's hidden local orchestrator, the managed SoloMLX
   brick, and RecursiveMAS availability;
@@ -427,9 +430,12 @@ Current test suite:
 
 Latest known status after the current implementation:
 
-- `83 passed`;
+- `90 passed`;
 - Ruff passes;
 - `node --check desktop/app.js` passes.
+- `git diff --check` passes.
+- Desktop API validation smoke confirms mutating commands are blocked in
+  `ask` mode, then pass only after exact approval.
 
 Test coverage currently includes:
 
@@ -474,6 +480,7 @@ Browser QA has been done with the in-app browser for:
 - slash command palette;
 - session action menu;
 - validation profile selector populated from `/api/validation-profiles`;
+- validation approval panel for blocked commands;
 - mobile 390px no horizontal overflow.
 
 Runtime proof after adding the execution-side OpenAI-compatible soloist:
@@ -516,12 +523,13 @@ This completed with trace `understand:openai-compatible`,
   budget enforcement, directory bundles, automatic current-workspace manifests,
   and desktop preview inspection. Token estimation is still byte-based rather
   than model-token based.
-- Desktop consumes NDJSON run events, but the visual timeline is still mostly
-  rendered from final context.
+- Desktop consumes NDJSON run events and updates the score/timeline during the
+  run, but deeper visual replay/debug tooling is still missing.
 - Validation hooks now become explicit `validate` score tasks and include a
   policy gate for mutating/unknown commands plus exact-command approval for
-  `ask` mode. The desktop can approve blocked validation commands and rerun, but
-  the approval UX is still a compact message action rather than a full modal.
+  `ask` mode. The desktop can review blocked validation commands in a dedicated
+  approval panel and rerun after exact approval. The next gap is richer
+  stdout/stderr inspection and applying the same policy model to code changes.
 - Bounded diff inspection and approval-token gated patch apply exist, including
   a compact desktop patch panel. Rich side-by-side patch review is not
   implemented yet.
@@ -534,18 +542,17 @@ This completed with trace `understand:openai-compatible`,
 
 ## Recommended Next Plan
 
-### 1. Harden The Soloist Adapter Boundary
+### 1. Complete The Product Shell
 
-Goal: turn the first `OllamaSoloist` into a provider boundary that can host
-Ollama, OpenAI-compatible APIs, Codex, tools, and future workers consistently.
+Goal: make the desktop feel like one coherent app, not a collection of panels.
 
 Suggested steps:
 
-- Keep hardening adapter metadata/config objects instead of hard-coded env reads
-  in `soloists.py`.
-- Add tests that mock subprocess/API calls and never require network/API keys.
-- Decide how routing handles requested-but-unavailable soloists in desktop UI.
-- Keep `local-echo` as deterministic fallback for tests and demos.
+- Add richer stdout/stderr/details inspection for validation and future code
+  actions.
+- Connect patch review/apply to the normal chat approval flow.
+- Persist event logs with sessions so restored runs show what happened live.
+- Add cancellation support for active runs.
 
 ### 2. Upgrade Context Attachments Further
 

@@ -57,6 +57,10 @@ select {
   font: inherit;
 }
 
+input {
+  font: inherit;
+}
+
 button {
   border: 0;
   cursor: pointer;
@@ -380,7 +384,8 @@ button {
 .score-panel,
 .files-panel,
 .session-panel,
-.patch-panel {
+.patch-panel,
+.validation-panel {
   display: grid;
   gap: 16px;
   margin: 16px 26px 0;
@@ -395,7 +400,8 @@ button {
 .score-panel[hidden],
 .files-panel[hidden],
 .session-panel[hidden],
-.patch-panel[hidden] {
+.patch-panel[hidden],
+.validation-panel[hidden] {
   display: none;
 }
 
@@ -404,7 +410,8 @@ button {
 .score-panel-header,
 .files-panel-header,
 .session-panel-header,
-.patch-panel-header {
+.patch-panel-header,
+.validation-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -442,6 +449,18 @@ button {
 .files-panel-header span,
 .session-panel-header span,
 .patch-panel-header span {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.validation-panel h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.validation-panel-header span {
   display: block;
   margin-top: 2px;
   color: var(--muted);
@@ -489,6 +508,40 @@ button {
   grid-template-columns: minmax(180px, 1fr) auto auto;
   gap: 8px;
   margin-top: 10px;
+}
+
+.validation-command-list {
+  display: grid;
+  gap: 10px;
+}
+
+.validation-command-card {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid rgba(212, 175, 55, 0.36);
+  border-radius: 8px;
+}
+
+.validation-command-card code {
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.validation-command-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.validation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .patch-actions input {
@@ -769,6 +822,26 @@ button {
   border-radius: 8px;
   background: rgba(212, 175, 55, 0.12);
   color: var(--ink);
+}
+
+.control-input {
+  min-width: 0;
+  min-height: 34px;
+  padding: 7px 10px;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: none;
+}
+
+.control-input:focus {
+  border-color: var(--maestro-purple);
+  box-shadow: 0 0 0 3px rgba(109, 61, 255, 0.14);
+}
+
+.validation-command-input {
+  width: clamp(160px, 18vw, 280px);
 }
 
 .tag {

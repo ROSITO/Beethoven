@@ -20,6 +20,7 @@ const soloistSelect = document.querySelector("#soloistSelect");
 const permissionSelect = document.querySelector("#permissionSelect");
 const effortSelect = document.querySelector("#effortSelect");
 const validationProfileSelect = document.querySelector("#validationProfileSelect");
+const validationCommandInput = document.querySelector("#validationCommandInput");
 const strategySelect = document.querySelector("#strategySelect");
 const recursiveStyleSelect = document.querySelector("#recursiveStyleSelect");
 const recursiveRoundsSelect = document.querySelector("#recursiveRoundsSelect");
@@ -86,6 +87,12 @@ const patchApprovalToken = document.querySelector("#patchApprovalToken");
 const checkPatchButton = document.querySelector("#checkPatchButton");
 const applyPatchButton = document.querySelector("#applyPatchButton");
 const patchResult = document.querySelector("#patchResult");
+const validationPanel = document.querySelector("#validationPanel");
+const closeValidationPanel = document.querySelector("#closeValidationPanel");
+const validationPanelMeta = document.querySelector("#validationPanelMeta");
+const validationCommandList = document.querySelector("#validationCommandList");
+const cancelValidationApprovalButton = document.querySelector("#cancelValidationApprovalButton");
+const approveValidationButton = document.querySelector("#approveValidationButton");
 const inspectorSoloistPill = document.querySelector("#inspectorSoloistPill");
 const inspectorCost = document.querySelector("#inspectorCost");
 const inspectorPrivacy = document.querySelector("#inspectorPrivacy");
@@ -205,7 +212,7 @@ function renderChat() {
           <div class="message-meta">${escapeHtml(message.meta)}</div>
           <p>${escapeHtml(message.content)}</p>
           ${message.action === "approve-validation"
-            ? `<button class="text-button message-action" type="button" data-chat-action="approve-validation" data-message-index="${index}">Approve and rerun</button>`
+            ? `<button class="text-button message-action" type="button" data-chat-action="review-validation" data-message-index="${index}">Review validation</button>`
             : ""}
         </article>
       `
@@ -264,7 +271,7 @@ function setConversationForRun(context) {
   ];
   const validationSummary = validationSummaryFromContext(context);
   if (validationSummary) {
-    const blockedCommands = blockedValidationCommands(context);
+    const blockedCommands = blockedValidationResults(context);
     pendingValidationApproval = blockedCommands.length
       ? {
           objective: context.score.objective,
@@ -339,13 +346,21 @@ function validationSummaryFromContext(context) {
 }
 
 function blockedValidationCommands(context) {
+  return blockedValidationResults(context).map((result) => String(result.command));
+}
+
+function blockedValidationResults(context) {
   const results = context.artifacts?.validation?.output;
   if (!Array.isArray(results)) {
     return [];
   }
   return results
     .filter((result) => result?.blocked && result?.command)
-    .map((result) => String(result.command));
+    .map((result) => ({
+      command: String(result.command),
+      reason: result.reason ? String(result.reason) : "Blocked by validation policy.",
+      risk: result.risk ? String(result.risk) : "unknown",
+    }));
 }
 
 function soloistLabel(context) {
@@ -910,6 +925,7 @@ function hideUtilityPanels() {
   scorePanel.hidden = true;
   filesPanel.hidden = true;
   sessionPanel.hidden = true;
+  validationPanel.hidden = true;
   skillsButton.classList.remove("active");
   scorePreviewButton.classList.remove("active");
   attachFilesButton.classList.remove("active");
@@ -1089,6 +1105,7 @@ function updateLiveTask(taskId, patch) {
 
 function scoreRequestPayload(objective, approvedValidationCommands = []) {
   const selectedValidationProfile = validationProfileSelect.value;
+  const validationCommand = validationCommandInput.value.trim();
   return {
     objective,
     soloist: soloistSelect.value,
@@ -1098,6 +1115,7 @@ function scoreRequestPayload(objective, approvedValidationCommands = []) {
     validation_profiles: selectedValidationProfile && selectedValidationProfile !== "none"
       ? [selectedValidationProfile]
       : [],
+    validation_commands: validationCommand ? [validationCommand] : [],
     approved_validation_commands: approvedValidationCommands
   };
 }
@@ -1165,9 +1183,10 @@ async function approveBlockedValidation() {
   }
   composerStatus.classList.remove("error");
   composerStatus.textContent = "Approving blocked validation commands…";
+  toggleValidationPanel(false);
   await runComposer({
     objective: pendingValidationApproval.objective,
-    approvedValidationCommands: pendingValidationApproval.commands,
+    approvedValidationCommands: pendingValidationApproval.commands.map((item) => item.command),
   });
 }
 
@@ -1862,6 +1881,32 @@ function togglePatchPanel(open = patchPanel.hidden) {
   }
 }
 
+function renderValidationApprovalPanel() {
+  const commands = pendingValidationApproval?.commands ?? [];
+  validationPanelMeta.textContent = pendingValidationApproval?.objective
+    ? `Blocked validation for: ${pendingValidationApproval.objective}`
+    : "Review blocked commands before rerunning.";
+  validationCommandList.innerHTML = commands.length
+    ? commands.map((item) => `
+        <article class="validation-command-card">
+          <code>${escapeHtml(item.command)}</code>
+          <p>Risk: ${escapeHtml(item.risk ?? "unknown")}</p>
+          <p>${escapeHtml(item.reason ?? "Blocked by validation policy.")}</p>
+        </article>
+      `).join("")
+    : '<div class="session-empty">No blocked validation commands.</div>';
+  approveValidationButton.disabled = !commands.length;
+}
+
+function toggleValidationPanel(open = validationPanel.hidden) {
+  validationPanel.hidden = !open;
+  if (open) {
+    hideUtilityPanels();
+    validationPanel.hidden = false;
+    renderValidationApprovalPanel();
+  }
+}
+
 async function checkRecursiveMas() {
   checkRecursiveMasButton.textContent = "Checking…";
   checkRecursiveMasButton.disabled = true;
@@ -1938,6 +1983,7 @@ async function startNewTask() {
   currentScore = null;
   currentRunContext = null;
   chatMessages = [];
+  pendingValidationApproval = null;
   pageTitle.textContent = "New task";
   setSearchOpen(false);
   composerStatus.classList.remove("error");
@@ -1945,12 +1991,14 @@ async function startNewTask() {
   permissionSelect.value = "ask";
   effortSelect.value = "medium";
   soloistSelect.value = "auto";
+  validationCommandInput.value = "";
   commandPanel.hidden = true;
   skillsPanel.hidden = true;
   scorePanel.hidden = true;
   filesPanel.hidden = true;
   sessionPanel.hidden = true;
   patchPanel.hidden = true;
+  validationPanel.hidden = true;
   patchInput.value = "";
   patchApprovalToken.value = "";
   patchResult.hidden = true;
@@ -2009,6 +2057,9 @@ chatThread.addEventListener("click", (event) => {
   if (target.dataset.chatAction === "approve-validation") {
     approveBlockedValidation();
   }
+  if (target.dataset.chatAction === "review-validation") {
+    toggleValidationPanel(true);
+  }
 });
 closeCommandPanel.addEventListener("click", () => toggleCommandPanel(false));
 closeSkillsPanel.addEventListener("click", () => toggleSkillsPanel(false));
@@ -2042,6 +2093,9 @@ closeScorePanel.addEventListener("click", () => toggleScorePanel(false));
 closeFilesPanel.addEventListener("click", () => toggleFilesPanel(false));
 closeSessionPanel.addEventListener("click", () => toggleSessionPanel(false));
 closePatchPanel.addEventListener("click", () => togglePatchPanel(false));
+closeValidationPanel.addEventListener("click", () => toggleValidationPanel(false));
+cancelValidationApprovalButton.addEventListener("click", () => toggleValidationPanel(false));
+approveValidationButton.addEventListener("click", approveBlockedValidation);
 copyScoreIdButton.addEventListener("click", async () => {
   await copyText(scoreId.textContent, "score ID");
   toggleSessionPanel(false);

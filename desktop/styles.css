@@ -510,6 +510,81 @@ button {
   margin-top: 10px;
 }
 
+.patch-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.patch-summary-grid div {
+  padding: 9px;
+  background: rgba(250, 247, 240, 0.74);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.patch-summary-grid span,
+.patch-file-row span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.patch-summary-grid strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink);
+  font-size: 16px;
+}
+
+.patch-file-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.patch-file-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px;
+  background: rgba(255, 253, 248, 0.72);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.patch-file-row strong {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.patch-line-count {
+  flex: 0 0 auto;
+  color: var(--gold);
+  font-weight: 650;
+}
+
+.patch-output summary {
+  margin-top: 8px;
+  color: var(--maestro-purple);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.patch-output pre {
+  max-height: 160px;
+  margin: 6px 0 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+}
+
 .validation-command-list {
   display: grid;
   gap: 10px;

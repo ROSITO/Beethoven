@@ -398,7 +398,13 @@ def test_desktop_api_can_check_and_apply_patch_with_approval(tmp_path, monkeypat
 
     def fake_inspect(patch: str) -> dict[str, object]:
         calls.append({"action": "check", "patch": patch})
-        return {"status": "applicable", "applicable": True, "token": "abc123", "message": "ok"}
+        return {
+            "status": "applicable",
+            "applicable": True,
+            "token": "abc123",
+            "message": "ok",
+            "summary": {"file_count": 1, "additions": 1, "deletions": 0, "files": [{"path": "x"}]},
+        }
 
     def fake_apply(patch: str, *, approval_token: str) -> dict[str, object]:
         calls.append({"action": "apply", "patch": patch, "approval_token": approval_token})
@@ -433,6 +439,7 @@ def test_desktop_api_can_check_and_apply_patch_with_approval(tmp_path, monkeypat
         thread.join(timeout=2)
 
     assert check_payload["patch"]["token"] == "abc123"
+    assert check_payload["patch"]["summary"]["file_count"] == 1
     assert apply_payload["patch"]["applied"] is True
     assert calls == [
         {"action": "check", "patch": "diff --git a/x b/x"},

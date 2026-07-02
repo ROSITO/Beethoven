@@ -633,10 +633,13 @@ def test_workspace_patch_commands_require_approval(tmp_path, monkeypatch, capsys
     apply_output = capsys.readouterr().out
 
     assert check_exit == 0
+    assert check_payload["patch"]["summary"]["file_count"] == 1
+    assert check_payload["patch"]["summary"]["files"][0]["path"] == "hello.txt"
     assert denied_exit == 1
     assert "approval_required" in denied_output
     assert apply_exit == 0
     assert "Patch: applied" in apply_output
+    assert "Summary: 1 files, +1, -1" in apply_output
     assert target.read_text(encoding="utf-8") == "after\n"
 
 

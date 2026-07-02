@@ -1866,11 +1866,62 @@ function renderPatchResult(report) {
   patchResult.classList.toggle("available", Boolean(report.applicable || report.applied));
   patchResult.classList.toggle("unavailable", !Boolean(report.applicable || report.applied));
   patchApprovalToken.value = report.token ?? patchApprovalToken.value;
+  const summary = report.summary ?? {};
+  const files = Array.isArray(summary.files) ? summary.files : [];
+  const output = [
+    report.stdout ? { label: "stdout", value: report.stdout } : null,
+    report.stderr ? { label: "stderr", value: report.stderr } : null,
+  ].filter(Boolean);
   patchResult.innerHTML = `
     <strong>${escapeHtml(report.status ?? "patch")} · ${escapeHtml(report.applied ? "applied" : report.applicable ? "applicable" : "blocked")}</strong>
     <p>${escapeHtml(report.message ?? "No patch report returned.")}</p>
-    ${report.token ? `<p><code>${escapeHtml(report.token)}</code></p>` : ""}
-    ${report.stderr ? `<p>${escapeHtml(report.stderr)}</p>` : ""}
+    ${renderPatchSummary(summary)}
+    ${files.length ? renderPatchFiles(files) : ""}
+    ${report.token ? `<p>Approval token <code>${escapeHtml(report.token)}</code></p>` : ""}
+    ${output.map((item) => renderPatchOutput(item.label, item.value)).join("")}
+  `;
+}
+
+function renderPatchSummary(summary) {
+  if (!summary || typeof summary !== "object" || summary.file_count === undefined) {
+    return "";
+  }
+  return `
+    <div class="patch-summary-grid">
+      <div><span>Files</span><strong>${escapeHtml(String(summary.file_count ?? 0))}</strong></div>
+      <div><span>Additions</span><strong>+${escapeHtml(String(summary.additions ?? 0))}</strong></div>
+      <div><span>Deletions</span><strong>-${escapeHtml(String(summary.deletions ?? 0))}</strong></div>
+    </div>
+    ${summary.truncated ? '<p>Patch file list truncated by safety limits.</p>' : ""}
+  `;
+}
+
+function renderPatchFiles(files) {
+  return `
+    <div class="patch-file-list">
+      ${files.map((file) => `
+        <div class="patch-file-row">
+          <div>
+            <strong>${escapeHtml(file.path ?? "unknown")}</strong>
+            <span>${escapeHtml(file.change_type ?? "modified")}</span>
+          </div>
+          <span class="patch-line-count">+${escapeHtml(String(file.additions ?? 0))} / -${escapeHtml(String(file.deletions ?? 0))}</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderPatchOutput(label, value) {
+  const cleanValue = String(value ?? "").trim();
+  if (!cleanValue) {
+    return "";
+  }
+  return `
+    <details class="patch-output">
+      <summary>${escapeHtml(label)}</summary>
+      <pre>${escapeHtml(cleanValue)}</pre>
+    </details>
   `;
 }
 

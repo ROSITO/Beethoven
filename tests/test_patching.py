@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import subprocess
 
-from beethoven.patching import apply_approved_patch, inspect_patch
+from beethoven.patching import apply_approved_patch, inspect_patch, summarize_patch
 
 
 def test_patch_requires_matching_approval_token(tmp_path) -> None:
@@ -20,6 +20,19 @@ def test_patch_requires_matching_approval_token(tmp_path) -> None:
     assert denied["status"] == "approval_required"
     assert applied["applied"] is True
     assert (tmp_path / "hello.txt").read_text(encoding="utf-8") == "after\n"
+
+
+def test_patch_summary_reports_files_and_line_counts(tmp_path) -> None:
+    _init_repo(tmp_path)
+    patch = _make_patch(tmp_path)
+
+    summary = summarize_patch(patch)
+
+    assert summary["file_count"] == 1
+    assert summary["additions"] == 1
+    assert summary["deletions"] == 1
+    assert summary["files"][0]["path"] == "hello.txt"
+    assert summary["files"][0]["change_type"] == "modified"
 
 
 def _init_repo(path) -> None:

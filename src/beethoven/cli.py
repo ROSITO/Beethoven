@@ -1067,6 +1067,26 @@ def print_patch_report(payload: dict[str, object]) -> None:
     print(f"Patch: {payload.get('status')}")
     print(f"Applicable: {payload.get('applicable')}")
     print(f"Applied: {payload.get('applied', False)}")
+    summary = payload.get("summary")
+    if isinstance(summary, dict):
+        print(
+            "Summary: "
+            f"{summary.get('file_count', 0)} files, "
+            f"+{summary.get('additions', 0)}, "
+            f"-{summary.get('deletions', 0)}"
+        )
+        files = summary.get("files", [])
+        if isinstance(files, list):
+            for item in files[:12]:
+                if not isinstance(item, dict):
+                    continue
+                print(
+                    f"- {item.get('path', 'unknown')} "
+                    f"({item.get('change_type', 'modified')}, "
+                    f"+{item.get('additions', 0)}/-{item.get('deletions', 0)})"
+                )
+        if summary.get("truncated"):
+            print("Patch file list truncated by safety limits.")
     if payload.get("token"):
         print(f"Approval token: {payload.get('token')}")
     print(f"Message: {payload.get('message')}")

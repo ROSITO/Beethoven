@@ -50,7 +50,7 @@ The foundation is pre-alpha but executable. It includes:
 - bounded Git diff inspection through CLI, desktop API, and desktop session
   menu;
 - approval-token gated patch check/apply helpers through CLI, desktop API, and
-  desktop patch panel;
+  desktop patch review panel with file/addition/deletion summary;
 - governed validation commands appended as explicit `validate` score tasks, with
   a policy gate that blocks mutating or unknown commands unless permission mode
   is `auto` or the exact command is explicitly approved for that run;
@@ -340,6 +340,8 @@ Implemented UI:
 - RecursiveMAS command save/clear controls in the skills panel;
 - OpenAI-compatible base URL/model/API key controls in the skills panel;
 - command center showing CLI commands and Git status;
+- patch approval panel showing applicability, approval token, file summary,
+  additions/deletions, and bounded git output;
 - top-bar session actions for copying score IDs, inserting session commands,
   exporting score JSON, and opening command center;
 - responsive/mobile checks have been run repeatedly at 390px wide with no
@@ -534,8 +536,8 @@ This completed with trace `understand:openai-compatible`,
   bounded stdout/stderr details. The next gap is applying the same policy model
   to code changes.
 - Bounded diff inspection and approval-token gated patch apply exist, including
-  a compact desktop patch panel. Rich side-by-side patch review is not
-  implemented yet.
+  CLI/API patch summaries and a desktop patch review panel. Rich side-by-side
+  patch review and chat-native patch approval are not implemented yet.
 - No persistent conversation message history beyond saved run/session summaries.
 - No plugin SDK.
 - No real automation/scheduled scores.
@@ -551,8 +553,8 @@ Goal: make the desktop feel like one coherent app, not a collection of panels.
 
 Suggested steps:
 
-- Extend validation-style details and approval semantics to future code actions.
 - Connect patch review/apply to the normal chat approval flow.
+- Add side-by-side patch review for generated code changes.
 - Persist event logs with sessions so restored runs show what happened live.
 - Add cancellation support for active runs.
 

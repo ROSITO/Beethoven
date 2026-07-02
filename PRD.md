@@ -174,7 +174,7 @@ As of 2026-07-01, Beethoven has crossed from concept into a working pre-alpha:
 | `@path` attachments | Done | Safe workspace reads with binary blocking, MIME/size/snippet metadata, total byte budget, bounded directory bundles, and desktop inspection. |
 | Validation tasks | Partial | Local commands and named profiles are appended as governed `validate` score tasks with policy gating, exact command approval, and desktop approve/rerun action; richer prompt UX remains. |
 | Diff/patch workflow | Partial | Bounded Git diff and approval-token patch check/apply are available in CLI, desktop API, and desktop session menu; richer patch review UX remains. |
-| Production packaging | Partial | Tauri scaffold, versioned sidecar launcher, external binary config, sidecar generation, and packaging doctor exist; installer-grade bundled Python runtime remains. |
+| Production packaging | Partial | Tauri dev mode now compiles and launches with Cargo, versioned sidecar launchers, target-suffixed sidecar, icon placeholder, external binary config, and packaging doctor; installer-grade bundled Python runtime remains. |
 
 ### MVP Acceptance Criteria
 

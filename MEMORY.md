@@ -104,7 +104,8 @@ Important modules:
   doctor. The generated launcher resolves `BEETHOVEN_BIN`, `beethoven`,
   `BEETHOVEN_PYTHON`, local `.venv/bin/python`, then
   `python3 -m beethoven.cli`. The doctor checks npm, Tauri CLI, Cargo,
-  sidecar executability, and Tauri sidecar config without mutating the project.
+  base/target sidecar executability, and Tauri sidecar config without mutating
+  the project.
 
 Current baseline score tasks:
 
@@ -388,13 +389,12 @@ needed before real installers.
 Runtime audit on 2026-07-01:
 
 - `npm install` succeeds and installs `@tauri-apps/cli@2.11.4`.
-- `beethoven package doctor --json` reports npm, Tauri CLI, sidecar, and Tauri
-  config ready.
-- Cargo is not installed on the current machine, so `npm run tauri:dev` remains
-  blocked until the Rust toolchain is installed.
+- Homebrew Rust is installed: `cargo 1.96.0`.
+- `beethoven package doctor --json` reports npm, Tauri CLI, Cargo, sidecar,
+  target sidecar, and Tauri config ready.
 - `npm run tauri -- --version` reports `tauri-cli 2.11.4`.
-- `npm run tauri:dev` is currently blocked on this machine because `cargo` is
-  not installed (`cargo metadata` cannot run).
+- `npm run tauri:dev` compiles and launches `target/debug/beethoven-desktop`
+  against the local Beethoven desktop server at `http://127.0.0.1:4173`.
 - SoloMLX status reports the managed Ministral endpoint available at
   `http://127.0.0.1:8080/v1`.
 

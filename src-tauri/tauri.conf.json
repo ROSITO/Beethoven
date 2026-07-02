@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "identifier": "ai.rosito.beethoven",
   "build": {
-    "beforeDevCommand": "beethoven desktop --host 127.0.0.1 --port 4173",
-    "beforeBuildCommand": "beethoven package sidecar --output src-tauri/bin/beethoven-sidecar",
+    "beforeDevCommand": "src-tauri/bin/beethoven-sidecar",
+    "beforeBuildCommand": "sh -c 'if [ -x .venv/bin/python ]; then .venv/bin/python -m beethoven.cli package sidecar --output src-tauri/bin/beethoven-sidecar; else python3 -m beethoven.cli package sidecar --output src-tauri/bin/beethoven-sidecar; fi'",
     "devUrl": "http://127.0.0.1:4173",
     "frontendDist": "../desktop"
   },

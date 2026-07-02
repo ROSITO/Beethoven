@@ -13,6 +13,13 @@ npm run tauri:dev
 
 `npm install` installs `@tauri-apps/cli`. The native shell also requires the
 Rust toolchain because Tauri calls `cargo metadata` before launching dev mode.
+On macOS, the current development machine uses Homebrew Rust:
+
+```bash
+brew install rust
+cargo --version
+```
+
 If `cargo` is missing, `npm run tauri:dev` fails before the Python sidecar starts.
 Run Beethoven's packaging doctor to check these prerequisites before launching
 Tauri:
@@ -23,14 +30,20 @@ beethoven package doctor --json
 ```
 
 The desktop runtime panel also calls the same diagnostic through `/api/packaging`.
-On the current development machine, npm, the Tauri CLI, sidecar script, and
-Tauri config are detected, while Cargo is the blocking prerequisite.
+On the current development machine, npm, the Tauri CLI, Cargo, sidecar scripts,
+and Tauri config are detected.
 
-The Tauri window loads `http://127.0.0.1:4173`, and `beforeDevCommand` starts:
+The Tauri window loads `http://127.0.0.1:4173`, and `beforeDevCommand` starts
+the versioned sidecar:
 
 ```bash
-beethoven desktop --host 127.0.0.1 --port 4173
+src-tauri/bin/beethoven-sidecar
 ```
+
+If a compatible Beethoven desktop server is already healthy at
+`http://127.0.0.1:4173/api/health`, the sidecar keeps the dev process alive and
+lets Tauri attach to the existing server instead of failing with an address
+conflict.
 
 ## Sidecar Launcher
 
@@ -44,6 +57,7 @@ By default this writes:
 
 ```bash
 src-tauri/bin/beethoven-sidecar
+src-tauri/bin/beethoven-sidecar-<target-triple>
 ```
 
 The launcher delegates to:
@@ -55,8 +69,10 @@ beethoven desktop --host "$BEETHOVEN_HOST" --port "$BEETHOVEN_PORT"
 with defaults of `127.0.0.1` and `4173`.
 
 The launcher is also versioned at `src-tauri/bin/beethoven-sidecar` and is
-listed in `tauri.conf.json` as an external binary. `beforeBuildCommand`
-regenerates it before a Tauri build.
+listed in `tauri.conf.json` as an external binary. Tauri expects the target
+specific sibling such as `beethoven-sidecar-aarch64-apple-darwin`;
+`beethoven package sidecar` generates both files. `beforeBuildCommand`
+regenerates them before a Tauri build.
 
 Resolution order:
 
@@ -99,13 +115,16 @@ This is intentionally the first native-app bridge, not the final installer:
 - Tauri provides the native window and app shell;
 - `beethoven package doctor` is the single non-destructive health check for the
   local packaging toolchain;
+- `npm run tauri:dev` is verified on this machine with Cargo and the local
+  sidecar;
 - production bundling needs the bundled sidecar phase above before installers
   are considered complete.
 
 ## Next Packaging Steps
 
 1. Replace the shell launcher with a fully bundled Python runtime sidecar.
-2. Add app icons and platform bundle metadata.
+2. Expand the current `brand/logo_HD.png` placeholder into a full polished icon
+   set (`.icns`, Windows icons, tray assets) and platform bundle metadata.
 3. Add CI checks for `beethoven package doctor` and `npm run tauri:dev` smoke
    tests where Rust/Cargo and Tauri are available.
 4. Add a startup supervisor that launches the sidecar, waits for health, and

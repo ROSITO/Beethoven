@@ -17,6 +17,17 @@ PORT="${BEETHOVEN_PORT:-4173}"
 BEETHOVEN_HOME="${BEETHOVEN_HOME:-$HOME/.beethoven}"
 export BEETHOVEN_HOME
 
+if command -v curl >/dev/null 2>&1; then
+  if curl -fsS "http://$HOST:$PORT/api/health" >/dev/null 2>&1; then
+    echo "Beethoven sidecar found an existing desktop server at http://$HOST:$PORT"
+    trap 'exit 0' INT TERM
+    while :; do
+      sleep 3600 &
+      wait $!
+    done
+  fi
+fi
+
 if [ -n "${BEETHOVEN_BIN:-}" ]; then
   exec "$BEETHOVEN_BIN" desktop --host "$HOST" --port "$PORT"
 fi
@@ -111,7 +122,45 @@ def write_sidecar_script(path: str | Path) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(SIDECAR_SCRIPT, encoding="utf-8")
     output_path.chmod(0o755)
+    target_path = tauri_target_sidecar_path(output_path)
+    if target_path != output_path:
+        target_path.write_text(SIDECAR_SCRIPT, encoding="utf-8")
+        target_path.chmod(0o755)
     return output_path
+
+
+def tauri_target_sidecar_path(path: str | Path) -> Path:
+    output_path = Path(path).expanduser().resolve()
+    target_triple = current_tauri_target_triple()
+    if output_path.name.endswith(f"-{target_triple}"):
+        return output_path
+    return output_path.with_name(f"{output_path.name}-{target_triple}")
+
+
+def current_tauri_target_triple() -> str:
+    try:
+        result = subprocess.run(
+            ["rustc", "-vV"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=4,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return _fallback_target_triple()
+    for line in result.stdout.splitlines():
+        if line.startswith("host:"):
+            return line.partition(":")[2].strip()
+    return _fallback_target_triple()
+
+
+def _fallback_target_triple() -> str:
+    import platform
+
+    machine = platform.machine().lower()
+    if machine in {"arm64", "aarch64"}:
+        return "aarch64-apple-darwin"
+    return "x86_64-apple-darwin"
 
 
 def write_recursivemas_bridge(path: str | Path) -> Path:
@@ -127,6 +176,7 @@ def packaging_doctor(root: str | Path | None = None) -> dict[str, Any]:
     src_tauri = project_root / "src-tauri"
     tauri_conf = src_tauri / "tauri.conf.json"
     sidecar = src_tauri / "bin" / "beethoven-sidecar"
+    target_sidecar = tauri_target_sidecar_path(sidecar)
     package_json = project_root / "package.json"
     lockfile = project_root / "package-lock.json"
 
@@ -200,6 +250,15 @@ def packaging_doctor(root: str | Path | None = None) -> dict[str, Any]:
         else "Run `beethoven package sidecar` to generate the executable desktop sidecar.",
         details={"path": str(sidecar)},
     )
+    add_check(
+        "target_sidecar",
+        "Tauri target sidecar",
+        target_sidecar.exists() and target_sidecar.is_file() and target_sidecar.stat().st_mode & 0o111 != 0,
+        f"Executable Tauri target sidecar found at {target_sidecar}"
+        if target_sidecar.exists() and target_sidecar.stat().st_mode & 0o111 != 0
+        else f"Run `beethoven package sidecar` to generate {target_sidecar.name}.",
+        details={"path": str(target_sidecar), "target": current_tauri_target_triple()},
+    )
 
     tauri_config = _inspect_tauri_config(tauri_conf)
     add_check(
@@ -260,19 +319,25 @@ def _inspect_tauri_config(path: Path) -> dict[str, Any]:
 
     bundle = config.get("bundle", {})
     external_bin = bundle.get("externalBin", []) if isinstance(bundle, dict) else []
-    before_build = config.get("build", {}).get("beforeBuildCommand") if isinstance(config.get("build"), dict) else None
+    build = config.get("build", {})
+    before_build = build.get("beforeBuildCommand") if isinstance(build, dict) else None
+    before_dev = build.get("beforeDevCommand") if isinstance(build, dict) else None
     has_sidecar = "bin/beethoven-sidecar" in external_bin
     has_before_build = isinstance(before_build, str) and "package sidecar" in before_build
+    has_before_dev = isinstance(before_dev, str) and "beethoven-sidecar" in before_dev
     missing = []
     if not has_sidecar:
         missing.append("bundle.externalBin must include bin/beethoven-sidecar")
     if not has_before_build:
         missing.append("build.beforeBuildCommand must regenerate the sidecar")
+    if not has_before_dev:
+        missing.append("build.beforeDevCommand must launch the Beethoven sidecar")
 
     return {
         "ok": not missing,
         "path": str(path),
         "externalBin": external_bin,
         "beforeBuildCommand": before_build,
+        "beforeDevCommand": before_dev,
         "message": "Tauri config wires the Beethoven sidecar." if not missing else "; ".join(missing),
     }

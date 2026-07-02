@@ -1092,6 +1092,64 @@ button {
   font-size: 12px;
 }
 
+.validation-detail-list {
+  display: grid;
+  gap: 8px;
+}
+
+.validation-detail-card {
+  display: grid;
+  gap: 6px;
+  padding: 9px;
+  background: rgba(250, 247, 240, 0.74);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.validation-detail-card.blocked,
+.validation-detail-card.failed {
+  border-color: rgba(212, 175, 55, 0.5);
+}
+
+.validation-detail-card.passed {
+  border-color: rgba(47, 135, 85, 0.28);
+}
+
+.validation-detail-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.validation-detail-card code {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.validation-output summary {
+  color: var(--maestro-purple);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.validation-output pre {
+  max-height: 160px;
+  margin: 6px 0 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+}
+
 .composer-shell {
   display: grid;
   gap: 10px;

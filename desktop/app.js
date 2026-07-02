@@ -424,12 +424,13 @@ function renderScore() {
         return `
         <article class="score-card">
           <header>
-            <h3>${task.id}</h3>
-            <span class="pill ${statusClass}">${status}</span>
+            <h3>${escapeHtml(task.id)}</h3>
+            <span class="pill ${statusClass}">${escapeHtml(status)}</span>
           </header>
-          <p>${task.instruction}</p>
+          <p>${escapeHtml(task.instruction)}</p>
           ${task.summary ? `<p class="route-reason">${escapeHtml(task.summary)}</p>` : ""}
-          <div class="route-reason">${task.capability} → ${task.soloist}: ${task.reason}</div>
+          ${task.validationDetails ? renderValidationDetails(task.validationDetails) : ""}
+          <div class="route-reason">${escapeHtml(task.capability)} → ${escapeHtml(task.soloist)}: ${escapeHtml(task.reason)}</div>
         </article>
       `;
       }
@@ -442,10 +443,10 @@ function renderScore() {
         <li>
           <span class="step-index">${index + 1}</span>
           <div>
-            <strong>${titleCase(task.id)}</strong>
-            <p>${task.instruction}</p>
+            <strong>${escapeHtml(titleCase(task.id))}</strong>
+            <p>${escapeHtml(task.instruction)}</p>
           </div>
-          <span class="step-state">${task.status ?? "done"}</span>
+          <span class="step-state">${escapeHtml(task.status ?? "done")}</span>
         </li>
       `
     )
@@ -1058,6 +1059,9 @@ function taskFromApi(task, context) {
       : "selected by the local Beethoven router",
     instruction: task.instruction,
     summary: output,
+    validationDetails: task.capability === "validate"
+      ? validationTaskDetails(artifact?.output)
+      : null,
     status: context.statuses?.[task.id] ?? "ready"
   };
 }
@@ -1070,6 +1074,62 @@ function validationTaskSummary(results) {
   const blocked = results.filter((result) => result?.blocked).length;
   const failed = results.length - passed - blocked;
   return `${passed} passed${failed ? ` · ${failed} failed` : ""}${blocked ? ` · ${blocked} blocked` : ""}`;
+}
+
+function validationTaskDetails(results) {
+  if (!Array.isArray(results) || !results.length) {
+    return null;
+  }
+  return results.map((result) => ({
+    command: String(result?.command ?? "unknown command"),
+    status: result?.blocked
+      ? "blocked"
+      : result?.passed
+        ? "passed"
+        : "failed",
+    risk: result?.risk ? String(result.risk) : "",
+    reason: result?.reason ? String(result.reason) : "",
+    returncode: result?.returncode ?? null,
+    stdout: result?.stdout ? String(result.stdout) : "",
+    stderr: result?.stderr ? String(result.stderr) : ""
+  }));
+}
+
+function renderValidationDetails(details) {
+  if (!Array.isArray(details) || !details.length) {
+    return "";
+  }
+  return `
+    <div class="validation-detail-list">
+      ${details.map((item) => `
+        <div class="validation-detail-card ${escapeHtml(item.status)}">
+          <div class="validation-detail-head">
+            <strong>${escapeHtml(item.status)}</strong>
+            ${item.returncode !== null ? `<span>exit ${escapeHtml(String(item.returncode))}</span>` : ""}
+          </div>
+          <code>${escapeHtml(item.command)}</code>
+          ${item.risk ? `<p>Risk: ${escapeHtml(item.risk)}</p>` : ""}
+          ${item.reason ? `<p>${escapeHtml(item.reason)}</p>` : ""}
+          ${renderValidationOutput("stdout", item.stdout)}
+          ${renderValidationOutput("stderr", item.stderr)}
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderValidationOutput(label, value) {
+  const cleanValue = String(value ?? "").trim();
+  if (!cleanValue) {
+    return "";
+  }
+  const preview = cleanValue.length > 700 ? `${cleanValue.slice(0, 700)}…` : cleanValue;
+  return `
+    <details class="validation-output">
+      <summary>${escapeHtml(label)}</summary>
+      <pre>${escapeHtml(preview)}</pre>
+    </details>
+  `;
 }
 
 function taskFromScore(task) {

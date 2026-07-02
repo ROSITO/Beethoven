@@ -322,6 +322,8 @@ Implemented UI:
 - validation result summary rendered as a normal assistant-side chat message
   after a run, with blocked commands opening a dedicated approval panel before
   rerun;
+- validation task cards in the score inspector show per-command pass/fail/block
+  details, risk/reason, exit code, and bounded stdout/stderr previews;
 - score inspector and progress timeline;
 - runtime board for Beethoven's hidden local orchestrator, the managed SoloMLX
   brick, and RecursiveMAS availability;
@@ -528,8 +530,9 @@ This completed with trace `understand:openai-compatible`,
 - Validation hooks now become explicit `validate` score tasks and include a
   policy gate for mutating/unknown commands plus exact-command approval for
   `ask` mode. The desktop can review blocked validation commands in a dedicated
-  approval panel and rerun after exact approval. The next gap is richer
-  stdout/stderr inspection and applying the same policy model to code changes.
+  approval panel and rerun after exact approval. The score inspector shows
+  bounded stdout/stderr details. The next gap is applying the same policy model
+  to code changes.
 - Bounded diff inspection and approval-token gated patch apply exist, including
   a compact desktop patch panel. Rich side-by-side patch review is not
   implemented yet.
@@ -548,8 +551,7 @@ Goal: make the desktop feel like one coherent app, not a collection of panels.
 
 Suggested steps:
 
-- Add richer stdout/stderr/details inspection for validation and future code
-  actions.
+- Extend validation-style details and approval semantics to future code actions.
 - Connect patch review/apply to the normal chat approval flow.
 - Persist event logs with sessions so restored runs show what happened live.
 - Add cancellation support for active runs.

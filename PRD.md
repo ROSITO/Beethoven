@@ -173,7 +173,7 @@ As of 2026-07-02, Beethoven has crossed from concept into a working pre-alpha:
 | RecursiveMAS integration | Partial | Native recursive scores and optional sidecar bridge are present; deeper runtime collaboration remains experimental. |
 | `@path` attachments | Done | Safe workspace reads with binary blocking, MIME/size/snippet metadata, total byte budget, bounded directory bundles, natural-language current-folder inference, workspace structure manifest, and desktop inspection. |
 | Validation tasks | In progress | Local commands and named profiles are appended as governed `validate` score tasks with policy gating, exact command approval, composer command input, desktop review/approve/rerun panel, and inspector details for stdout/stderr. |
-| Diff/patch workflow | Partial | Bounded Git diff and approval-token patch check/apply are available in CLI, desktop API, desktop session menu, and chat-visible review messages, with patch file/addition/deletion summaries; side-by-side review remains. |
+| Diff/patch workflow | In progress | Bounded Git diff and approval-token patch check/apply are available in CLI, desktop API, desktop session menu, and chat-visible review messages, with patch summaries and bounded side-by-side preview. |
 | Production packaging | Partial | Tauri dev mode now compiles and launches with Cargo, versioned sidecar launchers, target-suffixed sidecar, icon placeholder, external binary config, and packaging doctor; installer-grade bundled Python runtime remains. |
 
 ### MVP Acceptance Criteria
@@ -205,7 +205,7 @@ P0:
 - finish the desktop first-run state, runtime board, and conversation/run split;
 - test SoloMLX/Ministral on-device as the default hidden conductor path and tune
   runtime diagnostics for real memory/load behavior;
-- add side-by-side review for generated code changes.
+- deepen generated-code review tooling on top of the patch preview.
 
 P1:
 

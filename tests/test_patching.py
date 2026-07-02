@@ -33,6 +33,22 @@ def test_patch_summary_reports_files_and_line_counts(tmp_path) -> None:
     assert summary["deletions"] == 1
     assert summary["files"][0]["path"] == "hello.txt"
     assert summary["files"][0]["change_type"] == "modified"
+    assert summary["files"][0]["preview_lines"] == [
+        {
+            "kind": "deletion",
+            "old_line": 1,
+            "new_line": None,
+            "left": "before",
+            "right": "",
+        },
+        {
+            "kind": "addition",
+            "old_line": None,
+            "new_line": 1,
+            "left": "",
+            "right": "after",
+        },
+    ]
 
 
 def _init_repo(path) -> None:

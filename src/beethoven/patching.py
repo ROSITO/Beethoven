@@ -12,6 +12,7 @@ from beethoven.workspace import inspect_workspace
 
 MAX_PATCH_BYTES = 256_000
 MAX_PATCH_FILES = 80
+MAX_PATCH_PREVIEW_LINES_PER_FILE = 160
 
 
 def inspect_patch(
@@ -106,6 +107,8 @@ def summarize_patch(patch: str, *, max_files: int = MAX_PATCH_FILES) -> dict[str
     total_additions = 0
     total_deletions = 0
     truncated = False
+    old_line: int | None = None
+    new_line: int | None = None
 
     for line in patch.splitlines():
         if line.startswith("diff --git "):
@@ -116,6 +119,8 @@ def summarize_patch(patch: str, *, max_files: int = MAX_PATCH_FILES) -> dict[str
                 current = None
                 continue
             current = _patch_file_from_header(line)
+            old_line = None
+            new_line = None
             continue
         if current is None:
             continue
@@ -136,12 +141,54 @@ def summarize_patch(patch: str, *, max_files: int = MAX_PATCH_FILES) -> dict[str
             continue
         if line.startswith("+++") or line.startswith("---"):
             continue
+        if line.startswith("@@"):
+            old_line, new_line = _parse_hunk_header(line)
+            continue
         if line.startswith("+"):
             current["additions"] += 1
             total_additions += 1
+            _append_patch_preview_line(
+                current,
+                {
+                    "kind": "addition",
+                    "old_line": None,
+                    "new_line": new_line,
+                    "left": "",
+                    "right": line[1:],
+                },
+            )
+            if new_line is not None:
+                new_line += 1
         elif line.startswith("-"):
             current["deletions"] += 1
             total_deletions += 1
+            _append_patch_preview_line(
+                current,
+                {
+                    "kind": "deletion",
+                    "old_line": old_line,
+                    "new_line": None,
+                    "left": line[1:],
+                    "right": "",
+                },
+            )
+            if old_line is not None:
+                old_line += 1
+        elif line.startswith(" "):
+            _append_patch_preview_line(
+                current,
+                {
+                    "kind": "context",
+                    "old_line": old_line,
+                    "new_line": new_line,
+                    "left": line[1:],
+                    "right": line[1:],
+                },
+            )
+            if old_line is not None:
+                old_line += 1
+            if new_line is not None:
+                new_line += 1
 
     if current is not None and len(files) < max_files:
         files.append(current)
@@ -168,7 +215,37 @@ def _patch_file_from_header(line: str) -> dict[str, Any]:
         "change_type": "modified",
         "additions": 0,
         "deletions": 0,
+        "preview_lines": [],
+        "preview_truncated": False,
     }
+
+
+def _append_patch_preview_line(file_summary: dict[str, Any], line: dict[str, Any]) -> None:
+    preview_lines = file_summary.get("preview_lines")
+    if not isinstance(preview_lines, list):
+        preview_lines = []
+        file_summary["preview_lines"] = preview_lines
+    if len(preview_lines) >= MAX_PATCH_PREVIEW_LINES_PER_FILE:
+        file_summary["preview_truncated"] = True
+        return
+    preview_lines.append(line)
+
+
+def _parse_hunk_header(line: str) -> tuple[int | None, int | None]:
+    parts = line.split()
+    if len(parts) < 3:
+        return None, None
+    return _parse_hunk_start(parts[1], "-"), _parse_hunk_start(parts[2], "+")
+
+
+def _parse_hunk_start(value: str, prefix: str) -> int | None:
+    if not value.startswith(prefix):
+        return None
+    start = value.removeprefix(prefix).split(",", 1)[0]
+    try:
+        return int(start)
+    except ValueError:
+        return None
 
 
 def _git_apply(patch: str, cwd: Path, *, check_only: bool) -> subprocess.CompletedProcess[str]:

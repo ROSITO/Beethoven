@@ -1880,6 +1880,7 @@ function renderPatchResult(report) {
     <p>${escapeHtml(report.message ?? "No patch report returned.")}</p>
     ${renderPatchSummary(summary)}
     ${files.length ? renderPatchFiles(files) : ""}
+    ${files.length ? renderPatchSideBySide(files) : ""}
     ${report.token ? `<p>Approval token <code>${escapeHtml(report.token)}</code></p>` : ""}
     ${output.map((item) => renderPatchOutput(item.label, item.value)).join("")}
   `;
@@ -1911,6 +1912,43 @@ function renderPatchFiles(files) {
           <span class="patch-line-count">+${escapeHtml(String(file.additions ?? 0))} / -${escapeHtml(String(file.deletions ?? 0))}</span>
         </div>
       `).join("")}
+    </div>
+  `;
+}
+
+function renderPatchSideBySide(files) {
+  const previewFiles = files.filter((file) => Array.isArray(file.preview_lines) && file.preview_lines.length);
+  if (!previewFiles.length) {
+    return "";
+  }
+  return `
+    <div class="patch-review-list">
+      ${previewFiles.map((file) => `
+        <section class="patch-review-file">
+          <header>
+            <strong>${escapeHtml(file.path ?? "unknown")}</strong>
+            <span>+${escapeHtml(String(file.additions ?? 0))} / -${escapeHtml(String(file.deletions ?? 0))}</span>
+          </header>
+          <div class="patch-side-by-side">
+            ${(file.preview_lines ?? []).map((line) => renderPatchPreviewLine(line)).join("")}
+          </div>
+          ${file.preview_truncated ? '<p>Preview truncated by safety limits.</p>' : ""}
+        </section>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderPatchPreviewLine(line) {
+  const kind = line.kind ?? "context";
+  const oldLine = line.old_line ?? "";
+  const newLine = line.new_line ?? "";
+  return `
+    <div class="patch-preview-row ${escapeHtml(kind)}">
+      <span class="patch-line-number">${escapeHtml(String(oldLine))}</span>
+      <pre>${escapeHtml(line.left ?? "")}</pre>
+      <span class="patch-line-number">${escapeHtml(String(newLine))}</span>
+      <pre>${escapeHtml(line.right ?? "")}</pre>
     </div>
   `;
 }

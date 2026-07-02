@@ -341,7 +341,7 @@ Implemented UI:
 - OpenAI-compatible base URL/model/API key controls in the skills panel;
 - command center showing CLI commands and Git status;
 - patch approval panel showing applicability, approval token, file summary,
-  additions/deletions, and bounded git output;
+  additions/deletions, bounded side-by-side preview, and bounded git output;
 - patch check/apply results are also posted into the main chat with an action
   that reopens the patch review panel;
 - top-bar session actions for copying score IDs, inserting session commands,
@@ -539,7 +539,8 @@ This completed with trace `understand:openai-compatible`,
   to code changes.
 - Bounded diff inspection and approval-token gated patch apply exist, including
   CLI/API patch summaries, a desktop patch review panel, and chat-visible patch
-  review/apply results. Rich side-by-side patch review is not implemented yet.
+  review/apply results. The side-by-side preview is bounded and minimal; deeper
+  generated-code review tooling is still missing.
 - No persistent conversation message history beyond saved run/session summaries.
 - No plugin SDK.
 - No real automation/scheduled scores.
@@ -555,7 +556,7 @@ Goal: make the desktop feel like one coherent app, not a collection of panels.
 
 Suggested steps:
 
-- Add side-by-side patch review for generated code changes.
+- Add generated-code review tooling on top of the patch preview.
 - Persist event logs with sessions so restored runs show what happened live.
 - Add cancellation support for active runs.
 

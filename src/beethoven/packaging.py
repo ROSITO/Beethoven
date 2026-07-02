@@ -16,6 +16,7 @@ HOST="${BEETHOVEN_HOST:-127.0.0.1}"
 PORT="${BEETHOVEN_PORT:-4173}"
 BEETHOVEN_HOME="${BEETHOVEN_HOME:-$HOME/.beethoven}"
 export BEETHOVEN_HOME
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 
 if command -v curl >/dev/null 2>&1; then
   if curl -fsS "http://$HOST:$PORT/api/health" >/dev/null 2>&1; then
@@ -38,6 +39,23 @@ fi
 
 if [ -n "${BEETHOVEN_PYTHON:-}" ]; then
   PYTHON="$BEETHOVEN_PYTHON"
+else
+  PYTHON=""
+  for CANDIDATE in \\
+    "$SCRIPT_DIR/python/bin/python" \\
+    "$SCRIPT_DIR/../Resources/python/bin/python" \\
+    "$SCRIPT_DIR/../../Resources/python/bin/python" \\
+    "$SCRIPT_DIR/../../../Resources/python/bin/python"
+  do
+    if [ -x "$CANDIDATE" ]; then
+      PYTHON="$CANDIDATE"
+      break
+    fi
+  done
+fi
+
+if [ -n "$PYTHON" ]; then
+  :
 elif [ -x ".venv/bin/python" ]; then
   PYTHON=".venv/bin/python"
 elif command -v python3 >/dev/null 2>&1; then
@@ -268,6 +286,15 @@ def packaging_doctor(root: str | Path | None = None) -> dict[str, Any]:
         tauri_config["message"],
         details=tauri_config,
     )
+    python_runtime = inspect_python_runtime_strategy(project_root)
+    add_check(
+        "python_runtime",
+        "Python runtime strategy",
+        python_runtime["ok"],
+        python_runtime["message"],
+        required=False,
+        details=python_runtime,
+    )
 
     blockers = [check for check in checks if check["required"] and not check["ok"]]
     return {
@@ -340,4 +367,45 @@ def _inspect_tauri_config(path: Path) -> dict[str, Any]:
         "beforeBuildCommand": before_build,
         "beforeDevCommand": before_dev,
         "message": "Tauri config wires the Beethoven sidecar." if not missing else "; ".join(missing),
+    }
+
+
+def inspect_python_runtime_strategy(root: str | Path | None = None) -> dict[str, Any]:
+    project_root = Path(root or Path.cwd()).expanduser().resolve()
+    packaged_candidates = [
+        project_root / "src-tauri" / "bin" / "python" / "bin" / "python",
+        project_root / "src-tauri" / "python" / "bin" / "python",
+        project_root / "src-tauri" / "resources" / "python" / "bin" / "python",
+    ]
+    python3_path = shutil.which("python3")
+    dev_candidates = [project_root / ".venv" / "bin" / "python"]
+    if python3_path:
+        dev_candidates.append(Path(python3_path))
+    packaged = [path for path in packaged_candidates if str(path) and path.exists() and path.is_file()]
+    executable_packaged = [path for path in packaged if path.stat().st_mode & 0o111 != 0]
+    executable_dev = [path for path in dev_candidates if str(path) and path.exists() and path.is_file() and path.stat().st_mode & 0o111 != 0]
+
+    if executable_packaged:
+        status = "bundled"
+        message = f"Bundled Python runtime found at {executable_packaged[0]}."
+        ok = True
+    elif packaged:
+        status = "bundled_not_executable"
+        message = f"Bundled Python candidate exists but is not executable: {packaged[0]}."
+        ok = False
+    elif executable_dev:
+        status = "development_fallback"
+        message = f"Using development Python fallback at {executable_dev[0]}."
+        ok = True
+    else:
+        status = "missing"
+        message = "No bundled Python runtime or development Python fallback was found."
+        ok = False
+
+    return {
+        "ok": ok,
+        "status": status,
+        "packaged_candidates": [str(path) for path in packaged_candidates],
+        "development_candidates": [str(path) for path in dev_candidates if str(path)],
+        "message": message,
     }

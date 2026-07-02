@@ -5,6 +5,7 @@ HOST="${BEETHOVEN_HOST:-127.0.0.1}"
 PORT="${BEETHOVEN_PORT:-4173}"
 BEETHOVEN_HOME="${BEETHOVEN_HOME:-$HOME/.beethoven}"
 export BEETHOVEN_HOME
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 
 if command -v curl >/dev/null 2>&1; then
   if curl -fsS "http://$HOST:$PORT/api/health" >/dev/null 2>&1; then
@@ -27,6 +28,23 @@ fi
 
 if [ -n "${BEETHOVEN_PYTHON:-}" ]; then
   PYTHON="$BEETHOVEN_PYTHON"
+else
+  PYTHON=""
+  for CANDIDATE in \
+    "$SCRIPT_DIR/python/bin/python" \
+    "$SCRIPT_DIR/../Resources/python/bin/python" \
+    "$SCRIPT_DIR/../../Resources/python/bin/python" \
+    "$SCRIPT_DIR/../../../Resources/python/bin/python"
+  do
+    if [ -x "$CANDIDATE" ]; then
+      PYTHON="$CANDIDATE"
+      break
+    fi
+  done
+fi
+
+if [ -n "$PYTHON" ]; then
+  :
 elif [ -x ".venv/bin/python" ]; then
   PYTHON=".venv/bin/python"
 elif command -v python3 >/dev/null 2>&1; then

@@ -109,10 +109,11 @@ Important modules:
   listing, and safe attachment packing.
 - `src/beethoven/packaging.py`: sidecar launcher generation and packaging
   doctor. The generated launcher resolves `BEETHOVEN_BIN`, `beethoven`,
-  `BEETHOVEN_PYTHON`, local `.venv/bin/python`, then
-  `python3 -m beethoven.cli`. The doctor checks npm, Tauri CLI, Cargo,
-  base/target sidecar executability, and Tauri sidecar config without mutating
-  the project.
+  `BEETHOVEN_PYTHON`, bundled Python runtime candidates in the Tauri resource
+  tree, local `.venv/bin/python`, then `python3 -m beethoven.cli`. The doctor
+  checks npm, Tauri CLI, Cargo, base/target sidecar executability, Tauri
+  sidecar config, and reports whether the Python runtime strategy is bundled or
+  using a development fallback without mutating the project.
 
 Current baseline score tasks:
 
@@ -600,7 +601,8 @@ Goal: make the Tauri shell closer to a usable app.
 Suggested steps:
 
 - Implement a Tauri startup supervisor for the Python sidecar.
-- Replace the shell launcher with a bundled Python runtime sidecar.
+- Add the actual bundled Python runtime payload; the launcher and doctor now
+  know how to detect it, but the payload is not yet vendored.
 - Generate and wire app icons and platform bundle metadata.
 - Add CI checks for `npm run tauri:dev` smoke tests where Tauri is available.
 - Document macOS notarization/signing expectations.

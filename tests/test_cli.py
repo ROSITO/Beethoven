@@ -8,6 +8,7 @@ import sys
 from beethoven.cli import main, run_terminal_session
 from beethoven.core import Capability, ExecutionContext, Score, SoloistResult, Task
 from beethoven.desktop_state import DesktopSessionStore
+from beethoven.packaging import inspect_python_runtime_strategy
 from beethoven.runtime import list_soloists, run_objective, score_objective
 from beethoven.soloists import CodexCliSoloist
 
@@ -686,8 +687,22 @@ def test_package_sidecar_command_writes_launcher(tmp_path, capsys) -> None:
     launcher = output.read_text(encoding="utf-8")
     assert "BEETHOVEN_BIN" in launcher
     assert "BEETHOVEN_PYTHON" in launcher
+    assert "../Resources/python/bin/python" in launcher
     assert "-m beethoven.cli desktop" in launcher
     assert output.stat().st_mode & 0o111
+
+
+def test_python_runtime_strategy_prefers_packaged_runtime(tmp_path) -> None:
+    python = tmp_path / "src-tauri" / "python" / "bin" / "python"
+    python.parent.mkdir(parents=True)
+    python.write_text("#!/usr/bin/env sh\n", encoding="utf-8")
+    python.chmod(0o755)
+
+    report = inspect_python_runtime_strategy(tmp_path)
+
+    assert report["ok"] is True
+    assert report["status"] == "bundled"
+    assert str(python) in report["message"]
 
 
 def test_package_doctor_command_reports_blockers(monkeypatch, capsys) -> None:

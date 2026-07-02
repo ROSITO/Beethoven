@@ -41,6 +41,12 @@ MAX_ATTACHMENT_SNIPPET_CHARS = 420
 MAX_WORKSPACE_DIFF_CHARS = 48_000
 ATTACHMENT_PATTERN = re.compile(r"(?<!\S)@([A-Za-z0-9_./-]+)")
 FILE_REFERENCE_PATTERN = re.compile(r"(?<![@\w./-])([A-Za-z0-9_.-]+\.[A-Za-z0-9]{1,8})(?![\w./-])")
+CURRENT_WORKSPACE_PATTERNS = (
+    re.compile(r"\b(current|actual)\s+(folder|directory|workspace|project|repo|repository)\b", re.IGNORECASE),
+    re.compile(r"\b(this|the)\s+(folder|directory|workspace|project|repo|repository)\b", re.IGNORECASE),
+    re.compile(r"\b(dossier|répertoire|repertoire|workspace|projet|repo|repository)\s+(actuel|courant)\b", re.IGNORECASE),
+    re.compile(r"\b(ce|cet|cette|le|la)\s+(dossier|répertoire|repertoire|workspace|projet|repo|repository)\b", re.IGNORECASE),
+)
 
 
 def inspect_workspace(path: str | Path | None = None) -> dict[str, Any]:
@@ -132,6 +138,8 @@ def extract_attachment_paths(objective: str) -> list[str]:
 def infer_workspace_attachment_paths(objective: str, root: Path, limit: int = 5) -> list[str]:
     explicit_paths = set(extract_attachment_paths(objective))
     inferred: list[str] = []
+    if not explicit_paths and is_current_workspace_request(objective):
+        inferred.append(".")
     references = {
         match.group(1).lower()
         for match in FILE_REFERENCE_PATTERN.finditer(objective)
@@ -151,6 +159,10 @@ def infer_workspace_attachment_paths(objective: str, root: Path, limit: int = 5)
         if len(inferred) >= limit:
             break
     return inferred
+
+
+def is_current_workspace_request(objective: str) -> bool:
+    return any(pattern.search(objective) for pattern in CURRENT_WORKSPACE_PATTERNS)
 
 
 def read_workspace_attachments(

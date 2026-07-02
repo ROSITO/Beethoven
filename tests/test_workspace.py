@@ -67,6 +67,22 @@ def test_workspace_directory_attachment_expands_bounded_files(tmp_path) -> None:
     assert all(item["source_directory"] == "docs" for item in attachments)
 
 
+def test_workspace_current_folder_request_attaches_bounded_workspace_files(tmp_path) -> None:
+    (tmp_path / "README.md").write_text("# Project\n\nRoot context.", encoding="utf-8")
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "app.py").write_text("print('ok')", encoding="utf-8")
+
+    attachments = read_workspace_attachments(
+        "analyse le dossier actuel",
+        path=tmp_path,
+        max_directory_files=2,
+    )
+
+    assert [item["path"] for item in attachments] == ["README.md", "src/app.py"]
+    assert all(item["status"] == "attached" for item in attachments)
+    assert all(item["source_directory"] == "." for item in attachments)
+
+
 def test_workspace_file_listing_exposes_size_and_media_type(tmp_path) -> None:
     (tmp_path / "app.py").write_text("print('ok')", encoding="utf-8")
 

@@ -27,6 +27,15 @@ class FakeSoloist:
         return SoloistResult(output=f"{self.name}:{task.instruction}")
 
 
+@dataclass(frozen=True)
+class FailingSoloist:
+    name: str
+    capabilities: frozenset[Capability]
+
+    def perform(self, task: Task, context: ExecutionContext) -> SoloistResult:
+        raise RuntimeError(f"{self.name} unavailable")
+
+
 def test_conductor_executes_score_in_dependency_order() -> None:
     registry = SoloistRegistry()
     registry.register(FakeSoloist("planner", frozenset({Capability.PLAN})))
@@ -81,6 +90,45 @@ def test_router_respects_task_level_soloist_when_capable() -> None:
     chosen = CapabilityRouter(registry, preferred_soloist="default").choose(task)
 
     assert chosen.name == "task-choice"
+
+
+def test_conductor_falls_back_when_auto_routed_soloist_fails() -> None:
+    registry = SoloistRegistry()
+    registry.register(FailingSoloist("remote", frozenset({Capability.ANALYZE})))
+    registry.register(FakeSoloist("local", frozenset({Capability.ANALYZE})))
+    score = Score(
+        id="score-fallback",
+        objective="Analyze safely",
+        tasks=(
+            Task(
+                id="inspect",
+                instruction="Inspect",
+                capability=Capability.ANALYZE,
+                metadata={"preferred_soloist": "remote"},
+            ),
+        ),
+    )
+
+    context = Conductor(CapabilityRouter(registry)).perform(score)
+
+    assert context.trace == ["inspect:remote", "inspect:local"]
+    assert context.statuses["inspect"] == TaskStatus.COMPLETED
+    assert context.artifacts["inspect"].output == "local:Inspect"
+    assert context.artifacts["inspect"].metadata["fallback_from"] == "remote"
+
+
+def test_conductor_does_not_fallback_when_user_forces_soloist() -> None:
+    registry = SoloistRegistry()
+    registry.register(FailingSoloist("remote", frozenset({Capability.ANALYZE})))
+    registry.register(FakeSoloist("local", frozenset({Capability.ANALYZE})))
+    score = Score(
+        id="score-strict",
+        objective="Analyze strictly",
+        tasks=(Task(id="inspect", instruction="Inspect", capability=Capability.ANALYZE),),
+    )
+
+    with pytest.raises(RuntimeError, match="remote unavailable"):
+        Conductor(CapabilityRouter(registry, preferred_soloist="remote")).perform(score)
 
 
 def test_conductor_rejects_unknown_dependencies() -> None:

@@ -54,6 +54,8 @@ The foundation is pre-alpha but executable. It includes:
 - governed validation commands appended as explicit `validate` score tasks, with
   a policy gate that blocks mutating or unknown commands unless permission mode
   is `auto` or the exact command is explicitly approved for that run;
+- auto-routing fallback: when Beethoven owns routing and a suggested soloist
+  fails, the conductor can retry the task with another compatible local soloist;
 - desktop approve-and-rerun action for blocked validation commands;
 - named validation profiles (`desktop`, `lint`, `tests`, `full`) selectable from
   CLI, desktop API, and the composer;
@@ -69,7 +71,8 @@ Important modules:
 - `src/beethoven/core.py`: core contracts: `Capability`, `TaskStatus`, `Task`,
   `Score`, `ExecutionContext`, `SoloistResult`, `Soloist`.
 - `src/beethoven/conductor.py`: `Conductor` executes tasks in dependency order,
-  records trace/status/artifacts, and emits run events through `event_sink`.
+  records trace/status/artifacts, emits run events through `event_sink`, and can
+  retry an auto-routed failed task with another compatible soloist.
 - `src/beethoven/routing.py`: `SoloistRegistry` and `CapabilityRouter`, with
   task-level and requested soloist selection when the target can satisfy the
   task.
@@ -309,6 +312,8 @@ Implemented UI:
   completed, blocked, and failed events;
 - central chat message updates while streaming, final answer rendering in the
   main conversation, and dynamic inspector status/cost/privacy labels;
+- sanitized CLI adapter failures so usage limits or provider errors do not dump
+  full prompts or attached context into the desktop chat;
 - validation result summary rendered as a normal assistant-side chat message
   after a run;
 - score inspector and progress timeline;

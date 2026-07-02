@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from beethoven.core import Capability, ExecutionContext, Score, Task, TaskStatus
 from beethoven.routing import CapabilityRouter
@@ -59,10 +59,52 @@ class Conductor:
 
         try:
             result = soloist.perform(task, context)
-        except Exception:
+        except Exception as error:
             context.statuses[task.id] = TaskStatus.FAILED
-            self._emit({"type": "task_failed", "task_id": task.id, "status": TaskStatus.FAILED.value})
-            raise
+            self._emit(
+                {
+                    "type": "task_failed",
+                    "task_id": task.id,
+                    "status": TaskStatus.FAILED.value,
+                    "soloist": soloist.name,
+                    "error": str(error),
+                }
+            )
+            fallback = self.router.choose_fallback(task, soloist.name)
+            if fallback is None:
+                raise
+            context.statuses[task.id] = TaskStatus.RUNNING
+            context.trace.append(f"{task.id}:{fallback.name}")
+            self._emit(
+                {
+                    "type": "task_routed",
+                    "task_id": task.id,
+                    "soloist": fallback.name,
+                    "fallback_from": soloist.name,
+                }
+            )
+            self._emit({"type": "task_started", "task_id": task.id})
+            try:
+                result = fallback.perform(task, context)
+            except Exception:
+                context.statuses[task.id] = TaskStatus.FAILED
+                self._emit(
+                    {
+                        "type": "task_failed",
+                        "task_id": task.id,
+                        "status": TaskStatus.FAILED.value,
+                        "soloist": fallback.name,
+                    }
+                )
+                raise
+            result = replace(
+                result,
+                metadata={
+                    **result.metadata,
+                    "fallback_from": soloist.name,
+                    "fallback_error": str(error),
+                },
+            )
 
         context.artifacts[task.id] = result
         context.statuses[task.id] = TaskStatus.COMPLETED

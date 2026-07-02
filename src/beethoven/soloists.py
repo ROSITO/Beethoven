@@ -71,6 +71,11 @@ class LocalReaderSoloist:
     )
 
     def perform(self, task: Task, context: ExecutionContext) -> SoloistResult:
+        if task.capability == Capability.SYNTHESIZE and context.artifacts:
+            return SoloistResult(
+                output=self._synthesize_artifacts(context),
+                metadata={"mode": "local-reader", "synthesis": True},
+            )
         attachments = [
             item
             for item in context.score.metadata.get("attachments", [])
@@ -119,6 +124,20 @@ class LocalReaderSoloist:
             sections.append("Points clés: " + "; ".join(bullets))
         return "\n".join(sections)
 
+    def _synthesize_artifacts(self, context: ExecutionContext) -> str:
+        lines = [f"Synthèse locale pour: {context.score.objective}"]
+        for task_id, artifact in context.artifacts.items():
+            output = artifact.output
+            if not isinstance(output, str):
+                output = json.dumps(output, ensure_ascii=False, default=str)
+            compact = " ".join(str(output).split())
+            if not compact:
+                continue
+            lines.append(f"- {task_id}: {compact[:700]}")
+        if len(lines) == 1:
+            return "Le score est terminé, mais aucun artifact lisible n'a été produit."
+        return "\n".join(lines)
+
 
 @dataclass(frozen=True)
 class ClaudeCliSoloist:
@@ -150,7 +169,7 @@ class ClaudeCliSoloist:
             timeout=self.timeout_seconds,
         )
         if result.returncode != 0:
-            raise RuntimeError(result.stderr.strip() or "Claude CLI returned a non-zero exit code")
+            raise RuntimeError(_cli_error_message("Claude CLI", result.stderr))
         return SoloistResult(
             output=result.stdout.strip(),
             metadata={"mode": "claude-cli"},
@@ -194,7 +213,7 @@ class CodexCliSoloist:
             )
             output = Path(output_file.name).read_text(encoding="utf-8", errors="replace").strip()
         if result.returncode != 0:
-            raise RuntimeError(result.stderr.strip() or "Codex CLI returned a non-zero exit code")
+            raise RuntimeError(_cli_error_message("Codex CLI", result.stderr))
         return SoloistResult(
             output=output or result.stdout.strip(),
             metadata={"mode": "codex-cli", "model": self.model},
@@ -354,6 +373,26 @@ def claude_cli_is_available() -> bool:
 
 def codex_cli_is_available() -> bool:
     return shutil.which("codex") is not None
+
+
+def _cli_error_message(label: str, stderr: str) -> str:
+    lines = [line.strip() for line in stderr.splitlines() if line.strip()]
+    meaningful = [
+        line
+        for line in lines
+        if line.startswith(("ERROR:", "Error:", "error:"))
+        or "usage limit" in line.lower()
+        or "rate limit" in line.lower()
+        or "not authenticated" in line.lower()
+        or "permission" in line.lower()
+        or "unknown variant" in line.lower()
+    ]
+    if meaningful:
+        return f"{label} failed: {meaningful[-1]}"
+    if lines:
+        tail = lines[-1]
+        return f"{label} failed: {tail[:320]}"
+    return f"{label} returned a non-zero exit code"
 
 
 def openai_compatible_config() -> dict[str, str]:

@@ -133,6 +133,15 @@ def test_run_objective_accepts_auto_router_preference(monkeypatch) -> None:
     ]
 
 
+def test_auto_router_prefers_reader_for_attached_synthesis(monkeypatch) -> None:
+    monkeypatch.setenv("BEETHOVEN_DYNAMIC_PLANNING", "0")
+
+    context = run_objective("Review readme.md", soloist="auto")
+
+    assert context.trace[-1] == "synthesize:local-reader"
+    assert "Synthèse locale" in context.artifacts["synthesize"].output
+
+
 def test_run_command_can_stream_human_events(capsys) -> None:
     exit_code = main(["run", "Stream", "events", "--stream"])
 
@@ -513,6 +522,34 @@ def test_codex_cli_adapter_ignores_user_config(monkeypatch) -> None:
     assert result.output == "ok"
     assert commands
     assert "--ignore-user-config" in commands[0]
+
+
+def test_codex_cli_adapter_sanitizes_failure_output(monkeypatch) -> None:
+    def fake_run(command, **kwargs):  # type: ignore[no-untyped-def]
+        output_path = command[command.index("--output-last-message") + 1]
+        with open(output_path, "w", encoding="utf-8") as output_file:
+            output_file.write("")
+        return subprocess.CompletedProcess(
+            command,
+            1,
+            stdout="",
+            stderr="user prompt with attached private context\nERROR: You've hit your usage limit.",
+        )
+
+    monkeypatch.setattr("beethoven.soloists.subprocess.run", fake_run)
+    task = Task("inspect", "Inspect repository.", Capability.ANALYZE)
+    score = Score("score-test", "Test Codex adapter", (task,))
+
+    try:
+        CodexCliSoloist().perform(task, ExecutionContext(score))
+    except RuntimeError as error:
+        message = str(error)
+    else:
+        raise AssertionError("Expected CodexCliSoloist to fail")
+
+    assert "Codex CLI failed" in message
+    assert "usage limit" in message
+    assert "attached private context" not in message
 
 
 def test_skills_list_command_prints_capability_catalog(capsys) -> None:

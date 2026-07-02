@@ -377,7 +377,9 @@ function updateInspectorState(context = null) {
     ? "Failed"
     : statuses.length && statuses.every((status) => status === "completed")
       ? "Completed"
-      : scoreTasks.some((task) => task.status === "running")
+      : scoreTasks.some((task) => task.status === "failed")
+        ? "Failed"
+        : scoreTasks.some((task) => task.status === "running")
         ? "Running"
         : "Ready";
 }
@@ -985,7 +987,7 @@ function exportCurrentScore() {
 
 function taskFromApi(task, context) {
   const artifact = context.artifacts?.[task.id];
-  const route = context.trace?.find((item) => item.startsWith(`${task.id}:`));
+  const route = [...(context.trace ?? [])].reverse().find((item) => item.startsWith(`${task.id}:`));
   const soloist = route?.split(":")[1] ?? "local-echo";
   const output = task.capability === "validate"
     ? validationTaskSummary(artifact?.output)
@@ -994,7 +996,9 @@ function taskFromApi(task, context) {
     id: task.id,
     capability: task.capability,
     soloist,
-    reason: artifact?.metadata?.mode
+    reason: artifact?.metadata?.fallback_from
+      ? `fallback from ${artifact.metadata.fallback_from}: ${artifact.metadata.mode ?? "runtime"} execution`
+      : artifact?.metadata?.mode
       ? `${artifact.metadata.mode} execution returned by Beethoven runtime`
       : "selected by the local Beethoven router",
     instruction: task.instruction,
@@ -1100,8 +1104,14 @@ async function runComposer(options = {}) {
     composerStatus.textContent = `Trace: ${context.trace.join(" → ")}`;
   } catch (error) {
     composerStatus.classList.add("error");
-    composerStatus.textContent =
-      "Desktop API unavailable. Start it with: beethoven desktop";
+    const message = error?.message ?? "Unknown desktop API error";
+    composerStatus.textContent = `Desktop run failed: ${message}`;
+    updateAssistantDraft(
+      message.includes("Soloist requested but unavailable: auto")
+        ? "The desktop backend is still running an older Beethoven runtime. Restart the app or server, then run the task again."
+        : `The desktop run failed: ${message}`,
+      "Beethoven"
+    );
     console.error(error);
   } finally {
     setTimeout(() => {

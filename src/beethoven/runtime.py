@@ -334,6 +334,8 @@ def run_objective(
     )
     if merged_validation_commands:
         score = _with_validation_task(score, merged_validation_commands)
+    if preferred_soloist is None:
+        score = _prefer_local_reader_for_attached_synthesis(score)
     if event_sink is not None:
         event_sink({"type": "score_planned", "score": score_to_dict(score)})
     context = Conductor(
@@ -383,6 +385,35 @@ def _with_validation_task(score: Score, commands: list[str]) -> Score:
             ),
         ),
     )
+
+
+def _prefer_local_reader_for_attached_synthesis(score: Score) -> Score:
+    attachments = score.metadata.get("attachments", [])
+    has_attached_context = any(
+        isinstance(item, dict) and item.get("status") == "attached"
+        for item in attachments
+    )
+    if not has_attached_context:
+        return score
+    tasks: list[Task] = []
+    changed = False
+    for task in score.tasks:
+        if task.capability == Capability.SYNTHESIZE and not task.metadata.get("preferred_soloist"):
+            tasks.append(
+                replace(
+                    task,
+                    metadata={
+                        **task.metadata,
+                        "preferred_soloist": "local-reader",
+                    },
+                )
+            )
+            changed = True
+        else:
+            tasks.append(task)
+    if not changed:
+        return score
+    return replace(score, tasks=tuple(tasks))
 
 
 def _unique_task_id(score: Score, desired: str) -> str:

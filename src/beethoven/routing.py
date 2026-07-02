@@ -40,6 +40,10 @@ class CapabilityRouter:
     registry: SoloistRegistry
     preferred_soloist: str | None = None
 
+    @property
+    def allows_fallback(self) -> bool:
+        return self.preferred_soloist is None
+
     def choose(self, task: Task) -> Soloist:
         candidates = self.registry.capable_of(task.capability)
         if not candidates:
@@ -56,3 +60,11 @@ class CapabilityRouter:
                 if candidate.name == self.preferred_soloist:
                     return candidate
         return candidates[0]
+
+    def choose_fallback(self, task: Task, failed_soloist: str) -> Soloist | None:
+        if not self.allows_fallback:
+            return None
+        for candidate in self.registry.capable_of(task.capability):
+            if candidate.name != failed_soloist:
+                return candidate
+        return None

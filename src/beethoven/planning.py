@@ -166,10 +166,44 @@ def _extract_json_object(value: str) -> dict[str, Any]:
         stripped = fenced.group(1)
     elif "{" in stripped and "}" in stripped:
         stripped = stripped[stripped.find("{") : stripped.rfind("}") + 1]
-    payload = json.loads(stripped)
+    try:
+        payload = json.loads(stripped)
+    except json.JSONDecodeError as error:
+        if "Invalid control character" not in str(error):
+            raise
+        payload = json.loads(_escape_string_control_chars(stripped))
     if not isinstance(payload, dict):
         raise ValueError("Planner output must be a JSON object")
     return payload
+
+
+def _escape_string_control_chars(value: str) -> str:
+    repaired: list[str] = []
+    in_string = False
+    escaped = False
+    replacements = {
+        "\n": "\\n",
+        "\r": "\\r",
+        "\t": "\\t",
+    }
+    for char in value:
+        if escaped:
+            repaired.append(char)
+            escaped = False
+            continue
+        if char == "\\":
+            repaired.append(char)
+            escaped = True
+            continue
+        if char == '"':
+            in_string = not in_string
+            repaired.append(char)
+            continue
+        if in_string and ord(char) < 0x20:
+            repaired.append(replacements.get(char, f"\\u{ord(char):04x}"))
+            continue
+        repaired.append(char)
+    return "".join(repaired)
 
 
 def _tasks_from_payload(payload: dict[str, Any], *, allowed_soloists: set[str] | None = None) -> list[Task]:

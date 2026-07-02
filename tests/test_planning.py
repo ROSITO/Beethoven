@@ -65,6 +65,24 @@ def test_dynamic_planner_drops_unavailable_soloist_hint() -> None:
     assert "preferred_soloist" not in score.tasks[1].metadata
 
 
+def test_dynamic_planner_repairs_control_characters_inside_json_strings() -> None:
+    @dataclass(frozen=True)
+    class NewlinePlanner:
+        name: str = "newline-planner"
+        capabilities: frozenset[Capability] = frozenset({Capability.PLAN})
+
+        def perform(self, task: Task, context: ExecutionContext) -> SoloistResult:
+            return SoloistResult(
+                output='{"tasks":[{"id":"inspect","capability":"analyze","instruction":"Inspect line one\nline two","depends_on":[]}]}'
+            )
+
+    score = create_dynamic_score("Improve the app", NewlinePlanner())
+
+    assert score.metadata["planning_mode"] == "dynamic"
+    assert score.tasks[0].instruction == "Inspect line one\nline two"
+    assert score.tasks[-1].id == "synthesize"
+
+
 def test_dynamic_planner_falls_back_to_baseline_on_invalid_json() -> None:
     @dataclass(frozen=True)
     class BrokenPlanner:

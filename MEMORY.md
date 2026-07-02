@@ -293,8 +293,9 @@ Implemented UI:
 - strategy controls for baseline vs recursive score generation, recursive
   pattern, and rounds;
 - score preview through `/api/score`;
-- run through `/api/run/stream`, with live composer status updates while events
-  arrive;
+- run through `/api/run/stream`, with `score_planned` emitted before execution
+  and live score/timeline status updates for route, running, artifact,
+  completed, blocked, and failed events;
 - validation result summary rendered as a normal assistant-side chat message
   after a run;
 - score inspector and progress timeline;
@@ -406,7 +407,7 @@ Current test suite:
 
 Latest known status after the current implementation:
 
-- `80 passed`;
+- `81 passed`;
 - Ruff passes;
 - `node --check desktop/app.js` passes.
 
@@ -426,6 +427,8 @@ Test coverage currently includes:
 - packaging doctor CLI and desktop API;
 - RecursiveMAS bridge generation;
 - desktop API health, soloists, skills, workspace, files, run, sessions, detail;
+- desktop stream emits `score_planned` before execution so the UI can render
+  live tasks before final context;
 - desktop API orchestrator/SoloMLX status and mocked SoloMLX install trigger;
 - OpenAI-compatible execution soloist config, healthcheck, registry routing,
   and mocked chat completion execution;
@@ -436,6 +439,8 @@ Test coverage currently includes:
   MIME/size/snippet metadata, directory expansion, and enriched file listing;
 - bounded workspace diff inspection in CLI/API/desktop;
 - patch check/apply approval token behavior;
+- dynamic planner JSON repair for raw control characters inside model-produced
+  JSON strings;
 - conductor dependency execution;
 - invalid dependency rejection.
 

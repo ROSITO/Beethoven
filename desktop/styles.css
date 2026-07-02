@@ -881,6 +881,11 @@ button {
   background: rgba(109, 61, 255, 0.1);
 }
 
+.pill.info {
+  color: var(--maestro-purple);
+  background: rgba(109, 61, 255, 0.16);
+}
+
 .pill.warning {
   color: #a36c00;
   background: rgba(212, 175, 55, 0.16);

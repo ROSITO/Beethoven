@@ -251,7 +251,9 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path, monkeypatch) ->
     assert detail_data["session"]["run"]["score"]["id"] == payload["score"]["id"]
     assert clear_sessions_data["sessions"]["cleared"] >= 1
     assert empty_sessions_data["sessions"] == []
-    assert stream_events[0]["event"]["type"] == "score_started"
+    assert stream_events[0]["event"]["type"] == "score_planned"
+    assert stream_events[0]["event"]["score"]["tasks"][0]["id"] == "understand"
+    assert any(event["event"]["type"] == "score_started" for event in stream_events)
     assert stream_events[-1]["event"]["type"] == "run_completed"
     assert stream_events[-1]["event"]["context"]["score"]["objective"] == "stream desktop api"
     assert any(event["event"]["type"] == "validation_blocked" for event in blocked_stream_events)

@@ -12,6 +12,7 @@ from beethoven.orchestrator import check_local_orchestrator, create_local_orches
 from beethoven.planning import create_baseline_score, create_dynamic_score
 from beethoven.recursive import DEFAULT_RECURSIVE_STYLE, create_recursive_score
 from beethoven.routing import CapabilityRouter, SoloistRegistry
+from beethoven.serialization import score_to_dict
 from beethoven.solomlx import ensure_solomlx_orchestrator
 from beethoven.soloists import (
     ClaudeCliSoloist,
@@ -332,6 +333,8 @@ def run_objective(
     )
     if merged_validation_commands:
         score = _with_validation_task(score, merged_validation_commands)
+    if event_sink is not None:
+        event_sink({"type": "score_planned", "score": score_to_dict(score)})
     context = Conductor(
         CapabilityRouter(registry, preferred_soloist=soloist),
         event_sink=event_sink,

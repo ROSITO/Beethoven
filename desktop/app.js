@@ -327,7 +327,7 @@ function renderScore() {
     .map(
       (task) => {
         const status = task.status ?? "done";
-        const statusClass = status === "completed" ? "success" : "neutral";
+        const statusClass = taskStatusTone(status);
         return `
         <article class="score-card">
           <header>
@@ -361,6 +361,19 @@ function renderScore() {
   const completed = scoreTasks.filter((task) => (task.status ?? "done") === "completed").length;
   progressPill.textContent =
     completed > 0 ? `${completed} tasks completed` : `${scoreTasks.length} tasks ready`;
+}
+
+function taskStatusTone(status) {
+  if (status === "completed") {
+    return "success";
+  }
+  if (status === "failed" || status === "blocked") {
+    return "warning";
+  }
+  if (status === "running" || status === "produced") {
+    return "info";
+  }
+  return "neutral";
 }
 
 function renderSessions(sessions) {
@@ -941,6 +954,26 @@ function taskFromScore(task) {
   };
 }
 
+function ensureLiveScore(score) {
+  currentScore = score;
+  scoreId.textContent = score.id ?? "active score";
+  pageTitle.textContent = score.objective ?? pageTitle.textContent;
+  scoreTasks = (score.tasks ?? []).map(taskFromScore);
+  renderScore();
+}
+
+function updateLiveTask(taskId, patch) {
+  const index = scoreTasks.findIndex((task) => task.id === taskId);
+  if (index === -1) {
+    return;
+  }
+  scoreTasks[index] = {
+    ...scoreTasks[index],
+    ...patch
+  };
+  renderScore();
+}
+
 function scoreRequestPayload(objective, approvedValidationCommands = []) {
   const selectedValidationProfile = validationProfileSelect.value;
   return {
@@ -1055,24 +1088,53 @@ async function readRunStream(response) {
 }
 
 function updateRunEventStatus(event) {
+  if (event.type === "score_planned" && event.score) {
+    ensureLiveScore(event.score);
+    composerStatus.textContent = "Score planned. Starting execution…";
+    return;
+  }
   if (event.type === "task_routed") {
+    updateLiveTask(event.task_id, {
+      soloist: event.soloist,
+      reason: "routed by Beethoven runtime"
+    });
     composerStatus.textContent = `${event.task_id} routed to ${event.soloist}`;
     return;
   }
   if (event.type === "task_started") {
+    updateLiveTask(event.task_id, { status: "running" });
     composerStatus.textContent = `${event.task_id} running…`;
     return;
   }
+  if (event.type === "artifact_produced") {
+    updateLiveTask(event.task_id, { status: "produced", reason: "artifact produced by Beethoven runtime" });
+    return;
+  }
   if (event.type === "task_completed") {
+    updateLiveTask(event.task_id, { status: event.status ?? "completed" });
     composerStatus.textContent = `${event.task_id} completed`;
     return;
   }
+  if (event.type === "task_failed") {
+    updateLiveTask(event.task_id, { status: "failed" });
+    composerStatus.textContent = `${event.task_id} failed`;
+    return;
+  }
   if (event.type === "validation_started") {
+    updateLiveTask(event.task_id, { status: "running", reason: "validation commands running" });
     composerStatus.textContent = "Running validation…";
     return;
   }
   if (event.type === "validation_blocked") {
+    updateLiveTask(event.task_id, { status: "blocked", reason: "blocked by permission policy" });
     composerStatus.textContent = "Validation blocked by permission policy.";
+    return;
+  }
+  if (event.type === "validation_completed") {
+    updateLiveTask(event.task_id, {
+      status: event.blocked?.length ? "blocked" : "completed",
+      reason: event.blocked?.length ? "validation blocked by policy" : "validation completed"
+    });
     return;
   }
   if (event.type === "score_completed") {

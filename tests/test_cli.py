@@ -6,9 +6,10 @@ import subprocess
 import sys
 
 from beethoven.cli import main, run_terminal_session
-from beethoven.core import Capability, ExecutionContext, SoloistResult, Task
+from beethoven.core import Capability, ExecutionContext, Score, SoloistResult, Task
 from beethoven.desktop_state import DesktopSessionStore
 from beethoven.runtime import list_soloists, run_objective, score_objective
+from beethoven.soloists import CodexCliSoloist
 
 
 class FakeLocalOrchestrator:
@@ -478,6 +479,27 @@ def test_cli_soloists_are_listed_when_installed(monkeypatch) -> None:
 
     assert next(item for item in soloists if item["id"] == "claude-cli")["status"] == "available"
     assert next(item for item in soloists if item["id"] == "codex-cli")["status"] == "available"
+
+
+def test_codex_cli_adapter_ignores_user_config(monkeypatch) -> None:
+    commands: list[list[str]] = []
+
+    def fake_run(command, **kwargs):  # type: ignore[no-untyped-def]
+        commands.append(list(command))
+        output_path = command[command.index("--output-last-message") + 1]
+        with open(output_path, "w", encoding="utf-8") as output_file:
+            output_file.write("ok")
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setattr("beethoven.soloists.subprocess.run", fake_run)
+    task = Task("inspect", "Inspect repository.", Capability.ANALYZE)
+    score = Score("score-test", "Test Codex adapter", (task,))
+
+    result = CodexCliSoloist().perform(task, ExecutionContext(score))
+
+    assert result.output == "ok"
+    assert commands
+    assert "--ignore-user-config" in commands[0]
 
 
 def test_skills_list_command_prints_capability_catalog(capsys) -> None:

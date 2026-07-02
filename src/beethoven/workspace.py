@@ -34,11 +34,20 @@ IGNORED_SUFFIXES = {
     ".so",
     ".webp",
 }
+IGNORED_DIRECTORY_BUNDLE_FILENAMES = {
+    "Cargo.lock",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "poetry.lock",
+    "uv.lock",
+    "yarn.lock",
+}
 MAX_ATTACHMENT_BYTES = 64_000
 MAX_ATTACHMENT_TOTAL_BYTES = 128_000
 MAX_DIRECTORY_ATTACHMENT_FILES = 8
 MAX_ATTACHMENT_SNIPPET_CHARS = 420
 MAX_WORKSPACE_DIFF_CHARS = 48_000
+MAX_WORKSPACE_MANIFEST_FILES = 120
 ATTACHMENT_PATTERN = re.compile(r"(?<!\S)@([A-Za-z0-9_./-]+)")
 FILE_REFERENCE_PATTERN = re.compile(r"(?<![@\w./-])([A-Za-z0-9_.-]+\.[A-Za-z0-9]{1,8})(?![\w./-])")
 CURRENT_WORKSPACE_PATTERNS = (
@@ -212,6 +221,8 @@ def read_workspace_attachments(
             )
             continue
         if candidate.is_dir():
+            if candidate == root:
+                attachments.append(_workspace_manifest_attachment(root))
             bundled_files = _directory_attachment_files(candidate, root, max_directory_files)
             if not bundled_files:
                 attachments.append(
@@ -271,12 +282,76 @@ def _directory_attachment_files(directory: Path, root: Path, limit: int) -> list
         dirnames[:] = sorted(name for name in dirnames if name not in IGNORED_DIRS)
         for filename in sorted(filenames):
             candidate = Path(current_directory) / filename
+            if (
+                filename in IGNORED_DIRECTORY_BUNDLE_FILENAMES
+                or _is_ignored(candidate, root)
+                or not candidate.is_file()
+            ):
+                continue
+            files.append(candidate)
+    return sorted(files, key=lambda item: _workspace_file_priority(item, root))[:limit]
+
+
+def _workspace_manifest_attachment(root: Path) -> dict[str, object]:
+    files = _workspace_manifest_files(root)
+    lines = [
+        f"# Workspace: {root.name}",
+        "",
+        f"Root: {root}",
+        f"Visible files sampled: {len(files)}",
+        "",
+        "## Structure",
+    ]
+    lines.extend(f"- {item.relative_to(root).as_posix()} ({_media_type(item)}, {item.stat().st_size} bytes)" for item in files)
+    content = "\n".join(lines)
+    raw_content = content.encode("utf-8")
+    return {
+        "path": ".",
+        "name": root.name,
+        "extension": "workspace",
+        "kind": "workspace_manifest",
+        "media_type": "text/markdown",
+        "size_bytes": len(raw_content),
+        "status": "attached",
+        "bytes": len(raw_content),
+        "truncated": False,
+        "snippet": _snippet(content),
+        "content": content,
+        "source_directory": ".",
+    }
+
+
+def _workspace_manifest_files(root: Path) -> list[Path]:
+    files: list[Path] = []
+    for current_directory, dirnames, filenames in os.walk(root):
+        dirnames[:] = sorted(name for name in dirnames if name not in IGNORED_DIRS)
+        for filename in sorted(filenames):
+            candidate = Path(current_directory) / filename
             if _is_ignored(candidate, root) or not candidate.is_file():
                 continue
             files.append(candidate)
-            if len(files) >= limit:
-                return files
-    return files
+    return sorted(files, key=lambda item: _workspace_file_priority(item, root))[:MAX_WORKSPACE_MANIFEST_FILES]
+
+
+def _workspace_file_priority(path: Path, root: Path) -> tuple[int, int, str]:
+    relative = path.relative_to(root).as_posix()
+    name = path.name.lower()
+    root_depth = len(path.relative_to(root).parts)
+    preferred_names = {
+        "readme.md": 0,
+        "memory.md": 1,
+        "prd.md": 2,
+        "pyproject.toml": 3,
+        "package.json": 4,
+        "cargo.toml": 5,
+    }
+    if name in preferred_names:
+        return (preferred_names[name], root_depth, relative)
+    if name in IGNORED_DIRECTORY_BUNDLE_FILENAMES:
+        return (90, root_depth, relative)
+    if relative.startswith(("src/", "desktop/", "src-tauri/", "tests/", "docs/")):
+        return (20, root_depth, relative)
+    return (50, root_depth, relative)
 
 
 def _read_file_attachment(

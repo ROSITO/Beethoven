@@ -69,6 +69,7 @@ def test_workspace_directory_attachment_expands_bounded_files(tmp_path) -> None:
 
 def test_workspace_current_folder_request_attaches_bounded_workspace_files(tmp_path) -> None:
     (tmp_path / "README.md").write_text("# Project\n\nRoot context.", encoding="utf-8")
+    (tmp_path / "package-lock.json").write_text('{"lockfileVersion": 3}', encoding="utf-8")
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "app.py").write_text("print('ok')", encoding="utf-8")
 
@@ -78,7 +79,11 @@ def test_workspace_current_folder_request_attaches_bounded_workspace_files(tmp_p
         max_directory_files=2,
     )
 
-    assert [item["path"] for item in attachments] == ["README.md", "src/app.py"]
+    assert [item["path"] for item in attachments] == [".", "README.md", "src/app.py"]
+    assert attachments[0]["kind"] == "workspace_manifest"
+    assert "README.md" in str(attachments[0]["content"])
+    assert "src/app.py" in str(attachments[0]["content"])
+    assert "package-lock.json" in str(attachments[0]["content"])
     assert all(item["status"] == "attached" for item in attachments)
     assert all(item["source_directory"] == "." for item in attachments)
 

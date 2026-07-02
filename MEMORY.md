@@ -44,6 +44,9 @@ The foundation is pre-alpha but executable. It includes:
 - workspace file discovery and safe `@path` file attachment reads with binary
   blocking, MIME/size/snippet metadata, total byte budget, and bounded directory
   bundles;
+- natural-language current workspace attachment inference for prompts such as
+  "analyse le dossier actuel", including a bounded workspace structure manifest
+  before selected readable files;
 - bounded Git diff inspection through CLI, desktop API, and desktop session
   menu;
 - approval-token gated patch check/apply helpers through CLI, desktop API, and
@@ -141,7 +144,9 @@ Current available soloists:
 - `claude-cli`: Claude Code CLI adapter when `claude` is installed/logged in;
   invoked only when explicitly selected.
 - `codex-cli`: Codex CLI adapter when `codex` is installed/logged in; invoked
-  only when explicitly selected and run in read-only sandbox mode.
+  only when explicitly selected or routed by Beethoven, run in read-only sandbox
+  mode, and isolated from the user's `config.toml` with `--ignore-user-config`
+  so local Codex preferences do not break non-interactive execution.
 - `ollama`: detected when `ollama list` contains the configured model
   (`BEETHOVEN_OLLAMA_MODEL`, default `qwen3-coder:latest`), but disabled by
   default unless `BEETHOVEN_ENABLE_OLLAMA=1` is set. This is deliberate because
@@ -495,8 +500,9 @@ This completed with trace `understand:openai-compatible`,
 - `soloist`, `permission_mode`, and `effort` are recorded but not deeply enforced
   beyond metadata/routing scaffolding.
 - `@path` file ingestion now has richer context packing, binary detection,
-  budget enforcement, directory bundles, and desktop preview inspection. Token
-  estimation is still byte-based rather than model-token based.
+  budget enforcement, directory bundles, automatic current-workspace manifests,
+  and desktop preview inspection. Token estimation is still byte-based rather
+  than model-token based.
 - Desktop consumes NDJSON run events, but the visual timeline is still mostly
   rendered from final context.
 - Validation hooks now become explicit `validate` score tasks and include a

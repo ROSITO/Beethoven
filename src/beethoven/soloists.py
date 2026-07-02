@@ -179,6 +179,7 @@ class CodexCliSoloist:
                     str(Path.cwd()),
                     "--sandbox",
                     "read-only",
+                    "--ignore-user-config",
                     "--color",
                     "never",
                     "--output-last-message",

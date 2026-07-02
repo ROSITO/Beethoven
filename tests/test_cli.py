@@ -119,6 +119,26 @@ def test_run_command_prints_trace(capsys) -> None:
     assert "synthesize:local-echo" in captured.out
 
 
+def test_run_command_can_stream_human_events(capsys) -> None:
+    exit_code = main(["run", "Stream", "events", "--stream"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "event: score_planned" in captured.out
+    assert "event: task_started · understand" in captured.out
+    assert "Beethoven performed score-" in captured.out
+
+
+def test_run_command_can_stream_json_lines(capsys) -> None:
+    exit_code = main(["run", "Stream", "json", "--stream", "--json"])
+
+    captured = capsys.readouterr()
+    lines = [json.loads(line) for line in captured.out.splitlines() if line.strip()]
+    assert exit_code == 0
+    assert lines[0]["event"]["type"] == "score_planned"
+    assert lines[-1]["context"]["score"]["objective"] == "Stream json"
+
+
 def test_run_command_accepts_recursive_strategy(capsys) -> None:
     exit_code = main(
         [

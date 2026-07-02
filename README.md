@@ -245,6 +245,8 @@ beethoven chat
 beethoven score "Refactor this repository"
 beethoven run "Refactor this repository"
 beethoven run "Refactor this repository" --json
+beethoven run "Refactor this repository" --stream
+beethoven run "Refactor this repository" --stream --json
 beethoven run "Review @README.md" --validate "python -m pytest"
 beethoven run "Review @README.md" --validation-profile desktop
 beethoven run "Review @README.md" --validation-profile full

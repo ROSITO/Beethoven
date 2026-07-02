@@ -168,6 +168,8 @@ beethoven score "<objective>" --json
 beethoven score "<objective>" --strategy recursive --recursive-style deliberation --recursive-rounds 2
 beethoven run "<objective>"
 beethoven run "<objective>" --json
+beethoven run "<objective>" --stream
+beethoven run "<objective>" --stream --json
 beethoven run "<objective>" --soloist local-echo --permission ask --effort medium
 beethoven run "<objective>" --strategy recursive --recursive-style sequential --recursive-rounds 1
 BEETHOVEN_RECURSIVEMAS_COMMAND="python3 /path/to/bridge.py" beethoven run "<objective>" --soloist recursivemas --strategy recursive
@@ -407,7 +409,7 @@ Current test suite:
 
 Latest known status after the current implementation:
 
-- `81 passed`;
+- `83 passed`;
 - Ruff passes;
 - `node --check desktop/app.js` passes.
 
@@ -415,7 +417,7 @@ Test coverage currently includes:
 
 - score JSON CLI;
 - recursive score JSON CLI;
-- run CLI trace and controls;
+- run CLI trace, controls, and streamed text/NDJSON events;
 - desktop command registration;
 - session list/show;
 - soloist catalog;

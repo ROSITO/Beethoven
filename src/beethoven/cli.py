@@ -52,6 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
     run = subparsers.add_parser("run", help="Run a baseline score with the local echo soloist.")
     run.add_argument("objective", nargs="+", help="Objective to orchestrate.")
     run.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+    run.add_argument("--stream", action="store_true", help="Print run events as they arrive.")
     run.add_argument("--soloist", default="local-echo", help="Soloist/router preference.")
     run.add_argument(
         "--permission",
@@ -295,6 +296,15 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "run":
         objective = " ".join(args.objective)
+        stream_events: list[dict[str, object]] = []
+
+        def print_stream_event(event: dict[str, object]) -> None:
+            stream_events.append(event)
+            if args.json:
+                print(json.dumps({"event": event}, ensure_ascii=False), flush=True)
+            else:
+                print_event(event)
+
         context = run_objective(
             objective,
             soloist=args.soloist,
@@ -306,10 +316,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             validation_commands=args.validate,
             validation_profiles=args.validation_profile,
             approved_validation_commands=args.approve_validation,
+            event_sink=print_stream_event if args.stream else None,
         )
         if args.json:
-            print(json.dumps(context_to_dict(context), indent=2, ensure_ascii=False))
+            payload = context_to_dict(context)
+            if args.stream:
+                print(json.dumps({"context": payload}, ensure_ascii=False))
+            else:
+                print(json.dumps(payload, indent=2, ensure_ascii=False))
         else:
+            if args.stream and stream_events:
+                print()
             print_run(context_to_dict(context))
         return 0
 
@@ -791,6 +808,28 @@ def print_score(score: Score) -> None:
         print(f"- {task['id']} [{task['capability']}]")
         print(f"  depends_on: {dependencies}")
         print(f"  instruction: {task['instruction']}")
+
+
+def print_event(event: dict[str, object]) -> None:
+    event_type = str(event.get("type", "event"))
+    task_id = event.get("task_id")
+    if event_type == "score_planned":
+        score = event.get("score", {})
+        task_count = len(score.get("tasks", [])) if isinstance(score, dict) else 0
+        print(f"event: score_planned · {task_count} task(s)", flush=True)
+        return
+    if task_id:
+        suffix = ""
+        if event.get("soloist"):
+            suffix = f" · {event.get('soloist')}"
+        elif event.get("status"):
+            suffix = f" · {event.get('status')}"
+        print(f"event: {event_type} · {task_id}{suffix}", flush=True)
+        return
+    if event.get("score_id"):
+        print(f"event: {event_type} · {event.get('score_id')}", flush=True)
+        return
+    print(f"event: {event_type}", flush=True)
 
 
 def print_run(data: dict[str, object]) -> None:

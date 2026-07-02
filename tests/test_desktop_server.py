@@ -37,7 +37,11 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path, monkeypatch) ->
         host, port = server.server_address
         health = urlopen(f"http://{host}:{port}/api/health", timeout=2)
         health_data = json.loads(health.read().decode("utf-8"))
-        assert health_data == {"status": "ok", "surface": "desktop"}
+        assert health_data["status"] == "ok"
+        assert health_data["surface"] == "desktop"
+        assert health_data["version"]
+        assert "auto-routing" in health_data["capabilities"]
+        assert "local-synthesis" in health_data["capabilities"]
 
         soloists = urlopen(f"http://{host}:{port}/api/soloists", timeout=2)
         soloists_data = json.loads(soloists.read().decode("utf-8"))

@@ -6,6 +6,7 @@ import json
 import webbrowser
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
@@ -36,6 +37,15 @@ from beethoven.workspace import inspect_workspace, inspect_workspace_diff, list_
 
 
 DESKTOP_ROOT = Path(__file__).resolve().parents[2] / "desktop"
+DESKTOP_API_VERSION = "2026-07-02"
+DESKTOP_API_CAPABILITIES = [
+    "auto-routing",
+    "streaming",
+    "current-workspace",
+    "sanitized-cli-errors",
+    "fallback-routing",
+    "local-synthesis",
+]
 
 
 class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
@@ -50,7 +60,15 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
     def do_GET(self) -> None:
         path = urlparse(self.path).path
         if path == "/api/health":
-            self._send_json({"status": "ok", "surface": "desktop"})
+            self._send_json(
+                {
+                    "status": "ok",
+                    "surface": "desktop",
+                    "version": _package_version(),
+                    "api_version": DESKTOP_API_VERSION,
+                    "capabilities": DESKTOP_API_CAPABILITIES,
+                }
+            )
             return
         if path == "/api/sessions":
             self._send_json({"sessions": self.store.list_sessions()})
@@ -479,6 +497,13 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+
+def _package_version() -> str:
+    try:
+        return version("beethoven-ai")
+    except PackageNotFoundError:
+        return "0.1.0"
 
 
 def serve_desktop(host: str = "127.0.0.1", port: int = 4173, open_browser: bool = False) -> None:

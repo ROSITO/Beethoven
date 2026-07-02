@@ -171,6 +171,13 @@ const cliCommands = [
     description: "Check Tauri, Cargo, and sidecar packaging prerequisites."
   }
 ];
+const expectedBackendCapabilities = [
+  "auto-routing",
+  "streaming",
+  "current-workspace",
+  "fallback-routing",
+  "local-synthesis"
+];
 
 function titleCase(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -844,6 +851,38 @@ function renderCommandList(commands = filterCommands(cliCommands, commandSearch.
       `
     )
     .join("");
+}
+
+async function loadBackendHealth() {
+  try {
+    const response = await fetch("/api/health");
+    if (!response.ok) {
+      throw new Error(`Health API returned ${response.status}`);
+    }
+    const health = await response.json();
+    const capabilities = new Set(health.capabilities ?? []);
+    const missing = expectedBackendCapabilities.filter((item) => !capabilities.has(item));
+    if (missing.length) {
+      composerStatus.classList.add("error");
+      composerStatus.textContent = `Backend needs restart: missing ${missing.join(", ")}`;
+      if (!chatMessages.length) {
+        chatMessages = [
+          {
+            role: "assistant",
+            meta: "Beethoven",
+            content: "The desktop backend is running an older Beethoven build. Restart the app or server before running tasks.",
+          },
+        ];
+        renderChat();
+      }
+      return;
+    }
+    composerStatus.classList.remove("error");
+  } catch (error) {
+    composerStatus.classList.add("error");
+    composerStatus.textContent = "Desktop backend is unavailable. Start it with: beethoven desktop";
+    console.error(error);
+  }
 }
 
 function renderWorkspaceStatus(workspace) {
@@ -2067,6 +2106,7 @@ soloistSelect.addEventListener("change", () => updateInspectorState(currentRunCo
 renderCommandList();
 setConversationForMode("code");
 renderScore();
+loadBackendHealth();
 loadWorkspace();
 loadSoloists();
 loadSkills();

@@ -342,6 +342,8 @@ Implemented UI:
 - command center showing CLI commands and Git status;
 - patch approval panel showing applicability, approval token, file summary,
   additions/deletions, and bounded git output;
+- patch check/apply results are also posted into the main chat with an action
+  that reopens the patch review panel;
 - top-bar session actions for copying score IDs, inserting session commands,
   exporting score JSON, and opening command center;
 - responsive/mobile checks have been run repeatedly at 390px wide with no
@@ -536,8 +538,8 @@ This completed with trace `understand:openai-compatible`,
   bounded stdout/stderr details. The next gap is applying the same policy model
   to code changes.
 - Bounded diff inspection and approval-token gated patch apply exist, including
-  CLI/API patch summaries and a desktop patch review panel. Rich side-by-side
-  patch review and chat-native patch approval are not implemented yet.
+  CLI/API patch summaries, a desktop patch review panel, and chat-visible patch
+  review/apply results. Rich side-by-side patch review is not implemented yet.
 - No persistent conversation message history beyond saved run/session summaries.
 - No plugin SDK.
 - No real automation/scheduled scores.
@@ -553,7 +555,6 @@ Goal: make the desktop feel like one coherent app, not a collection of panels.
 
 Suggested steps:
 
-- Connect patch review/apply to the normal chat approval flow.
 - Add side-by-side patch review for generated code changes.
 - Persist event logs with sessions so restored runs show what happened live.
 - Add cancellation support for active runs.

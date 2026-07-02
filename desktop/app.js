@@ -214,6 +214,9 @@ function renderChat() {
           ${message.action === "approve-validation"
             ? `<button class="text-button message-action" type="button" data-chat-action="review-validation" data-message-index="${index}">Review validation</button>`
             : ""}
+          ${message.action === "open-patch"
+            ? `<button class="text-button message-action" type="button" data-chat-action="open-patch" data-message-index="${index}">Open patch review</button>`
+            : ""}
         </article>
       `
     )
@@ -1925,6 +1928,30 @@ function renderPatchOutput(label, value) {
   `;
 }
 
+function patchChatSummary(report, phase) {
+  const summary = report.summary ?? {};
+  const hasSummary = summary && typeof summary === "object" && summary.file_count !== undefined;
+  const stats = hasSummary
+    ? `${summary.file_count ?? 0} files, +${summary.additions ?? 0}, -${summary.deletions ?? 0}`
+    : "No patch summary available";
+  const status = report.applied
+    ? "applied"
+    : report.applicable
+      ? "ready for approval"
+      : report.status ?? "blocked";
+  return `${phase}: ${status}. ${stats}. ${report.message ?? ""}`.trim();
+}
+
+function pushPatchChatMessage(report, phase) {
+  chatMessages.push({
+    role: "assistant",
+    meta: phase,
+    content: patchChatSummary(report, phase),
+    action: "open-patch",
+  });
+  renderChat();
+}
+
 async function checkPatch() {
   const patch = patchInput.value.trim();
   if (!patch) {
@@ -1940,12 +1967,28 @@ async function checkPatch() {
       body: JSON.stringify({ patch })
     });
     const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error ?? payload.patch?.message ?? `Patch API returned ${response.status}`);
+    if (payload.patch) {
+      renderPatchResult(payload.patch);
+      pushPatchChatMessage(payload.patch, "Patch review");
+      if (!response.ok) {
+        composerStatus.classList.add("error");
+        composerStatus.textContent = payload.patch.message ?? "Patch check failed.";
+      } else {
+        composerStatus.classList.remove("error");
+        composerStatus.textContent = "Patch review ready.";
+      }
+      return;
     }
-    renderPatchResult(payload.patch ?? {});
+    if (!response.ok) {
+      throw new Error(payload.error ?? `Patch API returned ${response.status}`);
+    }
+    renderPatchResult({});
   } catch (error) {
-    renderPatchResult({ status: "error", applicable: false, message: error.message ?? "Patch check failed." });
+    const report = { status: "error", applicable: false, message: error.message ?? "Patch check failed." };
+    renderPatchResult(report);
+    pushPatchChatMessage(report, "Patch review");
+    composerStatus.classList.add("error");
+    composerStatus.textContent = report.message;
     console.error(error);
   } finally {
     checkPatchButton.textContent = "Check patch";
@@ -1969,13 +2012,29 @@ async function applyCheckedPatch() {
       body: JSON.stringify({ patch, approval_token: approvalToken })
     });
     const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error ?? payload.patch?.message ?? `Patch API returned ${response.status}`);
+    if (payload.patch) {
+      renderPatchResult(payload.patch);
+      pushPatchChatMessage(payload.patch, "Patch apply");
+      if (!response.ok) {
+        composerStatus.classList.add("error");
+        composerStatus.textContent = payload.patch.message ?? "Patch apply failed.";
+      } else {
+        composerStatus.classList.remove("error");
+        composerStatus.textContent = payload.patch.applied ? "Patch applied." : "Patch was not applied.";
+        await loadWorkspace();
+      }
+      return;
     }
-    renderPatchResult(payload.patch ?? {});
-    await loadWorkspace();
+    if (!response.ok) {
+      throw new Error(payload.error ?? `Patch API returned ${response.status}`);
+    }
+    renderPatchResult({});
   } catch (error) {
-    renderPatchResult({ status: "error", applied: false, message: error.message ?? "Patch apply failed." });
+    const report = { status: "error", applied: false, message: error.message ?? "Patch apply failed." };
+    renderPatchResult(report);
+    pushPatchChatMessage(report, "Patch apply");
+    composerStatus.classList.add("error");
+    composerStatus.textContent = report.message;
     console.error(error);
   } finally {
     applyPatchButton.textContent = "Apply patch";
@@ -1985,9 +2044,11 @@ async function applyCheckedPatch() {
 
 function togglePatchPanel(open = patchPanel.hidden) {
   patchPanel.hidden = !open;
-  sessionPanel.hidden = true;
   moreOptionsButton.classList.toggle("active", open);
   if (open) {
+    hideUtilityPanels();
+    patchPanel.hidden = false;
+    moreOptionsButton.classList.add("active");
     patchInput.focus();
   }
 }
@@ -2170,6 +2231,9 @@ chatThread.addEventListener("click", (event) => {
   }
   if (target.dataset.chatAction === "review-validation") {
     toggleValidationPanel(true);
+  }
+  if (target.dataset.chatAction === "open-patch") {
+    togglePatchPanel(true);
   }
 });
 closeCommandPanel.addEventListener("click", () => toggleCommandPanel(false));

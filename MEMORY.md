@@ -302,6 +302,8 @@ Implemented UI:
 - session restore via `/api/sessions/<id>`;
 - restored sessions show a compact saved execution event log without replacing
   the final chat answer;
+- session actions include a filterable event log panel for saved routing,
+  validation, fallback, and completion events;
 - search/filter for recent sessions;
 - `New task` resets composer and score state;
 - composer with permission mode, Beethoven Auto execution preference, and effort
@@ -466,6 +468,8 @@ Test coverage currently includes:
   live tasks before final context;
 - desktop sessions persist execution event logs and expose compact event counts
   in session summaries;
+- desktop event log panel can filter saved events by type, task, soloist,
+  status, or error;
 - desktop API orchestrator/SoloMLX status and mocked SoloMLX install trigger;
 - OpenAI-compatible execution soloist config, healthcheck, registry routing,
   and mocked chat completion execution;
@@ -562,7 +566,7 @@ Goal: make the desktop feel like one coherent app, not a collection of panels.
 Suggested steps:
 
 - Add generated-code review tooling on top of the patch preview.
-- Add richer visual replay controls for restored event logs.
+- Add richer replay controls on top of the filterable event log panel.
 - Add cancellation support for active runs.
 
 ### 2. Upgrade Context Attachments Further

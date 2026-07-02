@@ -384,6 +384,7 @@ button {
 .score-panel,
 .files-panel,
 .session-panel,
+.events-panel,
 .patch-panel,
 .validation-panel {
   display: grid;
@@ -400,6 +401,7 @@ button {
 .score-panel[hidden],
 .files-panel[hidden],
 .session-panel[hidden],
+.events-panel[hidden],
 .patch-panel[hidden],
 .validation-panel[hidden] {
   display: none;
@@ -410,6 +412,7 @@ button {
 .score-panel-header,
 .files-panel-header,
 .session-panel-header,
+.events-panel-header,
 .patch-panel-header,
 .validation-panel-header {
   display: flex;
@@ -424,6 +427,7 @@ button {
 .score-panel h2,
 .files-panel h2,
 .session-panel h2,
+.events-panel h2,
 .patch-panel h2 {
   margin: 0;
 }
@@ -433,6 +437,7 @@ button {
 .score-panel h2,
 .files-panel h2,
 .session-panel h2,
+.events-panel h2,
 .patch-panel h2 {
   font-size: 16px;
 }
@@ -448,6 +453,7 @@ button {
 .score-panel-header span,
 .files-panel-header span,
 .session-panel-header span,
+.events-panel-header span,
 .patch-panel-header span {
   display: block;
   margin-top: 2px;
@@ -480,9 +486,47 @@ button {
 }
 
 .command-list,
-.workspace-status-list {
+.workspace-status-list,
+.event-list {
   display: grid;
   gap: 8px;
+}
+
+.event-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.event-index {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  color: var(--midnight);
+  background: rgba(212, 175, 55, 0.28);
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.event-row strong {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.event-row p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .skills-grid {

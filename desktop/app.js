@@ -77,9 +77,15 @@ const sessionPanelMeta = document.querySelector("#sessionPanelMeta");
 const copyScoreIdButton = document.querySelector("#copyScoreIdButton");
 const insertSessionCommandButton = document.querySelector("#insertSessionCommandButton");
 const exportScoreButton = document.querySelector("#exportScoreButton");
+const openEventsPanelButton = document.querySelector("#openEventsPanelButton");
 const inspectDiffButton = document.querySelector("#inspectDiffButton");
 const openCommandsFromMenuButton = document.querySelector("#openCommandsFromMenuButton");
 const openPatchPanelButton = document.querySelector("#openPatchPanelButton");
+const eventsPanel = document.querySelector("#eventsPanel");
+const closeEventsPanel = document.querySelector("#closeEventsPanel");
+const eventsPanelMeta = document.querySelector("#eventsPanelMeta");
+const eventSearch = document.querySelector("#eventSearch");
+const eventList = document.querySelector("#eventList");
 const patchPanel = document.querySelector("#patchPanel");
 const closePatchPanel = document.querySelector("#closePatchPanel");
 const patchInput = document.querySelector("#patchInput");
@@ -105,6 +111,7 @@ let allSkills = [];
 let allFiles = [];
 let currentScore = null;
 let currentRunContext = null;
+let currentRunEvents = [];
 let chatMessages = [];
 let pendingValidationApproval = null;
 let runtimeStatus = {
@@ -493,7 +500,7 @@ function renderSessions(sessions) {
         <button class="session-row${activeClass}" type="button" data-session-id="${escapeHtml(session.id)}">
           <span class="status-dot${runningClass}"></span>
           ${escapeHtml(session.title)}
-          <span class="row-meta">${escapeHtml(recency)}</span>
+          <span class="row-meta">${escapeHtml(session.event_count ? `${session.event_count} events` : recency)}</span>
         </button>
       `;
     })
@@ -538,6 +545,7 @@ function applyRunContext(context) {
   pageTitle.textContent = context.score.objective;
   currentScore = context.score;
   currentRunContext = context;
+  currentRunEvents = Array.isArray(context.events) ? context.events : currentRunEvents;
   if (context.score.metadata?.soloist && [...soloistSelect.options].some((option) => option.value === context.score.metadata.soloist)) {
     soloistSelect.value = context.score.metadata.soloist;
   }
@@ -930,11 +938,79 @@ function hideUtilityPanels() {
   scorePanel.hidden = true;
   filesPanel.hidden = true;
   sessionPanel.hidden = true;
+  eventsPanel.hidden = true;
   validationPanel.hidden = true;
   skillsButton.classList.remove("active");
   scorePreviewButton.classList.remove("active");
   attachFilesButton.classList.remove("active");
   moreOptionsButton.classList.remove("active");
+}
+
+function renderEventList() {
+  const query = eventSearch.value.trim().toLowerCase();
+  const events = currentRunEvents.filter((event) => {
+    if (!query) {
+      return true;
+    }
+    return [
+      event.type,
+      event.task_id,
+      event.soloist,
+      event.status,
+      event.error,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(query);
+  });
+  eventsPanelMeta.textContent = currentRunEvents.length
+    ? `${events.length}/${currentRunEvents.length} saved events`
+    : "No saved events for this session.";
+  eventList.innerHTML = events.length
+    ? events.map((event, index) => `
+        <article class="event-row">
+          <span class="event-index">${index + 1}</span>
+          <div>
+            <strong>${escapeHtml(event.type ?? "event")}</strong>
+            <p>${escapeHtml(formatEventDetail(event))}</p>
+          </div>
+        </article>
+      `).join("")
+    : '<div class="session-empty">No matching events</div>';
+}
+
+function formatEventDetail(event) {
+  const detail = [];
+  if (event.task_id) {
+    detail.push(`task ${event.task_id}`);
+  }
+  if (event.soloist) {
+    detail.push(`soloist ${event.soloist}`);
+  }
+  if (event.status) {
+    detail.push(`status ${event.status}`);
+  }
+  if (event.error) {
+    detail.push(`error ${event.error}`);
+  }
+  if (event.score?.id) {
+    detail.push(`score ${event.score.id}`);
+  }
+  return detail.join(" · ") || "score-level event";
+}
+
+function toggleEventsPanel(force) {
+  const shouldOpen = force ?? eventsPanel.hidden;
+  eventsPanel.hidden = !shouldOpen;
+  moreOptionsButton.classList.toggle("active", shouldOpen);
+  if (shouldOpen) {
+    hideUtilityPanels();
+    eventsPanel.hidden = false;
+    moreOptionsButton.classList.add("active");
+    renderEventList();
+    eventSearch.focus();
+  }
 }
 
 function toggleCommandPanel(force) {
@@ -1262,6 +1338,7 @@ async function readRunStream(response) {
   const decoder = new TextDecoder();
   let buffer = "";
   let finalContext = null;
+  const events = [];
 
   while (true) {
     const { value, done } = await reader.read();
@@ -1274,6 +1351,9 @@ async function readRunStream(response) {
       }
       const payload = JSON.parse(line);
       const event = payload.event ?? {};
+      if (!["run_completed", "run_failed"].includes(event.type)) {
+        events.push(event);
+      }
       updateRunEventStatus(event);
       if (event.type === "run_completed") {
         finalContext = event.context;
@@ -1289,6 +1369,7 @@ async function readRunStream(response) {
   if (!finalContext) {
     throw new Error("Run stream ended without a final context");
   }
+  finalContext.events = events;
   return finalContext;
 }
 
@@ -1402,6 +1483,11 @@ async function restoreSession(sessionId) {
       throw new Error("Session has no run context");
     }
     applyRunContext(session.run);
+    currentRunEvents = Array.isArray(session.events)
+      ? session.events
+      : Array.isArray(session.run.events)
+        ? session.run.events
+        : [];
     const eventLog = formatSessionEventLog(session.events);
     if (eventLog) {
       chatMessages.push({
@@ -2218,6 +2304,7 @@ async function startNewTask() {
   scoreTasks = [];
   currentScore = null;
   currentRunContext = null;
+  currentRunEvents = [];
   chatMessages = [];
   pendingValidationApproval = null;
   pageTitle.textContent = "New task";
@@ -2235,6 +2322,8 @@ async function startNewTask() {
   sessionPanel.hidden = true;
   patchPanel.hidden = true;
   validationPanel.hidden = true;
+  eventsPanel.hidden = true;
+  eventSearch.value = "";
   patchInput.value = "";
   patchApprovalToken.value = "";
   patchResult.hidden = true;
@@ -2331,6 +2420,7 @@ clearOpenAiButton.addEventListener("click", clearOpenAiConfig);
 closeScorePanel.addEventListener("click", () => toggleScorePanel(false));
 closeFilesPanel.addEventListener("click", () => toggleFilesPanel(false));
 closeSessionPanel.addEventListener("click", () => toggleSessionPanel(false));
+closeEventsPanel.addEventListener("click", () => toggleEventsPanel(false));
 closePatchPanel.addEventListener("click", () => togglePatchPanel(false));
 closeValidationPanel.addEventListener("click", () => toggleValidationPanel(false));
 cancelValidationApprovalButton.addEventListener("click", () => toggleValidationPanel(false));
@@ -2350,6 +2440,7 @@ exportScoreButton.addEventListener("click", () => {
   exportCurrentScore();
   toggleSessionPanel(false);
 });
+openEventsPanelButton.addEventListener("click", () => toggleEventsPanel(true));
 inspectDiffButton.addEventListener("click", inspectWorkspaceDiff);
 openCommandsFromMenuButton.addEventListener("click", () => toggleCommandPanel(true));
 openPatchPanelButton.addEventListener("click", () => togglePatchPanel(true));
@@ -2373,6 +2464,7 @@ commandSearch.addEventListener("keydown", (event) => {
   }
 });
 fileSearch.addEventListener("input", renderFilteredFiles);
+eventSearch.addEventListener("input", renderEventList);
 fileList.addEventListener("click", (event) => {
   const row = event.target.closest(".file-row");
   if (row?.dataset.filePath) {

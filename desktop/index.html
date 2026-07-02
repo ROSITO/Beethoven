@@ -234,6 +234,10 @@
               <strong>Export score JSON</strong>
               <span>Download the current score or run context.</span>
             </button>
+            <button class="action-row" id="openEventsPanelButton" type="button">
+              <strong>Open event log</strong>
+              <span>Inspect saved routing, validation, and execution events.</span>
+            </button>
             <button class="action-row" id="inspectDiffButton" type="button">
               <strong>Inspect workspace diff</strong>
               <span>Load the current Git diff into the conversation.</span>
@@ -265,6 +269,25 @@
             <button class="text-button primary" id="applyPatchButton" type="button">Apply patch</button>
           </div>
           <div class="soloist-check-result" id="patchResult" hidden></div>
+        </section>
+
+        <section class="events-panel" id="eventsPanel" aria-label="Execution event log" hidden>
+          <div class="events-panel-header">
+            <div>
+              <h2>Event Log</h2>
+              <span id="eventsPanelMeta">No saved events for this session.</span>
+            </div>
+            <button class="icon-button" id="closeEventsPanel" type="button" aria-label="Close event log">×</button>
+          </div>
+          <label class="composer-label" for="eventSearch">Filter events</label>
+          <input
+            class="session-search"
+            id="eventSearch"
+            type="search"
+            placeholder="task, soloist, event type"
+            autocomplete="off"
+          />
+          <div class="event-list" id="eventList"></div>
         </section>
 
         <section class="validation-panel" id="validationPanel" aria-label="Validation approval" hidden>

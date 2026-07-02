@@ -164,7 +164,7 @@ As of 2026-07-02, Beethoven has crossed from concept into a working pre-alpha:
 | --- | --- | --- |
 | Core score/conductor/runtime contracts | Done | `Task`, `Score`, `Soloist`, router, conductor, trace, serialization. |
 | Terminal CLI | Done | `beethoven chat`, `score`, `run`, sessions, workspace, soloists, skills, orchestrator, SoloMLX. |
-| Desktop workbench | In progress | Working local API, Beethoven Auto routing by default, fallback when routed adapters fail, score preview, central chat streaming/final response, session restore/clear with persisted event logs, file attachments, runtime board. |
+| Desktop workbench | In progress | Working local API, Beethoven Auto routing by default, fallback when routed adapters fail, score preview, central chat streaming/final response, session restore/clear with persisted and filterable event logs, file attachments, runtime board. |
 | Hidden Beethoven orchestrator | Done | Local conductor uses SoloMLX/OpenAI-compatible `/v1` first, then Ollama. It is not user-selectable. |
 | SoloMLX runtime brick | Done | Managed runtime class, install, prepare Ministral, start, stop, status, ensure/autostart policy, memory guardrails, desktop API. |
 | Ollama adapter | Done | Available when explicitly enabled and model exists. |

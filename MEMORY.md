@@ -312,6 +312,9 @@ Implemented UI:
   completed, blocked, and failed events;
 - central chat message updates while streaming, final answer rendering in the
   main conversation, and dynamic inspector status/cost/privacy labels;
+- local-reader synthesis for auto-routed runs with attached context, so the final
+  chat answer summarizes completed artifacts without dumping raw JSON attachment
+  payloads;
 - sanitized CLI adapter failures so usage limits or provider errors do not dump
   full prompts or attached context into the desktop chat;
 - validation result summary rendered as a normal assistant-side chat message

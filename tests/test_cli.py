@@ -137,9 +137,13 @@ def test_auto_router_prefers_reader_for_attached_synthesis(monkeypatch) -> None:
     monkeypatch.setenv("BEETHOVEN_DYNAMIC_PLANNING", "0")
 
     context = run_objective("Review readme.md", soloist="auto")
+    output = context.artifacts["synthesize"].output
 
     assert context.trace[-1] == "synthesize:local-reader"
-    assert "Synthèse locale" in context.artifacts["synthesize"].output
+    assert "Synthèse locale" in output
+    assert "Contexte lu:" in output
+    assert '"attachments"' not in output
+    assert '"content"' not in output
 
 
 def test_run_command_can_stream_human_events(capsys) -> None:

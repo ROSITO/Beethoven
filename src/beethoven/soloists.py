@@ -125,18 +125,65 @@ class LocalReaderSoloist:
         return "\n".join(sections)
 
     def _synthesize_artifacts(self, context: ExecutionContext) -> str:
+        attachments = [
+            item
+            for item in context.score.metadata.get("attachments", [])
+            if isinstance(item, dict) and item.get("status") == "attached"
+        ]
         lines = [f"Synthèse locale pour: {context.score.objective}"]
+        if attachments:
+            sample = ", ".join(str(item.get("path")) for item in attachments[:8])
+            suffix = "..." if len(attachments) > 8 else ""
+            lines.append(f"Contexte lu: {len(attachments)} fichier(s) ({sample}{suffix}).")
         for task_id, artifact in context.artifacts.items():
-            output = artifact.output
-            if not isinstance(output, str):
-                output = json.dumps(output, ensure_ascii=False, default=str)
-            compact = " ".join(str(output).split())
-            if not compact:
+            summary = self._artifact_summary(task_id, artifact.output)
+            if not summary:
                 continue
-            lines.append(f"- {task_id}: {compact[:700]}")
+            fallback = artifact.metadata.get("fallback_from")
+            fallback_note = f" (fallback depuis {fallback})" if fallback else ""
+            lines.append(f"- {task_id}{fallback_note}: {summary}")
         if len(lines) == 1:
             return "Le score est terminé, mais aucun artifact lisible n'a été produit."
         return "\n".join(lines)
+
+    def _artifact_summary(self, task_id: str, output: object) -> str:
+        if isinstance(output, dict):
+            return self._dict_artifact_summary(output)
+        if not isinstance(output, str):
+            output = json.dumps(output, ensure_ascii=False, default=str)
+        compact = self._compact_text(output)
+        if not compact:
+            return ""
+        if "\n\n" in output:
+            sections = []
+            for block in output.split("\n\n")[:4]:
+                block_summary = self._compact_text(block)
+                if block_summary:
+                    sections.append(block_summary[:260])
+            if sections:
+                return " | ".join(sections)[:900]
+        return compact[:900]
+
+    def _dict_artifact_summary(self, output: dict[str, object]) -> str:
+        task = output.get("task")
+        capability = output.get("capability")
+        instruction = self._compact_text(str(output.get("instruction", "")))
+        previous = output.get("previous_artifacts", {})
+        previous_keys = []
+        if isinstance(previous, dict):
+            previous_keys = [str(key) for key in previous.keys()]
+        parts = []
+        if task or capability:
+            parts.append(f"exécution locale {task or 'task'} ({capability or 'capability inconnue'})")
+        if instruction:
+            parts.append(instruction[:320])
+        if previous_keys:
+            parts.append(f"artifacts utilisés: {', '.join(previous_keys[:6])}")
+        return "; ".join(parts)[:700]
+
+    @staticmethod
+    def _compact_text(value: str) -> str:
+        return " ".join(value.split())
 
 
 @dataclass(frozen=True)

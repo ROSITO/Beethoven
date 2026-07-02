@@ -1180,10 +1180,19 @@ function updateRunEventStatus(event) {
   if (event.type === "task_routed") {
     updateLiveTask(event.task_id, {
       soloist: event.soloist,
-      reason: "routed by Beethoven runtime"
+      reason: event.fallback_from
+        ? `fallback from ${event.fallback_from}`
+        : "routed by Beethoven runtime"
     });
-    composerStatus.textContent = `${event.task_id} routed to ${event.soloist}`;
-    updateAssistantDraft(`${event.task_id} routed to ${event.soloist}.`, "Beethoven");
+    composerStatus.textContent = event.fallback_from
+      ? `${event.task_id} fallback to ${event.soloist}`
+      : `${event.task_id} routed to ${event.soloist}`;
+    updateAssistantDraft(
+      event.fallback_from
+        ? `${event.task_id} fell back from ${event.fallback_from} to ${event.soloist}.`
+        : `${event.task_id} routed to ${event.soloist}.`,
+      "Beethoven"
+    );
     return;
   }
   if (event.type === "task_started") {
@@ -1204,9 +1213,19 @@ function updateRunEventStatus(event) {
     return;
   }
   if (event.type === "task_failed") {
-    updateLiveTask(event.task_id, { status: "failed" });
-    composerStatus.textContent = `${event.task_id} failed`;
-    updateAssistantDraft(`${event.task_id} failed.`, "Beethoven");
+    updateLiveTask(event.task_id, {
+      status: "failed",
+      reason: event.soloist ? `${event.soloist} failed` : "task failed"
+    });
+    composerStatus.textContent = event.soloist
+      ? `${event.task_id} failed on ${event.soloist}`
+      : `${event.task_id} failed`;
+    updateAssistantDraft(
+      event.soloist
+        ? `${event.task_id} failed on ${event.soloist}; looking for a fallback.`
+        : `${event.task_id} failed.`,
+      "Beethoven"
+    );
     return;
   }
   if (event.type === "validation_started") {

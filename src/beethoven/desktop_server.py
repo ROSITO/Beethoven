@@ -45,6 +45,7 @@ DESKTOP_API_CAPABILITIES = [
     "sanitized-cli-errors",
     "fallback-routing",
     "local-synthesis",
+    "session-events",
 ]
 
 
@@ -351,8 +352,11 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
             self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
+            streamed_events: list[dict[str, object]] = []
 
             def write_event(event: dict[str, object]) -> None:
+                if event.get("type") not in {"run_completed", "run_failed"}:
+                    streamed_events.append(event)
                 self.wfile.write(json.dumps({"event": event}, ensure_ascii=False).encode("utf-8") + b"\n")
                 self.wfile.flush()
 
@@ -377,9 +381,11 @@ class BeethovenDesktopHandler(SimpleHTTPRequestHandler):
                     soloist=soloist,
                     permission_mode=permission_mode,
                     effort=effort,
+                    events=streamed_events,
                 )
                 response = context_to_dict(context)
                 response["session"] = session
+                response["events"] = list(streamed_events)
                 write_event({"type": "run_completed", "context": response})
             except Exception as error:
                 write_event({"type": "run_failed", "error": str(error)})

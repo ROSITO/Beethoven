@@ -183,7 +183,8 @@ const expectedBackendCapabilities = [
   "streaming",
   "current-workspace",
   "fallback-routing",
-  "local-synthesis"
+  "local-synthesis",
+  "session-events"
 ];
 
 function titleCase(value) {
@@ -1374,6 +1375,19 @@ function updateRunEventStatus(event) {
   }
 }
 
+function formatSessionEventLog(events) {
+  if (!Array.isArray(events) || !events.length) {
+    return "";
+  }
+  const preview = events.slice(0, 8).map((event) => {
+    const task = event.task_id ? `:${event.task_id}` : "";
+    const soloist = event.soloist ? ` via ${event.soloist}` : "";
+    return `${event.type}${task}${soloist}`;
+  });
+  const suffix = events.length > preview.length ? `, +${events.length - preview.length} more` : "";
+  return `Restored ${events.length} saved execution events: ${preview.join(" → ")}${suffix}.`;
+}
+
 async function restoreSession(sessionId) {
   composerStatus.classList.remove("error");
   composerStatus.textContent = "Restoring session…";
@@ -1388,9 +1402,21 @@ async function restoreSession(sessionId) {
       throw new Error("Session has no run context");
     }
     applyRunContext(session.run);
+    const eventLog = formatSessionEventLog(session.events);
+    if (eventLog) {
+      chatMessages.push({
+        role: "assistant",
+        meta: "Session event log",
+        content: eventLog,
+      });
+      renderChat();
+    }
     activeSessionId = sessionId;
     composer.value = session.objective ?? "";
-    composerStatus.textContent = `Restored: ${session.title}`;
+    const eventCount = Array.isArray(session.events) ? session.events.length : 0;
+    composerStatus.textContent = eventCount
+      ? `Restored: ${session.title} · ${eventCount} events`
+      : `Restored: ${session.title}`;
     renderFilteredSessions();
   } catch (error) {
     composerStatus.classList.add("error");

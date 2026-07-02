@@ -921,6 +921,17 @@ def print_session(session: dict[str, object]) -> None:
     print("Trace")
     for event in session.get("trace", []):
         print(f"- {event}")
+    events = session.get("events", [])
+    if isinstance(events, list) and events:
+        print("Events")
+        for event in events[:12]:
+            if not isinstance(event, dict):
+                continue
+            task_id = f":{event.get('task_id')}" if event.get("task_id") else ""
+            soloist = f" via {event.get('soloist')}" if event.get("soloist") else ""
+            print(f"- {event.get('type')}{task_id}{soloist}")
+        if len(events) > 12:
+            print(f"- ... {len(events) - 12} more")
 
 
 def print_soloists(soloists: list[dict[str, object]]) -> None:

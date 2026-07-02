@@ -59,7 +59,10 @@ class DesktopSessionStore:
         soloist: str = "local-echo",
         permission_mode: str = "ask",
         effort: str = "medium",
+        events: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
+        run = context_to_dict(context)
+        session_events = events if events is not None else run.get("events", [])
         sessions = [session for session in self._read_sessions() if session.get("id") != context.score.id]
         session = {
             "id": context.score.id,
@@ -72,9 +75,10 @@ class DesktopSessionStore:
             "permission_mode": permission_mode,
             "effort": effort,
             "trace": context.trace,
+            "events": session_events if isinstance(session_events, list) else [],
             "status": "completed",
             "updated_at": datetime.now(UTC).isoformat(),
-            "run": context_to_dict(context),
+            "run": run,
         }
         sessions.insert(0, session)
         self._write(sessions[:25])
@@ -97,4 +101,7 @@ class DesktopSessionStore:
 
     @staticmethod
     def _summary(session: dict[str, Any]) -> dict[str, Any]:
-        return {key: value for key, value in session.items() if key != "run"}
+        summary = {key: value for key, value in session.items() if key not in {"run", "events"}}
+        events = session.get("events", [])
+        summary["event_count"] = len(events) if isinstance(events, list) else 0
+        return summary

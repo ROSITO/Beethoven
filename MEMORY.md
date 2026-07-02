@@ -39,7 +39,7 @@ The foundation is pre-alpha but executable. It includes:
 - a CLI;
 - a local desktop HTTP API;
 - a static desktop workbench;
-- session history;
+- session history with persisted execution event logs;
 - workspace and Git context;
 - workspace file discovery and safe `@path` file attachment reads with binary
   blocking, MIME/size/snippet metadata, total byte budget, and bounded directory
@@ -300,6 +300,8 @@ Implemented UI:
 - Chat/Cowork/Code segmented mode switcher;
 - recent sessions loaded from `/api/sessions`;
 - session restore via `/api/sessions/<id>`;
+- restored sessions show a compact saved execution event log without replacing
+  the final chat answer;
 - search/filter for recent sessions;
 - `New task` resets composer and score state;
 - composer with permission mode, Beethoven Auto execution preference, and effort
@@ -462,6 +464,8 @@ Test coverage currently includes:
 - desktop API health, soloists, skills, workspace, files, run, sessions, detail;
 - desktop stream emits `score_planned` before execution so the UI can render
   live tasks before final context;
+- desktop sessions persist execution event logs and expose compact event counts
+  in session summaries;
 - desktop API orchestrator/SoloMLX status and mocked SoloMLX install trigger;
 - OpenAI-compatible execution soloist config, healthcheck, registry routing,
   and mocked chat completion execution;
@@ -558,7 +562,7 @@ Goal: make the desktop feel like one coherent app, not a collection of panels.
 Suggested steps:
 
 - Add generated-code review tooling on top of the patch preview.
-- Persist event logs with sessions so restored runs show what happened live.
+- Add richer visual replay controls for restored event logs.
 - Add cancellation support for active runs.
 
 ### 2. Upgrade Context Attachments Further
@@ -581,7 +585,7 @@ Suggested steps:
 - Render timeline rows progressively from NDJSON events.
 - Add CLI verbose/stream mode that prints events as they arrive.
 - Add cancellation support for active runs.
-- Persist event logs with sessions, not only reconstructed final trace.
+- Add event log filtering/replay controls in the desktop.
 
 ### 4. Promote Validation Into A Governed Task Graph
 

@@ -308,6 +308,7 @@ def test_sessions_list_command_prints_history(tmp_path, monkeypatch, capsys) -> 
     assert show_exit_code == 0
     assert "Session: review desktop session history" in show_captured.out
     assert "Trace" in show_captured.out
+    assert "Events" in show_captured.out
 
     clear_exit_code = main(["sessions", "clear", "--json"])
     clear_captured = capsys.readouterr()

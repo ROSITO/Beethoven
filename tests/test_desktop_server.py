@@ -42,6 +42,7 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path, monkeypatch) ->
         assert health_data["version"]
         assert "auto-routing" in health_data["capabilities"]
         assert "local-synthesis" in health_data["capabilities"]
+        assert "session-events" in health_data["capabilities"]
 
         soloists = urlopen(f"http://{host}:{port}/api/soloists", timeout=2)
         soloists_data = json.loads(soloists.read().decode("utf-8"))
@@ -212,6 +213,9 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path, monkeypatch) ->
 
         detail = urlopen(f"http://{host}:{port}/api/sessions/{payload['score']['id']}", timeout=2)
         detail_data = json.loads(detail.read().decode("utf-8"))
+        stream_score_id = stream_events[-1]["event"]["context"]["score"]["id"]
+        stream_detail = urlopen(f"http://{host}:{port}/api/sessions/{stream_score_id}", timeout=2)
+        stream_detail_data = json.loads(stream_detail.read().decode("utf-8"))
 
         clear_sessions_request = Request(
             f"http://{host}:{port}/api/sessions",
@@ -252,7 +256,12 @@ def test_desktop_api_runs_objective_and_lists_sessions(tmp_path, monkeypatch) ->
     ]
     assert any(session["id"] == payload["score"]["id"] for session in sessions_data["sessions"])
     assert "run" not in sessions_data["sessions"][0]
+    assert "events" not in sessions_data["sessions"][0]
+    assert "event_count" in sessions_data["sessions"][0]
     assert detail_data["session"]["run"]["score"]["id"] == payload["score"]["id"]
+    assert detail_data["session"]["events"][0]["type"] == "score_started"
+    assert stream_detail_data["session"]["events"][0]["type"] == "score_planned"
+    assert any(event["type"] == "task_started" for event in stream_detail_data["session"]["events"])
     assert clear_sessions_data["sessions"]["cleared"] >= 1
     assert empty_sessions_data["sessions"] == []
     assert stream_events[0]["event"]["type"] == "score_planned"
